@@ -12,20 +12,36 @@ string? outputPath = null;
 
 for (var index = 0; index < args.Length; index++)
 {
-    switch (args[index])
+    if (string.Equals(args[index], "--residents", StringComparison.Ordinal))
     {
-        case "--residents" when index + 1 < args.Length && int.TryParse(args[++index], out var parsedResidents):
-            residentCount = parsedResidents;
-            break;
-        case "--days" when index + 1 < args.Length && int.TryParse(args[++index], out var parsedDays):
-            days = parsedDays;
-            break;
-        case "--output" when index + 1 < args.Length:
-            outputPath = args[++index];
-            break;
-        default:
-            Console.Error.WriteLine($"Unknown or invalid argument: {args[index]}");
+        if (index + 1 >= args.Length || !int.TryParse(args[++index], out residentCount))
+        {
+            Console.Error.WriteLine("--residents requires an integer value.");
             return 2;
+        }
+    }
+    else if (string.Equals(args[index], "--days", StringComparison.Ordinal))
+    {
+        if (index + 1 >= args.Length || !int.TryParse(args[++index], out days))
+        {
+            Console.Error.WriteLine("--days requires an integer value.");
+            return 2;
+        }
+    }
+    else if (string.Equals(args[index], "--output", StringComparison.Ordinal))
+    {
+        if (index + 1 >= args.Length)
+        {
+            Console.Error.WriteLine("--output requires a file path.");
+            return 2;
+        }
+
+        outputPath = args[++index];
+    }
+    else
+    {
+        Console.Error.WriteLine($"Unknown argument: {args[index]}");
+        return 2;
     }
 }
 
@@ -61,13 +77,14 @@ if (projection.Residents.Count != residentCount
     return 1;
 }
 
+var snapshotBytes = Encoding.UTF8.GetByteCount(snapshot);
 var report = new SettlementScaleReport(
     residentCount,
     days,
     checked((long)days * 24),
     elapsed.Elapsed.TotalMilliseconds,
     snapshotWatch.Elapsed.TotalMilliseconds,
-    Encoding.UTF8.GetByteCount(snapshot),
+    snapshotBytes,
     projection.Stockpile.Count,
     projection.Residents.Count,
     projection.Time.Milliseconds);
@@ -87,7 +104,7 @@ if (outputPath is not null)
 Console.WriteLine(json);
 Console.WriteLine(
     $"MWS_SETTLEMENT_SCALE_OK residents={residentCount} days={days} " +
-    $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} snapshot_bytes={Encoding.UTF8.GetByteCount(snapshot)}");
+    $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} snapshot_bytes={snapshotBytes}");
 return 0;
 
 static SettlementState CreateVillageState(int residentCount)
@@ -126,8 +143,8 @@ static SettlementState CreateVillageState(int residentCount)
     var stacks = state.ItemStacks
         .Select(stack => stack.ItemId switch
         {
-            SettlementItems.Ration => stack with { Quantity = Math.Min(int.MaxValue, residentCount * 3) },
-            SettlementItems.Grain => stack with { Quantity = Math.Min(int.MaxValue, residentCount * 2) },
+            SettlementItems.Ration => stack with { Quantity = residentCount * 3 },
+            SettlementItems.Grain => stack with { Quantity = residentCount * 2 },
             _ => stack,
         })
         .ToArray();
