@@ -2,36 +2,41 @@
   "checkpoint": "P0.6 Proof A",
   "status": "partial_pass",
   "evidence_class": "executable_ci",
-  "commit": "f435a283dd78abb2beed4b3ae7c021e1f884480b",
+  "commit": "b2be2d7ff8deafba512fb697a4baf923390a576a",
   "observed_at": "2026-08-16",
   "checks": {
-    "core_ci": {
-      "run_id": 31942036260,
+    "unified_ci": {
+      "run_id": 31944159434,
       "result": "success",
       "covers": [
-        "restore",
-        "release_build",
+        "developer_tooling_syntax",
+        "core_only_restore",
+        "release_core_build",
         "core_tests",
-        "architecture_tests"
+        "architecture_tests",
+        "headless_core_smoke",
+        "proof_a_workload_smoke",
+        "godot_csharp_build",
+        "godot_headless_integration_smoke"
       ]
     },
-    "godot_smoke": {
-      "run_id": 31942036258,
+    "proof_a_workload_smoke": {
       "result": "success",
-      "godot_version": "4.7.1",
-      "dotnet_sdk": "8.0.423",
       "covers": [
-        "godot_project_restore",
-        "godot_csharp_build",
-        "verified_editor_download",
-        "headless_scene_boot",
-        "core_adapter_execution",
-        "clean_process_exit"
-      ]
+        "RW-A_kernel_events_and_deterministic_ordering",
+        "RW-B_save_load_replay_equivalence",
+        "RW-C_causal_trace_write_and_reconstruction",
+        "RW-D_lod_roundtrip_identity_conservation_and_pending_process_continuity"
+      ],
+      "note": "Executable smoke coverage is proven; formal performance/allocation envelopes still require the bounded measurement run."
     }
   },
+  "toolchain": {
+    "godot": "4.7.1",
+    "dotnet_sdk": "8.0.423"
+  },
   "not_yet_proven": [
-    "performance_envelope",
+    "RW-A_to_RW-D_measured_performance_envelope",
     "allocation_envelope",
     "long_run_stability",
     "export_pipeline",
