@@ -17,6 +17,8 @@ public sealed partial class SettlementSimulation
         {
             _commandReceiptById.Add(receipt.CommandId.Value, receipt);
         }
+
+        CompactHistory();
     }
 
     private bool TryGetCommandReceipt(CommandId commandId, out SettlementCommandReceipt receipt) =>
@@ -26,7 +28,17 @@ public sealed partial class SettlementSimulation
     {
         _commandReceipts.Add(receipt);
         _commandReceiptById.Add(receipt.CommandId.Value, receipt);
+        RetainRecentCommandReceipts();
+    }
 
+    private void CompactHistory()
+    {
+        RetainRecentEvents();
+        RetainRecentCommandReceipts();
+    }
+
+    private void RetainRecentCommandReceipts()
+    {
         var overflow = _commandReceipts.Count - MaxRetainedCommandReceipts;
         if (overflow <= 0)
         {
