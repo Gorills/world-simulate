@@ -12,7 +12,7 @@ public sealed partial class SettlementSimulation
     private readonly SimulationScopeId _scopeId;
     private readonly ulong _worldSeed;
     private readonly EntityId _settlementOwnerId;
-    private readonly List<ResidentState> _residents;
+    private readonly ResidentRuntimeState[] _residents;
     private readonly List<ItemStackState> _itemStacks;
     private readonly List<WorkplaceState> _workplaces;
     private readonly List<SettlementEvent> _events;
@@ -44,13 +44,17 @@ public sealed partial class SettlementSimulation
         _nextStackId = nextStackId;
         _nextCommandId = nextCommandId;
         _settlementOwnerId = settlementOwnerId;
-        _residents = residents.OrderBy(resident => resident.Id.Value).ToList();
+        _residents = residents
+            .OrderBy(resident => resident.Id.Value)
+            .Select(resident => new ResidentRuntimeState(resident))
+            .ToArray();
         _itemStacks = itemStacks.OrderBy(stack => stack.StackId).ToList();
         _workplaces = workplaces.OrderBy(workplace => workplace.Id.Value).ToList();
         _events = events.OrderBy(entry => entry.Id).ToList();
         _commandReceipts = commandReceipts.OrderBy(entry => entry.CommandId.Value).ToList();
-        _residentIndicesById = new Dictionary<EntityId, int>(_residents.Count);
+        _residentIndicesById = new Dictionary<EntityId, int>(_residents.Length);
         _workplacesById = new Dictionary<EntityId, WorkplaceState>(_workplaces.Count);
+        _hourlyPlanWorkspace = new HourlyPlanWorkspace(_residents.Length);
 
         ValidateState();
         RebuildEntityIndexes();
@@ -133,7 +137,7 @@ public sealed partial class SettlementSimulation
         _nextStackId,
         _nextCommandId,
         _settlementOwnerId,
-        _residents.OrderBy(resident => resident.Id.Value).ToArray(),
+        _residents.Select(resident => resident.Capture()).ToArray(),
         _itemStacks.OrderBy(stack => stack.StackId).ToArray(),
         _workplaces.OrderBy(workplace => workplace.Id.Value).ToArray(),
         _events.OrderBy(entry => entry.Id).ToArray(),
@@ -152,7 +156,7 @@ public sealed partial class SettlementSimulation
     private void RebuildEntityIndexes()
     {
         _residentIndicesById.Clear();
-        for (var index = 0; index < _residents.Count; index++)
+        for (var index = 0; index < _residents.Length; index++)
         {
             _residentIndicesById.Add(_residents[index].Id, index);
         }

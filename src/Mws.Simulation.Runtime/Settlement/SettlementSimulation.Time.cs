@@ -50,14 +50,9 @@ public sealed partial class SettlementSimulation
             day = checked((int)(targetTime.Milliseconds / DayMilliseconds));
         }
 
-        var plan = BuildHourlyPlan(targetTime, hour);
-        ApplySettlementInventoryDelta(plan.Consumed, plan.Produced);
-
-        for (var index = 0; index < plan.Residents.Length; index++)
-        {
-            _residents[index] = plan.Residents[index];
-        }
-
+        BuildHourlyPlan(targetTime, hour);
+        ApplySettlementInventoryDelta(_hourlyPlanWorkspace.Consumed, _hourlyPlanWorkspace.Produced);
+        CommitHourlyResidentPlan();
         Time = targetTime;
 
         if (day is not null)
@@ -67,6 +62,17 @@ public sealed partial class SettlementSimulation
                 null,
                 IntFact(SettlementFactKeys.Day, day.Value),
                 IntFact(SettlementFactKeys.Rations, ItemQuantity(_settlementOwnerId, SettlementItems.Ration)));
+        }
+    }
+
+    private void CommitHourlyResidentPlan()
+    {
+        for (var index = 0; index < _residents.Length; index++)
+        {
+            var resident = _residents[index];
+            resident.Hunger = _hourlyPlanWorkspace.Hunger[index];
+            resident.Energy = _hourlyPlanWorkspace.Energy[index];
+            resident.Activity = _hourlyPlanWorkspace.Activity[index];
         }
     }
 }

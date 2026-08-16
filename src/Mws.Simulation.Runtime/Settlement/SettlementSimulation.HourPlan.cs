@@ -5,118 +5,126 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
-    private HourlyPlan BuildHourlyPlan(SimulationTime targetTime, int hour)
+    private readonly HourlyPlanWorkspace _hourlyPlanWorkspace;
+
+    private void BuildHourlyPlan(SimulationTime targetTime, int hour)
     {
         var restingHours = hour >= 22 || hour < 6;
         var workHours = hour >= 8 && hour < 17;
-        var nextResidents = _residents
-            .Select(resident => resident with
+        var plan = _hourlyPlanWorkspace;
+        plan.Reset(_residents);
+
+        var rationBudget = GetBudget(SettlementItems.Ration, plan.AvailableInputs, plan.ProjectedFinal);
+        for (var index = 0; index < _residents.Length; index++)
+        {
+            if (plan.Hunger[index] >= 70)
             {
-                Hunger = Math.Min(100, resident.Hunger + 3),
-                Activity = ResidentActivity.Idle,
-            })
-            .ToArray();
+                plan.HungryCandidates.Add(index);
+            }
+        }
 
-        var availableInputs = new Dictionary<string, int>(StringComparer.Ordinal);
-        var projectedFinal = new Dictionary<string, int>(StringComparer.Ordinal);
-        var consumed = new Dictionary<string, int>(StringComparer.Ordinal);
-        var produced = new Dictionary<string, int>(StringComparer.Ordinal);
-        var eating = new HashSet<int>();
-        var rationBudget = GetBudget(SettlementItems.Ration, availableInputs, projectedFinal);
+        plan.HungryCandidates.Sort((left, right) =>
+        {
+            var hunger = plan.Hunger[right].CompareTo(plan.Hunger[left]);
+            if (hunger != 0)
+            {
+                return hunger;
+            }
 
-        var hungryCandidates = nextResidents
-            .Select((resident, index) => (Resident: resident, Index: index))
-            .Where(entry => entry.Resident.Hunger >= 70)
-            .OrderByDescending(entry => entry.Resident.Hunger)
-            .ThenBy(entry => DeterministicSimulationHash.Rank(
+            var leftRank = DeterministicSimulationHash.Rank(
                 _worldSeed,
                 _scopeId,
                 targetTime,
                 "resident-auto-eat",
-                entry.Resident.Id))
-            .ThenBy(entry => entry.Resident.Id.Value)
-            .Select(entry => entry.Index);
+                _residents[left].Id);
+            var rightRank = DeterministicSimulationHash.Rank(
+                _worldSeed,
+                _scopeId,
+                targetTime,
+                "resident-auto-eat",
+                _residents[right].Id);
+            var rank = leftRank.CompareTo(rightRank);
+            return rank != 0 ? rank : _residents[left].Id.Value.CompareTo(_residents[right].Id.Value);
+        });
 
-        foreach (var index in hungryCandidates)
+        foreach (var index in plan.HungryCandidates)
         {
             if (rationBudget == 0)
             {
                 break;
             }
 
-            var resident = nextResidents[index];
-            nextResidents[index] = resident with
-            {
-                Hunger = Math.Max(0, resident.Hunger - 45),
-                Activity = ResidentActivity.Eating,
-            };
-            eating.Add(index);
+            plan.Hunger[index] = Math.Max(0, plan.Hunger[index] - 45);
+            plan.Activity[index] = ResidentActivity.Eating;
+            plan.Eating[index] = true;
             rationBudget--;
-            availableInputs[SettlementItems.Ration] = rationBudget;
-            projectedFinal[SettlementItems.Ration]--;
-            AddQuantity(consumed, SettlementItems.Ration, 1);
+            plan.AvailableInputs[SettlementItems.Ration] = rationBudget;
+            plan.ProjectedFinal[SettlementItems.Ration]--;
+            AddQuantity(plan.Consumed, SettlementItems.Ration, 1);
         }
 
-        var workCandidates = new List<int>();
-        for (var index = 0; index < nextResidents.Length; index++)
+        for (var index = 0; index < _residents.Length; index++)
         {
-            if (eating.Contains(index))
+            if (plan.Eating[index])
             {
                 continue;
             }
 
-            var resident = nextResidents[index];
+            var resident = _residents[index];
             if (restingHours)
             {
-                nextResidents[index] = resident with
-                {
-                    Energy = Math.Min(100, resident.Energy + 12),
-                    Activity = ResidentActivity.Resting,
-                };
+                plan.Energy[index] = Math.Min(100, resident.Energy + 12);
+                plan.Activity[index] = ResidentActivity.Resting;
                 continue;
             }
 
             if (workHours && resident.Energy >= 25 && FindWorkplace(resident.WorkplaceId) is not null)
             {
-                workCandidates.Add(index);
+                plan.WorkCandidates.Add(index);
                 continue;
             }
 
-            nextResidents[index] = resident with { Energy = Math.Max(0, resident.Energy - 1) };
+            plan.Energy[index] = Math.Max(0, resident.Energy - 1);
         }
 
-        foreach (var index in workCandidates
-            .OrderBy(index => DeterministicSimulationHash.Rank(
+        plan.WorkCandidates.Sort((left, right) =>
+        {
+            var leftRank = DeterministicSimulationHash.Rank(
                 _worldSeed,
                 _scopeId,
                 targetTime,
                 "resident-work-reservation",
-                nextResidents[index].Id))
-            .ThenBy(index => nextResidents[index].Id.Value))
+                _residents[left].Id);
+            var rightRank = DeterministicSimulationHash.Rank(
+                _worldSeed,
+                _scopeId,
+                targetTime,
+                "resident-work-reservation",
+                _residents[right].Id);
+            var rank = leftRank.CompareTo(rightRank);
+            return rank != 0 ? rank : _residents[left].Id.Value.CompareTo(_residents[right].Id.Value);
+        });
+
+        foreach (var index in plan.WorkCandidates)
         {
-            var resident = nextResidents[index];
+            var resident = _residents[index];
             var workplace = FindWorkplace(resident.WorkplaceId);
             if (workplace is null || workplace.Profession != resident.Profession)
             {
-                nextResidents[index] = resident with { Energy = Math.Max(0, resident.Energy - 1) };
+                plan.Energy[index] = Math.Max(0, resident.Energy - 1);
                 continue;
             }
 
-            if (!CanReserveWork(workplace, availableInputs, projectedFinal))
+            if (!CanReserveWork(workplace, plan.AvailableInputs, plan.ProjectedFinal))
             {
-                nextResidents[index] = resident with { Energy = Math.Max(0, resident.Energy - 1) };
+                plan.Energy[index] = Math.Max(0, resident.Energy - 1);
                 continue;
             }
 
-            ReserveWork(workplace, availableInputs, projectedFinal, consumed, produced);
-            nextResidents[index] = resident with
-            {
-                Energy = Math.Max(0, resident.Energy - 6),
-                Activity = ResidentActivity.Working,
-            };
+            ReserveWork(workplace, plan.AvailableInputs, plan.ProjectedFinal, plan.Consumed, plan.Produced);
+            plan.Energy[index] = Math.Max(0, resident.Energy - 6);
+            plan.Activity[index] = ResidentActivity.Working;
         }
-
-        return new HourlyPlan(nextResidents, consumed, produced);
     }
 
     private int GetBudget(
@@ -176,8 +184,54 @@ public sealed partial class SettlementSimulation
         totals[itemId] = checked(current + quantity);
     }
 
-    private sealed record HourlyPlan(
-        ResidentState[] Residents,
-        IReadOnlyDictionary<string, int> Consumed,
-        IReadOnlyDictionary<string, int> Produced);
+    private sealed class HourlyPlanWorkspace
+    {
+        internal HourlyPlanWorkspace(int residentCount)
+        {
+            Hunger = new int[residentCount];
+            Energy = new int[residentCount];
+            Activity = new ResidentActivity[residentCount];
+            Eating = new bool[residentCount];
+            HungryCandidates = new List<int>(residentCount);
+            WorkCandidates = new List<int>(residentCount);
+        }
+
+        internal int[] Hunger { get; }
+
+        internal int[] Energy { get; }
+
+        internal ResidentActivity[] Activity { get; }
+
+        internal bool[] Eating { get; }
+
+        internal List<int> HungryCandidates { get; }
+
+        internal List<int> WorkCandidates { get; }
+
+        internal Dictionary<string, int> AvailableInputs { get; } = new(StringComparer.Ordinal);
+
+        internal Dictionary<string, int> ProjectedFinal { get; } = new(StringComparer.Ordinal);
+
+        internal Dictionary<string, int> Consumed { get; } = new(StringComparer.Ordinal);
+
+        internal Dictionary<string, int> Produced { get; } = new(StringComparer.Ordinal);
+
+        internal void Reset(ResidentRuntimeState[] residents)
+        {
+            HungryCandidates.Clear();
+            WorkCandidates.Clear();
+            AvailableInputs.Clear();
+            ProjectedFinal.Clear();
+            Consumed.Clear();
+            Produced.Clear();
+            Array.Clear(Eating);
+
+            for (var index = 0; index < residents.Length; index++)
+            {
+                Hunger[index] = Math.Min(100, residents[index].Hunger + 3);
+                Energy[index] = residents[index].Energy;
+                Activity[index] = ResidentActivity.Idle;
+            }
+        }
+    }
 }

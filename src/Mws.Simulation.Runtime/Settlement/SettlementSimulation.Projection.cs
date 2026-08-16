@@ -19,7 +19,7 @@ public sealed partial class SettlementSimulation
                 workplace.OutputItemId,
                 workplace.OutputQuantity))
             .ToArray();
-        var residents = ProjectResidentRange(0, _residents.Count);
+        var residents = ProjectResidentRange(0, _residents.Length);
 
         return new SettlementProjection(
             _scopeId,
@@ -45,18 +45,18 @@ public sealed partial class SettlementSimulation
             throw new ArgumentOutOfRangeException(nameof(limit), limit, "Resident projection limit must be 1..1000.");
         }
 
-        var count = Math.Min(limit, Math.Max(0, _residents.Count - offset));
+        var count = Math.Min(limit, Math.Max(0, _residents.Length - offset));
         return new ResidentProjectionPage(
             _scopeId,
             Time,
             offset,
-            _residents.Count,
+            _residents.Length,
             ProjectResidentRange(offset, count));
     }
 
     private ResidentProjection[] ProjectResidentRange(int offset, int count)
     {
-        if (offset >= _residents.Count || count == 0)
+        if (offset >= _residents.Length || count == 0)
         {
             return [];
         }

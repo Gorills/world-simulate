@@ -4,7 +4,7 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
-    private SettlementCommandResult AskAboutWork(ResidentState resident)
+    private SettlementCommandResult AskAboutWork(ResidentRuntimeState resident)
     {
         var workplace = FindWorkplace(resident.WorkplaceId);
         var workplaceName = workplace?.Name ?? string.Empty;
@@ -19,15 +19,12 @@ public sealed partial class SettlementSimulation
             Fact(SettlementFactKeys.WorkplaceName, workplaceName));
     }
 
-    private SettlementCommandResult Encourage(int index, ResidentState resident)
+    private SettlementCommandResult Encourage(ResidentRuntimeState resident)
     {
         EnsureEventCapacity();
         var affinity = IncreaseAffinity(resident.Affinity, 1);
-        _residents[index] = resident with
-        {
-            Energy = Math.Min(100, resident.Energy + 10),
-            Affinity = affinity.Value,
-        };
+        resident.Energy = Math.Min(100, resident.Energy + 10);
+        resident.Affinity = affinity.Value;
         AppendEvent(SettlementEventKinds.Encouraged, resident.Id, IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
 
         return Result(
@@ -38,7 +35,7 @@ public sealed partial class SettlementSimulation
             IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
     }
 
-    private SettlementCommandResult ShareRation(int index, ResidentState resident)
+    private SettlementCommandResult ShareRation(ResidentRuntimeState resident)
     {
         if (ItemQuantity(_settlementOwnerId, SettlementItems.Ration) < 1)
         {
@@ -52,12 +49,9 @@ public sealed partial class SettlementSimulation
             throw new InvalidOperationException("Validated ration reservation could not be committed.");
         }
 
-        _residents[index] = resident with
-        {
-            Hunger = Math.Max(0, resident.Hunger - 45),
-            Activity = ResidentActivity.Eating,
-            Affinity = affinity.Value,
-        };
+        resident.Hunger = Math.Max(0, resident.Hunger - 45);
+        resident.Activity = ResidentActivity.Eating;
+        resident.Affinity = affinity.Value;
         AppendEvent(
             SettlementEventKinds.SharedRation,
             resident.Id,
