@@ -5,6 +5,7 @@
 .idea/
 .vscode/
 .ci/godot/
+.cache/
 TestResults/
 *.user
 *.suo
