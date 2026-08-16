@@ -13,7 +13,6 @@ on:
       - "global.json"
       - "TOOLS/dev.py"
       - ".github/workflows/ci.yml"
-      - ".github/workflows/proof-a-manual.yml"
   workflow_dispatch:
 
 permissions:
@@ -28,36 +27,50 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
 
 jobs:
-  core:
+  scope:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 1
     outputs:
+      core_required: ${{ steps.scope.outputs.core_required }}
       godot_required: ${{ steps.scope.outputs.godot_required }}
-      proof_a_required: ${{ steps.scope.outputs.proof_a_required }}
-      proof_a_measurement_required: ${{ steps.scope.outputs.proof_a_measurement_required }}
+      proof_a_smoke_required: ${{ steps.scope.outputs.proof_a_smoke_required }}
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
 
-      - name: Determine optional scope
+      - name: Determine latest update scope
         id: scope
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           if [[ "${EVENT_NAME}" != "pull_request" ]]; then
+            echo "core_required=true" >> "${GITHUB_OUTPUT}"
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
-            echo "proof_a_required=true" >> "${GITHUB_OUTPUT}"
-            echo "proof_a_measurement_required=true" >> "${GITHUB_OUTPUT}"
+            echo "proof_a_smoke_required=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
-          git fetch --no-tags --depth=1 origin "${BASE_SHA}" "${HEAD_SHA}"
-          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files.txt"
+          if [[ "${ACTION}" == "synchronize" ]] && git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
+            FROM_SHA="$(git rev-parse "${HEAD_SHA}^")"
+          else
+            git fetch --no-tags --depth=1 origin "${BASE_SHA}"
+            FROM_SHA="${BASE_SHA}"
+          fi
+
+          git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
+
+          if grep -Eq '^(src/|tests/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+            echo "core_required=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "core_required=false" >> "${GITHUB_OUTPUT}"
+          fi
 
           if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/DeterministicWorldSimulation\.cs$|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/World(Seed|Tick)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
@@ -65,19 +78,21 @@ jobs:
             echo "godot_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/ProofAKernel\.|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$|\.github/workflows/proof-a-manual\.yml$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
-            echo "proof_a_required=true" >> "${GITHUB_OUTPUT}"
+          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/ProofAKernel\.|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$)' "${RUNNER_TEMP}/changed-files.txt"; then
+            echo "proof_a_smoke_required=true" >> "${GITHUB_OUTPUT}"
           else
-            echo "proof_a_required=false" >> "${GITHUB_OUTPUT}"
+            echo "proof_a_smoke_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          git log -1 --format=%B "${HEAD_SHA}" > "${RUNNER_TEMP}/head-message.txt"
-          if grep -Fq '[proof-a]' "${RUNNER_TEMP}/head-message.txt"; then
-            echo "proof_a_measurement_required=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "proof_a_measurement_required=false" >> "${GITHUB_OUTPUT}"
-          fi
-
+  core:
+    needs: scope
+    if: needs.scope.outputs.core_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.423"
@@ -113,46 +128,14 @@ jobs:
           grep -q "MWS_HEADLESS_OK seed=42 steps=100 tick=100" headless-smoke.log
 
       - name: Proof A workload smoke
-        if: steps.scope.outputs.proof_a_required == 'true'
+        if: needs.scope.outputs.proof_a_smoke_required == 'true'
         run: |
           dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
           dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale 500
 
-  proof-a-measurement:
-    needs: core
-    if: needs.core.outputs.proof_a_measurement_required == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "8.0.423"
-
-      - name: Cache NuGet
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
-
-      - name: Restore workload harness
-        run: dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
-
-      - name: Run bounded RW-A through RW-D measurement
-        run: dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale 20000 --output proof-a-report.json
-
-      - name: Upload Proof A report
-        uses: actions/upload-artifact@v4
-        with:
-          name: p0.6-proof-a-workloads
-          path: proof-a-report.json
-          retention-days: 14
-
   godot:
-    needs: core
-    if: needs.core.outputs.godot_required == 'true'
+    needs: [scope, core]
+    if: needs.scope.outputs.godot_required == 'true' && needs.core.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 7
     env:
@@ -161,6 +144,8 @@ jobs:
       GODOT_SHA256: "6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6"
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.423"
