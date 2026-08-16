@@ -34,12 +34,13 @@ public sealed class SettlementAtomicityTests
     {
         var baseState = SettlementSimulation.CreateDefault(new WorldSeed(402)).CaptureState();
         var residentId = baseState.Residents[0].Id;
+        var extraStacks = new[]
+        {
+            new ItemStackState(3, SettlementItems.Herb, baseState.SettlementOwnerId, 1),
+        };
         var simulation = SettlementSimulation.Restore(baseState with
         {
-            ItemStacks = baseState.ItemStacks.Concat(
-            [
-                new ItemStackState(3, SettlementItems.Herb, baseState.SettlementOwnerId, 1),
-            ]).ToArray(),
+            ItemStacks = baseState.ItemStacks.Concat(extraStacks).ToArray(),
             NextStackId = 4,
             NextEventId = long.MaxValue,
         });
