@@ -10,6 +10,7 @@ on:
       - "WorldSimulate.sln"
       - "WorldSimulate.Core.slnf"
       - "Directory.Build.props"
+      - ".editorconfig"
       - "global.json"
       - "TOOLS/dev.py"
       - ".github/workflows/ci.yml"
@@ -66,19 +67,19 @@ jobs:
 
           git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
 
-          if grep -Eq '^(src/|tests/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(src/|tests/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "core_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "core_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/DeterministicWorldSimulation\.cs$|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/World(Seed|Tick)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/Settlement/|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/(WorldSeed|EntityId|SimulationTime)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|\.editorconfig$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "godot_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/ProofAKernel\.|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "proof_a_smoke_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "proof_a_smoke_required=false" >> "${GITHUB_OUTPUT}"
@@ -125,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build --no-restore -- 42 100 | tee headless-smoke.log
-          grep -q "MWS_HEADLESS_OK seed=42 steps=100 tick=100" headless-smoke.log
+          grep -q "MWS_HEADLESS_OK seed=42 hours=100 day=4 hour=4 residents=3" headless-smoke.log
 
       - name: Proof A workload smoke
         if: needs.scope.outputs.proof_a_smoke_required == 'true'
