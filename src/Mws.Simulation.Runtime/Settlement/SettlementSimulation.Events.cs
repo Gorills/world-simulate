@@ -20,5 +20,6 @@ public sealed partial class SettlementSimulation
         var nextEventId = checked(eventId + 1);
         _events.Add(new SettlementEvent(eventId, Time, kind, subjectId, facts));
         _nextEventId = nextEventId;
+        RetainRecentEvents();
     }
 }
