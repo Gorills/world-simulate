@@ -68,7 +68,7 @@ public sealed class SettlementHistoryTests
             residentId,
             ResidentInteractionChoice.Encourage));
 
-        Assert.Equal(expected, duplicate);
+        Assert.Equal(expected!, duplicate);
         Assert.Equal(affinityBefore, simulation.Project().Residents.Single(resident => resident.Id == residentId).Affinity);
     }
 }
