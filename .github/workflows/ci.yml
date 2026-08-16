@@ -6,12 +6,14 @@ on:
     paths:
       - "src/**"
       - "tests/**"
+      - "benchmarks/**"
       - "WorldSimulate.sln"
       - "WorldSimulate.Core.slnf"
       - "Directory.Build.props"
       - "global.json"
       - "TOOLS/dev.py"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/proof-a-manual.yml"
   workflow_dispatch:
 
 permissions:
@@ -31,12 +33,13 @@ jobs:
     timeout-minutes: 6
     outputs:
       godot_required: ${{ steps.scope.outputs.godot_required }}
+      proof_a_required: ${{ steps.scope.outputs.proof_a_required }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - name: Determine Godot scope
+      - name: Determine optional scope
         id: scope
         shell: bash
         env:
@@ -47,6 +50,7 @@ jobs:
           set -euo pipefail
           if [[ "${EVENT_NAME}" != "pull_request" ]]; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
+            echo "proof_a_required=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
           git fetch --no-tags --depth=1 origin "${BASE_SHA}" "${HEAD_SHA}"
@@ -55,6 +59,11 @@ jobs:
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "godot_required=false" >> "${GITHUB_OUTPUT}"
+          fi
+          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/ProofAKernel\.|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$|\.github/workflows/proof-a-manual\.yml$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+            echo "proof_a_required=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "proof_a_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
       - uses: actions/setup-dotnet@v6
@@ -90,6 +99,12 @@ jobs:
           set -euo pipefail
           dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build --no-restore -- 42 100 | tee headless-smoke.log
           grep -q "MWS_HEADLESS_OK seed=42 steps=100 tick=100" headless-smoke.log
+
+      - name: Proof A workload smoke
+        if: steps.scope.outputs.proof_a_required == 'true'
+        run: |
+          dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
+          dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale 500
 
   godot:
     needs: core

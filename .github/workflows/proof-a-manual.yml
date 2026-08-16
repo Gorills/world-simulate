@@ -3,10 +3,10 @@ name: proof-a-manual
 on:
   workflow_dispatch:
     inputs:
-      steps:
-        description: "Simulation steps for the bounded Proof A benchmark"
+      scale:
+        description: "RW-A/B/C/D workload scale (100..200000)"
         required: false
-        default: "1000000"
+        default: "20000"
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  benchmark:
+  workloads:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -28,5 +28,20 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.423"
-      - name: Run bounded benchmark
-        run: dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj -- "${{ inputs.steps }}"
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Restore workload harness
+        run: dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
+      - name: Run RW-A through RW-D
+        run: dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale "${{ inputs.scale }}" --output proof-a-report.json
+      - name: Upload Proof A report
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0.6-proof-a-workloads
+          path: proof-a-report.json
+          retention-days: 14

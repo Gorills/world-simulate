@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Mws.Domain/Mws.Domain.csproj" />
+    <ProjectReference Include="../../src/Mws.Persistence.Json/Mws.Persistence.Json.csproj" />
     <ProjectReference Include="../../src/Mws.Simulation.Runtime/Mws.Simulation.Runtime.csproj" />
   </ItemGroup>
 </Project>
