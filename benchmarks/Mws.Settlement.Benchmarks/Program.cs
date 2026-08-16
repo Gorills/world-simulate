@@ -53,9 +53,11 @@ if (residentCount is < 3 or > 5_000 || days is < 1 or > 365)
 
 var state = CreateVillageState(residentCount);
 var simulation = SettlementSimulation.Restore(state);
+var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
 var elapsed = Stopwatch.StartNew();
 simulation.AdvanceHours(checked((long)days * 24));
 elapsed.Stop();
+var advanceAllocatedBytes = checked(GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore);
 
 var snapshotWatch = Stopwatch.StartNew();
 var snapshot = SettlementStateJson.Serialize(simulation.CaptureState());
@@ -71,18 +73,21 @@ if (!string.Equals(snapshot, roundTrip, StringComparison.Ordinal))
 
 var projection = restored.Project();
 if (projection.Residents.Count != residentCount
+    || projection.Workplaces.Count != residentCount
     || projection.Residents.Any(resident => resident.Hunger is < 0 or > 100 || resident.Energy is < 0 or > 100))
 {
-    Console.Error.WriteLine("Settlement scale run violated resident invariants.");
+    Console.Error.WriteLine("Settlement scale run violated resident or topology invariants.");
     return 1;
 }
 
 var snapshotBytes = Encoding.UTF8.GetByteCount(snapshot);
 var report = new SettlementScaleReport(
     residentCount,
+    projection.Workplaces.Count,
     days,
     checked((long)days * 24),
     elapsed.Elapsed.TotalMilliseconds,
+    advanceAllocatedBytes,
     snapshotWatch.Elapsed.TotalMilliseconds,
     snapshotBytes,
     projection.Stockpile.Count,
@@ -103,40 +108,60 @@ if (outputPath is not null)
 
 Console.WriteLine(json);
 Console.WriteLine(
-    $"MWS_SETTLEMENT_SCALE_OK residents={residentCount} days={days} " +
-    $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} snapshot_bytes={snapshotBytes}");
+    $"MWS_SETTLEMENT_SCALE_OK residents={residentCount} days={days} workplaces={projection.Workplaces.Count} " +
+    $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} allocated_bytes={advanceAllocatedBytes} snapshot_bytes={snapshotBytes}");
 return 0;
 
 static SettlementState CreateVillageState(int residentCount)
 {
     var state = SettlementSimulation.CreateDefault(new WorldSeed(4242), new SimulationScopeId(4242)).CaptureState();
-    var farm = state.Workplaces.Single(workplace => workplace.Profession == ResidentProfession.Farmer);
-    var kitchen = state.Workplaces.Single(workplace => workplace.Profession == ResidentProfession.Cook);
-    var grove = state.Workplaces.Single(workplace => workplace.Profession == ResidentProfession.Forager);
+    var workplaces = Enumerable.Range(1, residentCount)
+        .Select(index =>
+        {
+            var profession = ProfessionFor(index);
+            var workplaceId = new EntityId(2_000_000L + index);
+            return profession switch
+            {
+                ResidentProfession.Farmer => new WorkplaceState(
+                    workplaceId,
+                    $"Farm {index}",
+                    profession,
+                    null,
+                    0,
+                    SettlementItems.Grain,
+                    2),
+                ResidentProfession.Cook => new WorkplaceState(
+                    workplaceId,
+                    $"Kitchen {index}",
+                    profession,
+                    SettlementItems.Grain,
+                    2,
+                    SettlementItems.Ration,
+                    1),
+                ResidentProfession.Forager => new WorkplaceState(
+                    workplaceId,
+                    $"Grove {index}",
+                    profession,
+                    null,
+                    0,
+                    SettlementItems.Herb,
+                    1),
+                _ => throw new InvalidOperationException("Unexpected profession."),
+            };
+        })
+        .ToArray();
     var residents = Enumerable.Range(1, residentCount)
         .Select(index =>
         {
-            var profession = (index % 3) switch
-            {
-                0 => ResidentProfession.Farmer,
-                1 => ResidentProfession.Cook,
-                _ => ResidentProfession.Forager,
-            };
-            var workplaceId = profession switch
-            {
-                ResidentProfession.Farmer => farm.Id,
-                ResidentProfession.Cook => kitchen.Id,
-                ResidentProfession.Forager => grove.Id,
-                _ => throw new InvalidOperationException("Unexpected profession."),
-            };
+            var profession = ProfessionFor(index);
             return new ResidentState(
-                new EntityId(index),
+                new EntityId(1_000_000L + index),
                 $"Resident {index}",
                 10 + (index % 50),
                 50 + (index % 51),
                 ResidentActivity.Idle,
                 profession,
-                workplaceId,
+                workplaces[index - 1].Id,
                 index % 11);
         })
         .ToArray();
@@ -153,14 +178,24 @@ static SettlementState CreateVillageState(int residentCount)
     {
         Residents = residents,
         ItemStacks = stacks,
+        Workplaces = workplaces,
     };
 }
 
+static ResidentProfession ProfessionFor(int index) => (index % 3) switch
+{
+    0 => ResidentProfession.Farmer,
+    1 => ResidentProfession.Cook,
+    _ => ResidentProfession.Forager,
+};
+
 internal sealed record SettlementScaleReport(
     int Residents,
+    int Workplaces,
     int Days,
     long Hours,
     double AdvanceMilliseconds,
+    long AdvanceAllocatedBytes,
     double SnapshotRoundTripMilliseconds,
     int SnapshotBytes,
     int StockpileStacks,

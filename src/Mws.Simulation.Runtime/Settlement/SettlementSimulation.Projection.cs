@@ -19,20 +19,7 @@ public sealed partial class SettlementSimulation
                 workplace.OutputItemId,
                 workplace.OutputQuantity))
             .ToArray();
-
-        var residents = _residents
-            .OrderBy(resident => resident.Id.Value)
-            .Select(resident => new ResidentProjection(
-                resident.Id,
-                resident.Name,
-                resident.Hunger,
-                resident.Energy,
-                resident.Activity,
-                resident.Profession,
-                FindWorkplace(resident.WorkplaceId)?.Name ?? "Unassigned",
-                resident.Affinity,
-                ProjectInventory(resident.Id)))
-            .ToArray();
+        var residents = ProjectResidentRange(0, _residents.Count);
 
         return new SettlementProjection(
             _scopeId,
@@ -46,9 +33,56 @@ public sealed partial class SettlementSimulation
             _events.TakeLast(8).ToArray());
     }
 
+    public ResidentProjectionPage ProjectResidents(int offset, int limit)
+    {
+        if (offset < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(offset), offset, "Resident projection offset cannot be negative.");
+        }
+
+        if (limit is <= 0 or > 1_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(limit), limit, "Resident projection limit must be 1..1000.");
+        }
+
+        var count = Math.Min(limit, Math.Max(0, _residents.Count - offset));
+        return new ResidentProjectionPage(
+            _scopeId,
+            Time,
+            offset,
+            _residents.Count,
+            ProjectResidentRange(offset, count));
+    }
+
+    private ResidentProjection[] ProjectResidentRange(int offset, int count)
+    {
+        if (offset >= _residents.Count || count == 0)
+        {
+            return [];
+        }
+
+        var result = new ResidentProjection[count];
+        for (var index = 0; index < count; index++)
+        {
+            var resident = _residents[offset + index];
+            result[index] = new ResidentProjection(
+                resident.Id,
+                resident.Name,
+                resident.Hunger,
+                resident.Energy,
+                resident.Activity,
+                resident.Profession,
+                FindWorkplace(resident.WorkplaceId)?.Name ?? "Unassigned",
+                resident.Affinity,
+                ProjectInventory(resident.Id));
+        }
+
+        return result;
+    }
+
     private WorkplaceState? FindWorkplace(EntityId workplaceId) =>
-        _workplaces.FirstOrDefault(workplace => workplace.Id == workplaceId);
+        _workplacesById.TryGetValue(workplaceId, out var workplace) ? workplace : null;
 
     private int FindResidentIndex(EntityId residentId) =>
-        _residents.FindIndex(resident => resident.Id == residentId);
+        _residentIndicesById.TryGetValue(residentId, out var index) ? index : -1;
 }

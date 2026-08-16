@@ -17,6 +17,8 @@ public sealed partial class SettlementSimulation
     private readonly List<WorkplaceState> _workplaces;
     private readonly List<SettlementEvent> _events;
     private readonly List<SettlementCommandReceipt> _commandReceipts;
+    private readonly Dictionary<EntityId, int> _residentIndicesById;
+    private readonly Dictionary<EntityId, WorkplaceState> _workplacesById;
     private long _nextEventId;
     private long _nextStackId;
     private long _nextCommandId;
@@ -47,8 +49,11 @@ public sealed partial class SettlementSimulation
         _workplaces = workplaces.OrderBy(workplace => workplace.Id.Value).ToList();
         _events = events.OrderBy(entry => entry.Id).ToList();
         _commandReceipts = commandReceipts.OrderBy(entry => entry.CommandId.Value).ToList();
+        _residentIndicesById = new Dictionary<EntityId, int>(_residents.Count);
+        _workplacesById = new Dictionary<EntityId, WorkplaceState>(_workplaces.Count);
 
         ValidateState();
+        RebuildEntityIndexes();
         RebuildInventoryIndexes();
         ValidateInventoryTotals();
         RebuildHistoryIndexes();
@@ -61,11 +66,17 @@ public sealed partial class SettlementSimulation
     public static SettlementSimulation CreateDefault(WorldSeed seed) =>
         CreateDefault(seed, SimulationScopeId.Root);
 
-    public static SettlementSimulation CreateDefault(WorldSeed seed, SimulationScopeId scopeId)
+    public static SettlementSimulation CreateDefault(WorldSeed seed, SimulationScopeId scopeId) =>
+        CreateDefault(seed, scopeId, entityIdOffset: 0);
+
+    internal static SettlementSimulation CreateDefault(
+        WorldSeed seed,
+        SimulationScopeId scopeId,
+        long entityIdOffset)
     {
-        var residents = SettlementPrototypeContent.CreateResidents();
-        var itemStacks = SettlementPrototypeContent.CreateItemStacks();
-        var workplaces = SettlementPrototypeContent.CreateWorkplaces();
+        var residents = SettlementPrototypeContent.CreateResidents(entityIdOffset);
+        var itemStacks = SettlementPrototypeContent.CreateItemStacks(entityIdOffset);
+        var workplaces = SettlementPrototypeContent.CreateWorkplaces(entityIdOffset);
         SettlementPrototypeContent.Validate(residents, itemStacks, workplaces);
 
         return new SettlementSimulation(
@@ -75,7 +86,7 @@ public sealed partial class SettlementSimulation
             nextEventId: 1,
             nextStackId: 3,
             nextCommandId: 1,
-            SettlementPrototypeContent.SettlementOwnerId,
+            SettlementPrototypeContent.GetSettlementOwnerId(entityIdOffset),
             residents,
             itemStacks,
             workplaces,
@@ -136,6 +147,21 @@ public sealed partial class SettlementSimulation
         }
 
         return new CommandId(_nextCommandId);
+    }
+
+    private void RebuildEntityIndexes()
+    {
+        _residentIndicesById.Clear();
+        for (var index = 0; index < _residents.Count; index++)
+        {
+            _residentIndicesById.Add(_residents[index].Id, index);
+        }
+
+        _workplacesById.Clear();
+        foreach (var workplace in _workplaces)
+        {
+            _workplacesById.Add(workplace.Id, workplace);
+        }
     }
 
     private void ValidateState()
