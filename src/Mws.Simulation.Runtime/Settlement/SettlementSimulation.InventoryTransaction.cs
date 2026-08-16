@@ -64,4 +64,21 @@ public sealed partial class SettlementSimulation
             throw new InvalidOperationException("Settlement item stack ID space cannot commit the hourly plan.");
         }
     }
+
+    private void ValidateInventoryTotals()
+    {
+        foreach (var item in _itemStackIndicesByOwnerAndItem)
+        {
+            long total = 0;
+            foreach (var index in item.Value)
+            {
+                total += _itemStacks[index].Quantity;
+                if (total > int.MaxValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Inventory total exceeds supported quantity for owner {item.Key.OwnerId}, item '{item.Key.ItemId}'.");
+                }
+            }
+        }
+    }
 }
