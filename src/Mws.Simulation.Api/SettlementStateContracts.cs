@@ -60,6 +60,10 @@ public sealed record SettlementCommandReceipt(
 
 public sealed record SettlementState(
     int SchemaVersion,
+    string ModelVersion,
+    string RulesVersion,
+    string ContentVersion,
+    SimulationScopeId ScopeId,
     ulong WorldSeed,
     SimulationTime Time,
     long NextEventId,
