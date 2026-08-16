@@ -1,0 +1,32 @@
+{
+  "id": "GR_P06_G20_V1",
+  "gate_id": "G20",
+  "subject_id": "P0.6",
+  "subject_version": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
+  "evidence_ids": [
+    "EV_P06_PROOF_A_EXECUTABLE_V1"
+  ],
+  "system_spec_ids": [],
+  "maturity_record_ids": [],
+  "capability_ids": [],
+  "findings": [],
+  "backtracking_target": null,
+  "reviewer": "proof-a-foundation-review",
+  "timestamp": "2026-08-16T18:45:00+07:00",
+  "applicability": "APPLICABLE",
+  "applicability_rationale": "P0.6 depends on canonical integer time, deterministic event ordering, persisted RNG outcomes, save/load, and replay equivalence.",
+  "verdict": "PASS",
+  "validation_run_ids": [
+    "GH_ACTIONS_RUN_31944761344",
+    "GH_ACTIONS_RUN_31944761360"
+  ],
+  "benchmark_ids": [
+    "BR_P06_RW_A_KERNEL_EVENTS_V1",
+    "BR_P06_RW_B_SAVE_REPLAY_V1"
+  ],
+  "metrics_or_oracles": [
+    "RW-A ordering_mismatch_count=0 across 3 repetitions.",
+    "RW-B replay_mismatch_count=0 across 3 repetitions.",
+    "Core tests passed canonical integer-time, persisted RNG, same-time arbitration, and replay-equivalence probes."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "PR_P06_V1",
+  "phase_id": "P0.6",
+  "phase_version": "0.4.1+p06.f7732f7",
+  "verdict": "PASS",
+  "gate_result_ids": [
+    "GR_P06_G20_V1",
+    "GR_P06_G25_V1",
+    "GR_P06_G26_V1",
+    "GR_P06_G27_V1",
+    "GR_P06_G28_V1"
+  ],
+  "evidence_ids": [
+    "EV_P06_PROOF_A_EXECUTABLE_V1"
+  ],
+  "benchmark_ids": [
+    "BR_P06_RW_A_KERNEL_EVENTS_V1",
+    "BR_P06_RW_B_SAVE_REPLAY_V1",
+    "BR_P06_RW_C_TRACE_V1",
+    "BR_P06_RW_D_LOD_ROUNDTRIP_V1"
+  ],
+  "findings": [],
+  "backtracking_target": null,
+  "reviewer": "proof-a-foundation-review",
+  "timestamp": "2026-08-16T18:45:00+07:00"
+}

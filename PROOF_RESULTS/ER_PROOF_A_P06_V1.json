@@ -1,0 +1,34 @@
+{
+  "id": "ER_PROOF_A_P06_V1",
+  "proof_id": "PROOF_A",
+  "proof_version": "1@f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
+  "verdict": "PASS",
+  "phase_result_ids": [
+    "PR_P06_V1"
+  ],
+  "gate_result_ids": [
+    "GR_P06_G20_V1",
+    "GR_P06_G25_V1",
+    "GR_P06_G26_V1",
+    "GR_P06_G27_V1",
+    "GR_P06_G28_V1"
+  ],
+  "validation_run_ids": [
+    "GH_ACTIONS_RUN_31944761344",
+    "GH_ACTIONS_RUN_31944761360"
+  ],
+  "benchmark_ids": [
+    "BR_P06_RW_A_KERNEL_EVENTS_V1",
+    "BR_P06_RW_B_SAVE_REPLAY_V1",
+    "BR_P06_RW_C_TRACE_V1",
+    "BR_P06_RW_D_LOD_ROUNDTRIP_V1"
+  ],
+  "maturity_record_ids": [],
+  "evidence_ids": [
+    "EV_P06_PROOF_A_EXECUTABLE_V1"
+  ],
+  "findings": [],
+  "backtracking_target": null,
+  "reviewer": "proof-a-foundation-review",
+  "timestamp": "2026-08-16T18:45:00+07:00"
+}
