@@ -38,14 +38,14 @@ public partial class Main : Node
         }
     }
 
-    public override void _Input(InputEvent inputEvent)
+    public override void _Input(InputEvent @event)
     {
-        if (_inputDevice.Observe(inputEvent))
+        if (_inputDevice.Observe(@event))
         {
             _hud?.SetInputDevice(_inputDevice.Current);
         }
 
-        if (_hud?.HandleInput(inputEvent) == true)
+        if (_hud?.HandleInput(@event) == true)
         {
             GetViewport().SetInputAsHandled();
         }
