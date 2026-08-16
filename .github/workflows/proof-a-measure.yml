@@ -2,10 +2,11 @@ name: proof-a-measure
 
 on:
   push:
-    branches: [main]
+    branches: [main, "audit/**"]
     paths:
       - "BENCHMARKS/Mws.ProofA.Measurements/**"
       - "BENCHMARKS/WORKLOADS/**"
+      - "src/Mws.Domain/**"
       - "src/Mws.Simulation.Runtime/Foundation/**"
       - "src/Mws.Simulation.Runtime/Verification/ProofA/**"
       - "src/Mws.Simulation.Api/ProofAKernelContracts.cs"
@@ -17,6 +18,7 @@ on:
     paths:
       - "BENCHMARKS/Mws.ProofA.Measurements/**"
       - "BENCHMARKS/WORKLOADS/**"
+      - "src/Mws.Domain/**"
       - "src/Mws.Simulation.Runtime/Foundation/**"
       - "src/Mws.Simulation.Runtime/Verification/ProofA/**"
       - "src/Mws.Simulation.Api/ProofAKernelContracts.cs"
@@ -72,7 +74,7 @@ jobs:
           fi
 
           git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
-          if grep -Eq '^(BENCHMARKS/Mws\.ProofA\.Measurements/|BENCHMARKS/WORKLOADS/|src/Mws\.Simulation\.Runtime/Foundation/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofAKernelContracts\.cs$|src/Mws\.Persistence\.Json/ProofAKernelJson\.cs$|MACHINE/benchmark-result\.schema\.json$|\.github/workflows/proof-a-measure\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(BENCHMARKS/Mws\.ProofA\.Measurements/|BENCHMARKS/WORKLOADS/|src/Mws\.Domain/|src/Mws\.Simulation\.Runtime/Foundation/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofAKernelContracts\.cs$|src/Mws\.Persistence\.Json/ProofAKernelJson\.cs$|MACHINE/benchmark-result\.schema\.json$|\.github/workflows/proof-a-measure\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "measure_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "measure_required=false" >> "${GITHUB_OUTPUT}"
