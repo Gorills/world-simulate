@@ -28,8 +28,6 @@ public sealed partial class SettlementSimulation
             return Result(false, SettlementResultCodes.StaleCommand, null);
         }
 
-        _nextCommandId = checked(command.Id.Value + 1);
-
         var result = command switch
         {
             FeedResidentCommand feed => ExecuteFeedResident(feed.ResidentId),
@@ -38,6 +36,7 @@ public sealed partial class SettlementSimulation
             _ => throw new ArgumentOutOfRangeException(nameof(command), command.GetType().Name, "Unknown settlement command."),
         };
 
+        _nextCommandId = checked(command.Id.Value + 1);
         RecordCommandReceipt(new SettlementCommandReceipt(
             command.Id,
             result.Success,
@@ -65,9 +64,15 @@ public sealed partial class SettlementSimulation
             return ResidentNotFound(residentId);
         }
 
-        if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
+        if (ItemQuantity(_settlementOwnerId, SettlementItems.Ration) < 1)
         {
             return Result(false, SettlementResultCodes.NoRations, residentId);
+        }
+
+        EnsureEventCapacity();
+        if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
+        {
+            throw new InvalidOperationException("Validated ration reservation could not be committed.");
         }
 
         var resident = _residents[index];
@@ -110,6 +115,7 @@ public sealed partial class SettlementSimulation
             return ResidentNotFound(residentId);
         }
 
+        EnsureEventCapacity();
         var transfer = TryTransferItem(_settlementOwnerId, residentId, itemId, quantity);
         if (transfer == ItemTransferStatus.SourceUnavailable)
         {
@@ -163,74 +169,6 @@ public sealed partial class SettlementSimulation
             ResidentInteractionChoice.ShareRation => ShareRation(index, resident),
             _ => throw new ArgumentOutOfRangeException(nameof(choice), choice, "Unknown resident interaction."),
         };
-    }
-
-    private SettlementCommandResult AskAboutWork(ResidentState resident)
-    {
-        var workplace = FindWorkplace(resident.WorkplaceId);
-        var workplaceName = workplace?.Name ?? string.Empty;
-        AppendEvent(SettlementEventKinds.AskedAboutWork, resident.Id);
-
-        return Result(
-            true,
-            SettlementResultCodes.WorkInfo,
-            resident.Id,
-            Fact(SettlementFactKeys.ResidentName, resident.Name),
-            Fact(SettlementFactKeys.Profession, resident.Profession.ToString()),
-            Fact(SettlementFactKeys.WorkplaceName, workplaceName));
-    }
-
-    private SettlementCommandResult Encourage(int index, ResidentState resident)
-    {
-        var affinity = IncreaseAffinity(resident.Affinity, 1);
-        _residents[index] = resident with
-        {
-            Energy = Math.Min(100, resident.Energy + 10),
-            Affinity = affinity.Value,
-        };
-        AppendEvent(SettlementEventKinds.Encouraged, resident.Id, IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
-
-        return Result(
-            true,
-            SettlementResultCodes.Encouraged,
-            resident.Id,
-            Fact(SettlementFactKeys.ResidentName, resident.Name),
-            IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
-    }
-
-    private SettlementCommandResult ShareRation(int index, ResidentState resident)
-    {
-        var affinity = IncreaseAffinity(resident.Affinity, 2);
-        if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
-        {
-            return Result(false, SettlementResultCodes.NoRations, resident.Id);
-        }
-
-        _residents[index] = resident with
-        {
-            Hunger = Math.Max(0, resident.Hunger - 45),
-            Activity = ResidentActivity.Eating,
-            Affinity = affinity.Value,
-        };
-        AppendEvent(
-            SettlementEventKinds.SharedRation,
-            resident.Id,
-            Fact(SettlementFactKeys.ItemId, SettlementItems.Ration),
-            IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
-
-        return Result(
-            true,
-            SettlementResultCodes.RationShared,
-            resident.Id,
-            Fact(SettlementFactKeys.ResidentName, resident.Name),
-            Fact(SettlementFactKeys.ItemId, SettlementItems.Ration),
-            IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
-    }
-
-    private static (int Value, int Delta) IncreaseAffinity(int value, int requestedDelta)
-    {
-        var next = Math.Min((long)int.MaxValue, (long)value + requestedDelta);
-        return ((int)next, checked((int)(next - value)));
     }
 
     private static SettlementCommandResult ResidentNotFound(EntityId residentId) =>
