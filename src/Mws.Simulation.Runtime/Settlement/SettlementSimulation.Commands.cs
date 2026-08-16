@@ -115,9 +115,7 @@ public sealed partial class SettlementSimulation
             return ResidentNotFound(residentId);
         }
 
-        EnsureEventCapacity();
-        var transfer = TryTransferItem(_settlementOwnerId, residentId, itemId, quantity);
-        if (transfer == ItemTransferStatus.SourceUnavailable)
+        if (ItemQuantity(_settlementOwnerId, itemId) < quantity)
         {
             return Result(
                 false,
@@ -127,7 +125,7 @@ public sealed partial class SettlementSimulation
                 IntFact(SettlementFactKeys.Quantity, quantity));
         }
 
-        if (transfer == ItemTransferStatus.DestinationCapacityExceeded)
+        if (!CanAddItem(residentId, itemId, quantity))
         {
             return Result(
                 false,
@@ -135,6 +133,12 @@ public sealed partial class SettlementSimulation
                 residentId,
                 Fact(SettlementFactKeys.ItemId, itemId),
                 IntFact(SettlementFactKeys.Quantity, quantity));
+        }
+
+        EnsureEventCapacity();
+        if (TryTransferItem(_settlementOwnerId, residentId, itemId, quantity) != ItemTransferStatus.Success)
+        {
+            throw new InvalidOperationException("Validated inventory transfer could not be committed.");
         }
 
         var resident = _residents[index];
