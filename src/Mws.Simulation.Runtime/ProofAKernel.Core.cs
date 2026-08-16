@@ -74,10 +74,7 @@ public sealed partial class ProofAKernel
 
     public EntityId CreateEntity(EntityId? ownerId = null, long initialResource = 0, bool rare = false)
     {
-        if (initialResource < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(initialResource));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(initialResource);
 
         var id = new EntityId(_nextEntityId++);
         var actualOwner = ownerId ?? id;

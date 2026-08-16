@@ -186,11 +186,20 @@ public sealed partial class ProofAKernel
             return false;
         }
 
-        if (!_entities.TryGetValue(fromId.Value, out source) || !_entities.TryGetValue(toId.Value, out destination))
+        if (!_entities.TryGetValue(fromId.Value, out var foundSource) || foundSource is null)
         {
             failureCode = "ENTITY_NOT_FOUND";
             return false;
         }
+
+        if (!_entities.TryGetValue(toId.Value, out var foundDestination) || foundDestination is null)
+        {
+            failureCode = "ENTITY_NOT_FOUND";
+            return false;
+        }
+
+        source = foundSource;
+        destination = foundDestination;
 
         if (source.OwnerId != ownerId || destination.OwnerId != ownerId)
         {

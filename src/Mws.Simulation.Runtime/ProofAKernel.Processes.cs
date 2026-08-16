@@ -14,15 +14,8 @@ public sealed partial class ProofAKernel
         long reservedResource,
         bool interruptible = true)
     {
-        if (durationMilliseconds <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(durationMilliseconds));
-        }
-
-        if (reservedResource < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(reservedResource));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(durationMilliseconds);
+        ArgumentOutOfRangeException.ThrowIfNegative(reservedResource);
 
         if (TryGetRecorded(commandId, out var recorded))
         {
