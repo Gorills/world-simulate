@@ -12,6 +12,15 @@ public sealed class ArchitectureBoundaryTests
         "Mws.Persistence.Json",
     ];
 
+    private static readonly string[] GodotClientFolders =
+    [
+        "App",
+        "Session",
+        "Input",
+        "World",
+        "UI",
+    ];
+
     [Fact]
     public void AuthoritativeCoreHasNoGodotDependency()
     {
@@ -47,6 +56,44 @@ public sealed class ArchitectureBoundaryTests
                 text.Contains("Mws.Client.Godot", StringComparison.OrdinalIgnoreCase),
                 $"Core project unexpectedly references the client project: {projectFile}");
         }
+    }
+
+    [Fact]
+    public void GodotClientUsesFocusedFeatureFolders()
+    {
+        var root = FindRepositoryRoot();
+        var client = Path.Combine(root, "src", "Mws.Client.Godot");
+
+        foreach (var requiredDirectory in GodotClientFolders)
+        {
+            Assert.True(
+                Directory.Exists(Path.Combine(client, requiredDirectory)),
+                $"Godot client is missing required feature folder: {requiredDirectory}");
+        }
+
+        Assert.False(
+            File.Exists(Path.Combine(client, "Main.cs")),
+            "Legacy root Main.cs must not return; use App/Main.cs as the composition root.");
+    }
+
+    [Fact]
+    public void GodotClientFilesStayWithinAgentFriendlySizeBudgets()
+    {
+        var root = FindRepositoryRoot();
+        var client = Path.Combine(root, "src", "Mws.Client.Godot");
+        var files = Directory.EnumerateFiles(client, "*.cs", SearchOption.AllDirectories);
+
+        foreach (var file in files)
+        {
+            var lines = File.ReadLines(file).Count();
+            Assert.True(lines <= 300, $"Godot client file exceeds 300-line responsibility budget: {file} ({lines}).");
+        }
+
+        var compositionRoot = Path.Combine(client, "App", "Main.cs");
+        var compositionRootLines = File.ReadLines(compositionRoot).Count();
+        Assert.True(
+            compositionRootLines <= 180,
+            $"Godot composition root exceeds 180 lines: {compositionRootLines}.");
     }
 
     private static string FindRepositoryRoot()
