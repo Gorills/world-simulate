@@ -16,17 +16,8 @@ on:
       - ".github/workflows/ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "benchmarks/**"
-      - "WorldSimulate.sln"
-      - "WorldSimulate.Core.slnf"
-      - "Directory.Build.props"
-      - ".editorconfig"
-      - "global.json"
-      - "TOOLS/dev.py"
-      - ".github/workflows/ci.yml"
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -54,12 +45,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
 
-      - name: Determine latest update scope
+      - name: Determine full change scope
         id: scope
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          ACTION: ${{ github.event.action }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -71,14 +61,8 @@ jobs:
             exit 0
           fi
 
-          if [[ "${ACTION}" == "synchronize" ]] && git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
-            FROM_SHA="$(git rev-parse "${HEAD_SHA}^")"
-          else
-            git fetch --no-tags --depth=1 origin "${BASE_SHA}"
-            FROM_SHA="${BASE_SHA}"
-          fi
-
-          git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
+          git fetch --no-tags --depth=1 origin "${BASE_SHA}"
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
 
           if grep -Eq '^(src/|tests/|benchmarks/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "core_required=true" >> "${GITHUB_OUTPUT}"
@@ -228,3 +212,28 @@ jobs:
           set -euo pipefail
           "${GODOT_BIN}" --headless --path src/Mws.Client.Godot --quit-after 120 2>&1 | tee godot-smoke.log
           grep -q "MWS_GODOT_SMOKE_OK" godot-smoke.log
+
+  required:
+    name: ci-required
+    if: always()
+    needs: [scope, core, godot]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Verify required CI jobs
+        shell: bash
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          CORE_REQUIRED: ${{ needs.scope.outputs.core_required }}
+          CORE_RESULT: ${{ needs.core.result }}
+          GODOT_REQUIRED: ${{ needs.scope.outputs.godot_required }}
+          GODOT_RESULT: ${{ needs.godot.result }}
+        run: |
+          set -euo pipefail
+          test "${SCOPE_RESULT}" = "success"
+          if [[ "${CORE_REQUIRED}" == "true" ]]; then
+            test "${CORE_RESULT}" = "success"
+          fi
+          if [[ "${GODOT_REQUIRED}" == "true" ]]; then
+            test "${GODOT_RESULT}" = "success"
+          fi
