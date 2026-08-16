@@ -2,7 +2,11 @@ namespace Mws.Simulation.Api;
 
 public static class SettlementVersions
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
+    public const int LegacySchemaVersion = 3;
+    public const string CurrentModelVersion = "settlement-model-v1";
+    public const string CurrentRulesVersion = "settlement-rules-v1";
+    public const string CurrentContentVersion = "settlement-content-v1";
 }
 
 public static class SettlementItems
@@ -23,6 +27,7 @@ public static class SettlementResultCodes
     public const string NoRations = "NO_RATIONS";
     public const string InvalidQuantity = "INVALID_QUANTITY";
     public const string ItemNotAvailable = "ITEM_NOT_AVAILABLE";
+    public const string InventoryCapacityExceeded = "INVENTORY_CAPACITY_EXCEEDED";
 }
 
 public static class SettlementEventKinds
