@@ -35,6 +35,7 @@ public sealed partial class SettlementSimulation
             .ToArray();
 
         return new SettlementProjection(
+            _scopeId,
             Time,
             checked((int)(Time.Milliseconds / DayMilliseconds)),
             checked((int)((Time.Milliseconds / HourMilliseconds) % 24)),
