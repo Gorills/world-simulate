@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="../Mws.Domain/Mws.Domain.csproj" />
     <ProjectReference Include="../Mws.Simulation.Api/Mws.Simulation.Api.csproj" />
   </ItemGroup>
 </Project>
