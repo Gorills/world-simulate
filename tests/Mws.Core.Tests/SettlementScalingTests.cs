@@ -38,7 +38,7 @@ public sealed class SettlementScalingTests
                 .OrderBy(id => id)
                 .ToArray();
             Assert.Equal(2, winners.Length);
-            distinctWinnerSets.Add(string.Join(',', winners));
+            distinctWinnerSets.Add(string.Join(",", winners));
         }
 
         Assert.True(distinctWinnerSets.Count > 1, "World seed must affect deterministic scarcity arbitration.");
@@ -85,14 +85,14 @@ public sealed class SettlementScalingTests
     {
         var baseState = SettlementSimulation.CreateDefault(new WorldSeed(88)).CaptureState();
         var residentId = baseState.Residents[0].Id;
-        var stacks = baseState.ItemStacks.Concat(
-        [
+        var extraStacks = new[]
+        {
             new ItemStackState(3, SettlementItems.Herb, baseState.SettlementOwnerId, 1),
             new ItemStackState(4, SettlementItems.Herb, residentId, int.MaxValue),
-        ]).ToArray();
+        };
         var simulation = SettlementSimulation.Restore(baseState with
         {
-            ItemStacks = stacks,
+            ItemStacks = baseState.ItemStacks.Concat(extraStacks).ToArray(),
             NextStackId = 5,
         });
 
