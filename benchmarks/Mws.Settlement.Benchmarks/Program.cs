@@ -88,7 +88,7 @@ var report = new SettlementScaleReport(
     projection.Stockpile.Count,
     projection.Residents.Count,
     projection.Time.Milliseconds);
-var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+var json = JsonSerializer.Serialize(report);
 
 if (outputPath is not null)
 {
@@ -116,7 +116,7 @@ static SettlementState CreateVillageState(int residentCount)
     var residents = Enumerable.Range(1, residentCount)
         .Select(index =>
         {
-            var profession = index % 3 switch
+            var profession = (index % 3) switch
             {
                 0 => ResidentProfession.Farmer,
                 1 => ResidentProfession.Cook,
