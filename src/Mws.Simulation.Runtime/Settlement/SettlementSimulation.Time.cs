@@ -1,89 +1,72 @@
+using Mws.Domain;
 using Mws.Simulation.Api;
 
 namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
-    public void AdvanceHours(int hours)
+    public void AdvanceHours(long hours)
     {
         if (hours < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(hours), hours, "Hours cannot be negative.");
         }
 
-        for (var index = 0; index < hours; index++)
+        for (long index = 0; index < hours; index++)
         {
             AdvanceOneHour();
         }
     }
 
+    public void AdvanceTo(SimulationTime target)
+    {
+        if (target.Milliseconds < Time.Milliseconds)
+        {
+            throw new InvalidOperationException("Settlement simulation time is monotonic.");
+        }
+
+        var delta = checked(target.Milliseconds - Time.Milliseconds);
+        if (delta % HourMilliseconds != 0)
+        {
+            throw new ArgumentException("Settlement simulation advances on canonical whole-hour boundaries.", nameof(target));
+        }
+
+        AdvanceHours(delta / HourMilliseconds);
+    }
+
     private void AdvanceOneHour()
     {
-        Time = Time.AddMilliseconds(HourMilliseconds);
-        var hour = checked((int)((Time.Milliseconds / HourMilliseconds) % 24));
-        var restingHours = hour >= 22 || hour < 6;
-
-        for (var index = 0; index < _residents.Count; index++)
-        {
-            var resident = _residents[index];
-            var hunger = Math.Min(100, resident.Hunger + 3);
-            var energy = resident.Energy;
-            var activity = ResidentActivity.Idle;
-
-            if (hunger >= 70 && TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
-            {
-                hunger = Math.Max(0, hunger - 45);
-                activity = ResidentActivity.Eating;
-            }
-            else if (restingHours)
-            {
-                energy = Math.Min(100, energy + 12);
-                activity = ResidentActivity.Resting;
-            }
-            else if (hour >= 8 && hour < 17 && energy >= 25 && TryWork(resident))
-            {
-                energy = Math.Max(0, energy - 6);
-                activity = ResidentActivity.Working;
-            }
-            else
-            {
-                energy = Math.Max(0, energy - 1);
-            }
-
-            _residents[index] = resident with
-            {
-                Hunger = hunger,
-                Energy = energy,
-                Activity = activity,
-            };
-        }
+        var targetTime = Time.AddMilliseconds(HourMilliseconds);
+        var hour = checked((int)((targetTime.Milliseconds / HourMilliseconds) % 24));
+        int? day = null;
 
         if (hour == 0)
         {
-            var day = checked((int)(Time.Milliseconds / DayMilliseconds));
+            if (_nextEventId <= 0 || _nextEventId == long.MaxValue)
+            {
+                throw new InvalidOperationException("Settlement event ID space cannot commit the next day boundary.");
+            }
+
+            day = checked((int)(targetTime.Milliseconds / DayMilliseconds));
+        }
+
+        var plan = BuildHourlyPlan(targetTime, hour);
+        ApplySettlementInventoryDelta(plan.Consumed, plan.Produced);
+
+        for (var index = 0; index < plan.Residents.Length; index++)
+        {
+            _residents[index] = plan.Residents[index];
+        }
+
+        Time = targetTime;
+
+        if (day is not null)
+        {
             AppendEvent(
                 SettlementEventKinds.DayBegan,
                 null,
-                IntFact(SettlementFactKeys.Day, day),
+                IntFact(SettlementFactKeys.Day, day.Value),
                 IntFact(SettlementFactKeys.Rations, ItemQuantity(_settlementOwnerId, SettlementItems.Ration)));
         }
-    }
-
-    private bool TryWork(ResidentState resident)
-    {
-        var workplace = FindWorkplace(resident.WorkplaceId);
-        if (workplace is null || workplace.Profession != resident.Profession)
-        {
-            return false;
-        }
-
-        if (workplace.InputItemId is not null
-            && !TryConsumeItem(_settlementOwnerId, workplace.InputItemId, workplace.InputQuantity))
-        {
-            return false;
-        }
-
-        AddItem(_settlementOwnerId, workplace.OutputItemId, workplace.OutputQuantity);
-        return true;
     }
 }
