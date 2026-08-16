@@ -40,3 +40,9 @@ jobs:
         run: dotnet test tests/Mws.Core.Tests/Mws.Core.Tests.csproj --configuration Release --no-build --no-restore --logger "console;verbosity=minimal"
       - name: Architecture tests
         run: dotnet test tests/Mws.Architecture.Tests/Mws.Architecture.Tests.csproj --configuration Release --no-build --no-restore --logger "console;verbosity=minimal"
+      - name: Headless core smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build -- 42 100 | tee headless-smoke.log
+          grep -q "MWS_HEADLESS_OK seed=42 steps=100 tick=100" headless-smoke.log

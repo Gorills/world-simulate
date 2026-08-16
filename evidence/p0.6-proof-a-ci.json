@@ -1,0 +1,40 @@
+{
+  "checkpoint": "P0.6 Proof A",
+  "status": "partial_pass",
+  "evidence_class": "executable_ci",
+  "commit": "f435a283dd78abb2beed4b3ae7c021e1f884480b",
+  "observed_at": "2026-08-16",
+  "checks": {
+    "core_ci": {
+      "run_id": 31942036260,
+      "result": "success",
+      "covers": [
+        "restore",
+        "release_build",
+        "core_tests",
+        "architecture_tests"
+      ]
+    },
+    "godot_smoke": {
+      "run_id": 31942036258,
+      "result": "success",
+      "godot_version": "4.7.1",
+      "dotnet_sdk": "8.0.423",
+      "covers": [
+        "godot_project_restore",
+        "godot_csharp_build",
+        "verified_editor_download",
+        "headless_scene_boot",
+        "core_adapter_execution",
+        "clean_process_exit"
+      ]
+    }
+  },
+  "not_yet_proven": [
+    "performance_envelope",
+    "allocation_envelope",
+    "long_run_stability",
+    "export_pipeline",
+    "render_correctness"
+  ]
+}

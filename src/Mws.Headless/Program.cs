@@ -2,11 +2,20 @@ using Mws.Domain;
 using Mws.Persistence.Json;
 using Mws.Simulation.Runtime;
 
-var simulation = new DeterministicWorldSimulation(new WorldSeed(42));
+var seed = args.Length > 0 && ulong.TryParse(args[0], out var parsedSeed)
+    ? parsedSeed
+    : 42UL;
+var steps = args.Length > 1 && int.TryParse(args[1], out var parsedSteps) && parsedSteps >= 0
+    ? parsedSteps
+    : 100;
 
-for (var i = 0; i < 100; i++)
+var simulation = new DeterministicWorldSimulation(new WorldSeed(seed));
+
+for (var i = 0; i < steps; i++)
 {
     simulation.Advance();
 }
 
-Console.WriteLine(WorldSnapshotJson.Serialize(simulation.Snapshot));
+var json = WorldSnapshotJson.Serialize(simulation.Snapshot);
+Console.WriteLine(json);
+Console.WriteLine($"MWS_HEADLESS_OK seed={seed} steps={steps} tick={simulation.Snapshot.Tick.Value} state={simulation.Snapshot.DeterministicState}");

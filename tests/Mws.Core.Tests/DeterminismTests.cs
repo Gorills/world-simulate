@@ -20,6 +20,15 @@ public sealed class DeterminismTests
     }
 
     [Fact]
+    public void DifferentSeedsDiverge()
+    {
+        var left = new DeterministicWorldSimulation(new WorldSeed(42));
+        var right = new DeterministicWorldSimulation(new WorldSeed(43));
+
+        Assert.NotEqual(left.Advance(), right.Advance());
+    }
+
+    [Fact]
     public void SnapshotRoundTripPreservesState()
     {
         var simulation = new DeterministicWorldSimulation(new WorldSeed(7));
@@ -29,5 +38,16 @@ public sealed class DeterminismTests
         var restored = WorldSnapshotJson.Deserialize(json);
 
         Assert.Equal(snapshot, restored);
+    }
+
+    [Fact]
+    public void SnapshotSerializationIsStableForSameValue()
+    {
+        var simulation = new DeterministicWorldSimulation(new WorldSeed(99));
+        var snapshot = simulation.Advance();
+
+        Assert.Equal(
+            WorldSnapshotJson.Serialize(snapshot),
+            WorldSnapshotJson.Serialize(snapshot));
     }
 }
