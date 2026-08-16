@@ -55,8 +55,10 @@ public sealed class SettlementSimulationTests
         var projection = restored.Project();
 
         Assert.True(result.Success);
+        Assert.Equal(SettlementResultCodes.FedResident, result.Code);
         Assert.Equal(pantryBefore - 1, projection.PantryRations);
-        Assert.Contains(projection.RecentEvents, entry => entry.Kind == "player-fed" && entry.SubjectId == resident.Id);
+        Assert.Contains(projection.RecentEvents, entry =>
+            entry.Kind == SettlementEventKinds.PlayerFed && entry.SubjectId == resident.Id);
     }
 
     [Fact]
@@ -74,9 +76,11 @@ public sealed class SettlementSimulationTests
         var restoredResident = projection.Residents.Single(entry => entry.Id == resident.Id);
 
         Assert.True(result.Success);
+        Assert.Equal(SettlementResultCodes.ItemGiven, result.Code);
         Assert.Equal(stockpileBefore - 2, StockpileQuantity(projection, SettlementItems.Herb));
         Assert.Equal(2, InventoryQuantity(restoredResident, SettlementItems.Herb));
-        Assert.Contains(projection.RecentEvents, entry => entry.Kind == "item-given" && entry.SubjectId == resident.Id);
+        Assert.Contains(projection.RecentEvents, entry =>
+            entry.Kind == SettlementEventKinds.ItemGiven && entry.SubjectId == resident.Id);
     }
 
     [Fact]
@@ -94,11 +98,15 @@ public sealed class SettlementSimulationTests
         var restoredResident = restored.Project().Residents.Single(entry => entry.Id == resident.Id);
 
         Assert.True(workAnswer.Success);
-        Assert.Contains(resident.Profession.ToString(), workAnswer.Message);
+        Assert.Equal(SettlementResultCodes.WorkInfo, workAnswer.Code);
+        Assert.Contains(
+            workAnswer.Facts,
+            fact => fact.Key == SettlementFactKeys.Profession && fact.Value == resident.Profession.ToString());
         Assert.True(encouragement.Success);
         Assert.True(sharedRation.Success);
         Assert.Equal(3, restoredResident.Affinity);
-        Assert.Contains(restored.Project().RecentEvents, entry => entry.Kind == "shared-ration" && entry.SubjectId == resident.Id);
+        Assert.Contains(restored.Project().RecentEvents, entry =>
+            entry.Kind == SettlementEventKinds.SharedRation && entry.SubjectId == resident.Id);
     }
 
     [Fact]
@@ -114,7 +122,7 @@ public sealed class SettlementSimulationTests
         Assert.Equal(3, projection.Residents.Count);
         Assert.Equal(3, projection.Workplaces.Count);
         Assert.All(projection.Residents, resident => Assert.False(string.IsNullOrWhiteSpace(resident.WorkplaceName)));
-        Assert.Contains(projection.RecentEvents, entry => entry.Kind == "day-began");
+        Assert.Contains(projection.RecentEvents, entry => entry.Kind == SettlementEventKinds.DayBegan);
     }
 
     private static int StockpileQuantity(SettlementProjection projection, string itemId) =>

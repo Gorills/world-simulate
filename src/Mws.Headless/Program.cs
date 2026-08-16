@@ -5,34 +5,34 @@ using Mws.Simulation.Runtime;
 
 if (args.Length > 0 && string.Equals(args[0], "settlement", StringComparison.OrdinalIgnoreCase))
 {
-    RunSettlement(args);
+    RunSettlementDays(args);
 }
 else
 {
-    RunKernelSmoke(args);
+    RunWorldSmoke(args);
 }
 
-static void RunKernelSmoke(string[] args)
+static void RunWorldSmoke(string[] args)
 {
     var seed = args.Length > 0 && ulong.TryParse(args[0], out var parsedSeed)
         ? parsedSeed
         : 42UL;
-    var steps = args.Length > 1 && int.TryParse(args[1], out var parsedSteps) && parsedSteps >= 0
-        ? parsedSteps
+    var hours = args.Length > 1 && int.TryParse(args[1], out var parsedHours) && parsedHours >= 0
+        ? Math.Min(parsedHours, 87_600)
         : 100;
 
-    var simulation = new DeterministicWorldSimulation(new WorldSeed(seed));
-    for (var index = 0; index < steps; index++)
-    {
-        simulation.Advance();
-    }
+    var simulation = SettlementSimulation.CreateDefault(new WorldSeed(seed));
+    simulation.AdvanceHours(hours);
 
-    var json = WorldSnapshotJson.Serialize(simulation.Snapshot);
+    var json = SettlementStateJson.Serialize(simulation.CaptureState());
+    var projection = simulation.Project();
     Console.WriteLine(json);
-    Console.WriteLine($"MWS_HEADLESS_OK seed={seed} steps={steps} tick={simulation.Snapshot.Tick.Value} state={simulation.Snapshot.DeterministicState}");
+    Console.WriteLine(
+        $"MWS_HEADLESS_OK seed={seed} hours={hours} day={projection.Day} hour={projection.Hour} " +
+        $"residents={projection.Residents.Count} stockpile={projection.Stockpile.Count}");
 }
 
-static void RunSettlement(string[] args)
+static void RunSettlementDays(string[] args)
 {
     var days = args.Length > 1 && int.TryParse(args[1], out var parsedDays) && parsedDays > 0
         ? Math.Min(parsedDays, 3650)

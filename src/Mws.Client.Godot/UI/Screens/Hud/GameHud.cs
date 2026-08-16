@@ -1,6 +1,7 @@
 using Godot;
 using Mws.Client.Godot.Input;
 using Mws.Client.Godot.Session;
+using Mws.Client.Godot.UI.Feedback;
 using Mws.Client.Godot.UI.Theme;
 using Mws.Client.Godot.World.Settlement;
 using InteractionMenuView = Mws.Client.Godot.UI.Screens.InteractionMenu.InteractionMenu;
@@ -41,7 +42,7 @@ public partial class GameHud : Control
             }
 
             var result = _session.InteractSelected(choice);
-            _feedback.Text = result.Message;
+            _feedback.Text = SettlementFeedbackText.Format(result, _session.SelectedResident);
         };
     }
 
