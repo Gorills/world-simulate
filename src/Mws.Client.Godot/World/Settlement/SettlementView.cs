@@ -50,7 +50,7 @@ public partial class SettlementView : VBoxContainer
             DesignSystem.ApplyButton(button);
             if (selected)
             {
-                button.AddThemeColorOverride("font_color", DesignTokens.Accent);
+                DesignSystem.ApplySelectedButton(button);
                 _selectedButton = button;
             }
 

@@ -41,6 +41,45 @@ internal static class GameInput
         BindButton(Menu, JoyButton.Start);
     }
 
+    public static void ValidateDefaults()
+    {
+        StringName[] requiredActions =
+        [
+            MoveLeft,
+            MoveRight,
+            MoveUp,
+            MoveDown,
+            PreviousTarget,
+            NextTarget,
+            Interact,
+            AdvanceTime,
+            Cancel,
+            Menu,
+        ];
+
+        foreach (var action in requiredActions)
+        {
+            if (!InputMap.HasAction(action))
+            {
+                throw new InvalidOperationException($"Required input action is missing: {action}.");
+            }
+
+            var hasKeyboard = false;
+            var hasGamepad = false;
+            foreach (var inputEvent in InputMap.ActionGetEvents(action))
+            {
+                hasKeyboard |= inputEvent is InputEventKey;
+                hasGamepad |= inputEvent is InputEventJoypadButton or InputEventJoypadMotion;
+            }
+
+            if (!hasKeyboard || !hasGamepad)
+            {
+                throw new InvalidOperationException(
+                    $"Input action {action} must have keyboard and gamepad bindings; keyboard={hasKeyboard} gamepad={hasGamepad}.");
+            }
+        }
+    }
+
     private static void BindKey(StringName action, Key key)
     {
         var inputEvent = new InputEventKey { PhysicalKeycode = key };

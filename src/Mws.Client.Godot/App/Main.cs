@@ -18,6 +18,7 @@ public partial class Main : Node
         try
         {
             GameInput.ConfigureDefaults();
+            GameInput.ValidateDefaults();
             _session = new GameSession(new WorldSeed(42));
 
             if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
@@ -63,9 +64,7 @@ public partial class Main : Node
 
         if (!interaction.Success
             || projection.Day != 1
-            || projection.Residents.Count != 3
-            || !InputMap.HasAction(GameInput.Interact)
-            || !InputMap.HasAction(GameInput.AdvanceTime))
+            || projection.Residents.Count != 3)
         {
             throw new InvalidOperationException("Client foundation smoke produced an invalid state.");
         }
@@ -73,7 +72,7 @@ public partial class Main : Node
         var resident = _session.SelectedResident;
         GD.Print(
             $"MWS_GODOT_SMOKE_OK client=v0.1 day={projection.Day} resident={resident.Name} " +
-            $"affinity={resident.Affinity} input=keyboard-gamepad");
+            $"affinity={resident.Affinity} input=keyboard-gamepad-validated");
         GetTree().Quit(0);
     }
 }

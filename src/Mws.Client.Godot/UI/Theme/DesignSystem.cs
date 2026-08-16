@@ -37,4 +37,10 @@ internal static class DesignSystem
         button.AddThemeColorOverride("font_focus_color", DesignTokens.Accent);
         button.AddThemeColorOverride("font_pressed_color", DesignTokens.Positive);
     }
+
+    public static void ApplySelectedButton(Button button)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        button.AddThemeColorOverride("font_color", DesignTokens.Accent);
+    }
 }
