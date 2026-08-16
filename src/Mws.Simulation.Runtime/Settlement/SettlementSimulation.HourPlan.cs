@@ -24,11 +24,20 @@ public sealed partial class SettlementSimulation
         var eating = new HashSet<int>();
         var rationBudget = GetBudget(SettlementItems.Ration, availableInputs, projectedFinal);
 
-        foreach (var index in OrderedResidentIndices(
-            nextResidents,
-            targetTime,
-            "resident-auto-eat",
-            resident => resident.Hunger >= 70))
+        var hungryCandidates = nextResidents
+            .Select((resident, index) => (Resident: resident, Index: index))
+            .Where(entry => entry.Resident.Hunger >= 70)
+            .OrderByDescending(entry => entry.Resident.Hunger)
+            .ThenBy(entry => DeterministicSimulationHash.Rank(
+                _worldSeed,
+                _scopeId,
+                targetTime,
+                "resident-auto-eat",
+                entry.Resident.Id))
+            .ThenBy(entry => entry.Resident.Id.Value)
+            .Select(entry => entry.Index);
+
+        foreach (var index in hungryCandidates)
         {
             if (rationBudget == 0)
             {
@@ -107,25 +116,8 @@ public sealed partial class SettlementSimulation
             };
         }
 
-        return new HourlyPlan(targetTime, hour, nextResidents, consumed, produced);
+        return new HourlyPlan(nextResidents, consumed, produced);
     }
-
-    private IEnumerable<int> OrderedResidentIndices(
-        IReadOnlyList<ResidentState> residents,
-        SimulationTime time,
-        string domain,
-        Func<ResidentState, bool> predicate) =>
-        residents
-            .Select((resident, index) => (Resident: resident, Index: index))
-            .Where(entry => predicate(entry.Resident))
-            .OrderBy(entry => DeterministicSimulationHash.Rank(
-                _worldSeed,
-                _scopeId,
-                time,
-                domain,
-                entry.Resident.Id))
-            .ThenBy(entry => entry.Resident.Id.Value)
-            .Select(entry => entry.Index);
 
     private int GetBudget(
         string itemId,
@@ -185,8 +177,6 @@ public sealed partial class SettlementSimulation
     }
 
     private sealed record HourlyPlan(
-        SimulationTime Time,
-        int Hour,
         ResidentState[] Residents,
         IReadOnlyDictionary<string, int> Consumed,
         IReadOnlyDictionary<string, int> Produced);
