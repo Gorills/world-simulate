@@ -13,7 +13,7 @@ public sealed class ArchitectureBoundaryTests
     ];
 
     [Fact]
-    public void Authoritative_core_has_no_Godot_dependency()
+    public void AuthoritativeCoreHasNoGodotDependency()
     {
         var root = FindRepositoryRoot();
 
@@ -35,7 +35,7 @@ public sealed class ArchitectureBoundaryTests
     }
 
     [Fact]
-    public void Core_projects_do_not_reference_client_project()
+    public void CoreProjectsDoNotReferenceClientProject()
     {
         var root = FindRepositoryRoot();
 

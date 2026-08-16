@@ -7,7 +7,7 @@ var simulation = new DeterministicWorldSimulation(new WorldSeed(42));
 
 for (var i = 0; i < 10_000; i++)
 {
-    simulation.Step();
+    simulation.Advance();
 }
 
 var beforeAllocated = GC.GetAllocatedBytesForCurrentThread();
@@ -15,7 +15,7 @@ var stopwatch = Stopwatch.StartNew();
 
 for (var i = 0; i < steps; i++)
 {
-    simulation.Step();
+    simulation.Advance();
 }
 
 stopwatch.Stop();

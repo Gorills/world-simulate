@@ -16,7 +16,7 @@ public sealed class DeterministicWorldSimulation : IWorldSimulation
 
     public WorldSnapshot Snapshot { get; private set; }
 
-    public WorldSnapshot Step()
+    public WorldSnapshot Advance()
     {
         _tick = _tick.Next();
         _state = unchecked((_state * 6364136223846793005UL) + 1442695040888963407UL + (ulong)_tick.Value);

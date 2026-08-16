@@ -6,7 +6,7 @@ public interface IWorldSimulation
 {
     WorldSnapshot Snapshot { get; }
 
-    WorldSnapshot Step();
+    WorldSnapshot Advance();
 }
 
 public readonly record struct WorldSnapshot(

@@ -11,7 +11,7 @@ public partial class Main : Node
         try
         {
             var simulation = new DeterministicWorldSimulation(new WorldSeed(42));
-            var snapshot = simulation.Step();
+            var snapshot = simulation.Advance();
 
             if (snapshot.Tick.Value != 1)
             {

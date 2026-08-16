@@ -6,7 +6,7 @@ var simulation = new DeterministicWorldSimulation(new WorldSeed(42));
 
 for (var i = 0; i < 100; i++)
 {
-    simulation.Step();
+    simulation.Advance();
 }
 
 Console.WriteLine(WorldSnapshotJson.Serialize(simulation.Snapshot));
