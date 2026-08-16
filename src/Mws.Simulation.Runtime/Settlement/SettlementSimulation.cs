@@ -51,6 +51,7 @@ public sealed partial class SettlementSimulation
         ValidateState();
         RebuildInventoryIndexes();
         ValidateInventoryTotals();
+        RebuildHistoryIndexes();
     }
 
     public SimulationScopeId ScopeId => _scopeId;
@@ -134,9 +135,7 @@ public sealed partial class SettlementSimulation
             throw new InvalidOperationException("Settlement command ID space is exhausted or invalid.");
         }
 
-        var id = new CommandId(_nextCommandId);
-        _nextCommandId = checked(_nextCommandId + 1);
-        return id;
+        return new CommandId(_nextCommandId);
     }
 
     private void ValidateState()
