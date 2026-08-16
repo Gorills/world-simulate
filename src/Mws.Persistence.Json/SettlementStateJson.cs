@@ -12,10 +12,7 @@ public static class SettlementStateJson
     public static string Serialize(SettlementState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        if (state.SchemaVersion != SettlementVersions.CurrentSchemaVersion)
-        {
-            throw new NotSupportedException($"Settlement schema {state.SchemaVersion} is unsupported.");
-        }
+        ValidateCurrentVersionBundle(state);
 
         var payload = JsonSerializer.Serialize(state, SettlementStateJsonContext.Default.SettlementState);
         var envelope = new SettlementSnapshotEnvelope(state.SchemaVersion, payload, ComputeChecksum(payload));
@@ -45,11 +42,7 @@ public static class SettlementStateJson
     {
         var state = JsonSerializer.Deserialize(payload, SettlementStateJsonContext.Default.SettlementState)
             ?? throw new InvalidDataException("Settlement snapshot payload is missing.");
-        if (state.SchemaVersion != SettlementVersions.CurrentSchemaVersion)
-        {
-            throw new InvalidDataException("Settlement snapshot schema markers disagree.");
-        }
-
+        ValidateCurrentVersionBundle(state);
         return state;
     }
 
@@ -79,6 +72,21 @@ public static class SettlementStateJson
             legacy.Workplaces,
             legacy.Events,
             legacy.CommandReceipts);
+    }
+
+    private static void ValidateCurrentVersionBundle(SettlementState state)
+    {
+        if (state.SchemaVersion != SettlementVersions.CurrentSchemaVersion)
+        {
+            throw new NotSupportedException($"Settlement schema {state.SchemaVersion} is unsupported.");
+        }
+
+        if (!string.Equals(state.ModelVersion, SettlementVersions.CurrentModelVersion, StringComparison.Ordinal)
+            || !string.Equals(state.RulesVersion, SettlementVersions.CurrentRulesVersion, StringComparison.Ordinal)
+            || !string.Equals(state.ContentVersion, SettlementVersions.CurrentContentVersion, StringComparison.Ordinal))
+        {
+            throw new NotSupportedException("Settlement model, rules, or content version is unsupported.");
+        }
     }
 
     private static string ComputeChecksum(string payload) =>
