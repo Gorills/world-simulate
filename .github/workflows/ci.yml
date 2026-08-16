@@ -80,7 +80,7 @@ jobs:
 
           git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
 
-          if grep -Eq '^(src/|tests/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(src/|tests/|benchmarks/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "core_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "core_required=false" >> "${GITHUB_OUTPUT}"
@@ -102,7 +102,7 @@ jobs:
     needs: scope
     if: needs.scope.outputs.core_required == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
@@ -140,6 +140,22 @@ jobs:
           set -euo pipefail
           dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build --no-restore -- 42 100 | tee headless-smoke.log
           grep -q "MWS_HEADLESS_OK seed=42 hours=100 day=4 hour=4 residents=3" headless-smoke.log
+
+      - name: Production settlement scale smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore benchmarks/Mws.Settlement.Benchmarks/Mws.Settlement.Benchmarks.csproj --nologo
+          dotnet run --configuration Release --project benchmarks/Mws.Settlement.Benchmarks/Mws.Settlement.Benchmarks.csproj --no-restore -- --residents 512 --days 30 --output settlement-scale.json | tee settlement-scale.log
+          grep -q "MWS_SETTLEMENT_SCALE_OK residents=512 days=30" settlement-scale.log
+
+      - name: Upload settlement scale metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: settlement-scale-metrics
+          path: settlement-scale.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Proof A workload smoke
         if: needs.scope.outputs.proof_a_smoke_required == 'true'
