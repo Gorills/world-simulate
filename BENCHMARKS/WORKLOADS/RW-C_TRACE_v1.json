@@ -1,0 +1,17 @@
+{
+  "id": "RW-C_TRACE",
+  "version": "1",
+  "status": "DEFINED",
+  "purpose": "Measure T0-T3 causal trace storage and reconstruction cost for player-visible and validation-relevant consequences.",
+  "enabled_systems": ["authoritative_state", "causal_trace"],
+  "seed_policy": "Fixed recorded seed set with the same event mix as the paired no/low-trace baseline.",
+  "execution_modes": ["headless", "release"],
+  "workload_parameters": {
+    "trace_levels": "T0-T3 as applicable",
+    "query_set": "versioned consequence reconstruction queries"
+  },
+  "required_metrics": ["trace_bytes", "trace_write_overhead", "trace_lookup_latency", "reconstruction_failure_count"],
+  "duration_contract": {"kind": "iterations", "value_source": "Result records transition count and number of reconstruction queries."},
+  "instrumentation_contract": "Benchmark must distinguish trace cost from unrelated profiler/debug instrumentation.",
+  "enabled_at_maturity": "P0.6"
+}

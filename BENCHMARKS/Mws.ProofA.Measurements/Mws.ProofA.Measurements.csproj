@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AnalysisLevel>none</AnalysisLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Mws.Domain/Mws.Domain.csproj" />
+    <ProjectReference Include="../../src/Mws.Simulation.Api/Mws.Simulation.Api.csproj" />
+    <ProjectReference Include="../../src/Mws.Simulation.Runtime/Mws.Simulation.Runtime.csproj" />
+    <ProjectReference Include="../../src/Mws.Persistence.Json/Mws.Persistence.Json.csproj" />
+  </ItemGroup>
+</Project>

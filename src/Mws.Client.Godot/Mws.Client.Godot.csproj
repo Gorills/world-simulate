@@ -1,0 +1,10 @@
+<Project Sdk="Godot.NET.Sdk/4.7.1">
+  <PropertyGroup>
+    <RootNamespace>Mws.Client.Godot</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Mws.Domain/Mws.Domain.csproj" />
+    <ProjectReference Include="../Mws.Simulation.Api/Mws.Simulation.Api.csproj" />
+    <ProjectReference Include="../Mws.Simulation.Runtime/Mws.Simulation.Runtime.csproj" />
+  </ItemGroup>
+</Project>

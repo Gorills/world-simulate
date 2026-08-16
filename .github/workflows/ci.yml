@@ -1,0 +1,201 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "benchmarks/**"
+      - "WorldSimulate.sln"
+      - "WorldSimulate.Core.slnf"
+      - "Directory.Build.props"
+      - ".editorconfig"
+      - "global.json"
+      - "TOOLS/dev.py"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      core_required: ${{ steps.scope.outputs.core_required }}
+      godot_required: ${{ steps.scope.outputs.godot_required }}
+      proof_a_smoke_required: ${{ steps.scope.outputs.proof_a_smoke_required }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Determine latest update scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" != "pull_request" ]]; then
+            echo "core_required=true" >> "${GITHUB_OUTPUT}"
+            echo "godot_required=true" >> "${GITHUB_OUTPUT}"
+            echo "proof_a_smoke_required=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [[ "${ACTION}" == "synchronize" ]] && git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
+            FROM_SHA="$(git rev-parse "${HEAD_SHA}^")"
+          else
+            git fetch --no-tags --depth=1 origin "${BASE_SHA}"
+            FROM_SHA="${BASE_SHA}"
+          fi
+
+          git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
+
+          if grep -Eq '^(src/|tests/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+            echo "core_required=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "core_required=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/Settlement/|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/(WorldSeed|EntityId|SimulationTime)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|\.editorconfig$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+            echo "godot_required=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "godot_required=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$)' "${RUNNER_TEMP}/changed-files.txt"; then
+            echo "proof_a_smoke_required=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "proof_a_smoke_required=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  core:
+    needs: scope
+    if: needs.scope.outputs.core_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.423"
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Developer tooling syntax
+        run: python -m py_compile TOOLS/dev.py
+
+      - name: Restore core only
+        run: dotnet restore WorldSimulate.Core.slnf
+
+      - name: Build core only
+        run: dotnet build WorldSimulate.Core.slnf --configuration Release --no-restore --nologo --verbosity minimal
+
+      - name: Core tests
+        run: dotnet test tests/Mws.Core.Tests/Mws.Core.Tests.csproj --configuration Release --no-build --no-restore --nologo --verbosity minimal
+
+      - name: Architecture tests
+        run: dotnet test tests/Mws.Architecture.Tests/Mws.Architecture.Tests.csproj --configuration Release --no-build --no-restore --nologo --verbosity minimal
+
+      - name: Headless core smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build --no-restore -- 42 100 | tee headless-smoke.log
+          grep -q "MWS_HEADLESS_OK seed=42 hours=100 day=4 hour=4 residents=3" headless-smoke.log
+
+      - name: Proof A workload smoke
+        if: needs.scope.outputs.proof_a_smoke_required == 'true'
+        run: |
+          dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
+          dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale 500
+
+  godot:
+    needs: [scope, core]
+    if: needs.scope.outputs.godot_required == 'true' && needs.core.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      GODOT_VERSION: "4.7.1"
+      GODOT_ARCHIVE: "Godot_v4.7.1-stable_mono_linux_x86_64.zip"
+      GODOT_SHA256: "6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.423"
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore Godot project
+        run: dotnet restore src/Mws.Client.Godot/Mws.Client.Godot.csproj
+
+      - name: Build Godot C# project
+        run: dotnet build src/Mws.Client.Godot/Mws.Client.Godot.csproj --configuration Debug --no-restore --nologo --verbosity minimal
+
+      - name: Cache Godot editor
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: .ci/godot/${{ env.GODOT_VERSION }}
+          key: godot-${{ runner.os }}-${{ env.GODOT_VERSION }}-mono-x86_64-${{ env.GODOT_SHA256 }}
+
+      - name: Download verified Godot .NET editor
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ".ci/godot/${GODOT_VERSION}"
+          curl --fail --location --retry 2 \
+            --output "${RUNNER_TEMP}/${GODOT_ARCHIVE}" \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/${GODOT_ARCHIVE}"
+          echo "${GODOT_SHA256}  ${RUNNER_TEMP}/${GODOT_ARCHIVE}" | sha256sum --check -
+          unzip -q "${RUNNER_TEMP}/${GODOT_ARCHIVE}" -d ".ci/godot/${GODOT_VERSION}"
+
+      - name: Resolve Godot binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_BIN="$(find ".ci/godot/${GODOT_VERSION}" -type f -name 'Godot_v4.7.1-stable_mono_linux.x86_64' -print -quit)"
+          test -n "${GODOT_BIN}"
+          chmod +x "${GODOT_BIN}"
+          echo "GODOT_BIN=${GODOT_BIN}" >> "${GITHUB_ENV}"
+
+      - name: Headless integration smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${GODOT_BIN}" --headless --path src/Mws.Client.Godot --quit-after 120 2>&1 | tee godot-smoke.log
+          grep -q "MWS_GODOT_SMOKE_OK" godot-smoke.log

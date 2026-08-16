@@ -1,0 +1,17 @@
+{
+  "id": "RW-B_SAVE_REPLAY",
+  "version": "1",
+  "status": "DEFINED",
+  "purpose": "Measure snapshot size, save/load latency and deterministic replay equivalence including pending processes and version metadata.",
+  "enabled_systems": ["authoritative_state", "snapshot_store", "replay_harness"],
+  "seed_policy": "Fixed recorded seed set and identical pre-save antecedents across repetitions.",
+  "execution_modes": ["headless", "release"],
+  "workload_parameters": {
+    "snapshot_shapes": "versioned kernel states including pending process and identity allocator",
+    "replay_span": "recorded in result; must include at least one post-load causal consequence"
+  },
+  "required_metrics": ["save_bytes", "save_latency", "load_latency", "replay_mismatch_count", "peak_memory"],
+  "duration_contract": {"kind": "compound", "value_source": "Each result records transition count before snapshot and replay span after load."},
+  "instrumentation_contract": "Record checksum/diff cost separately from save/load latency where material.",
+  "enabled_at_maturity": "P0.6"
+}

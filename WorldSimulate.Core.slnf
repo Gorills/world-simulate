@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "WorldSimulate.sln",
+    "projects": [
+      "src\\Mws.Domain\\Mws.Domain.csproj",
+      "src\\Mws.Simulation.Api\\Mws.Simulation.Api.csproj",
+      "src\\Mws.Simulation.Runtime\\Mws.Simulation.Runtime.csproj",
+      "src\\Mws.Persistence.Json\\Mws.Persistence.Json.csproj",
+      "src\\Mws.Headless\\Mws.Headless.csproj",
+      "tests\\Mws.Core.Tests\\Mws.Core.Tests.csproj",
+      "tests\\Mws.Architecture.Tests\\Mws.Architecture.Tests.csproj"
+    ]
+  }
+}

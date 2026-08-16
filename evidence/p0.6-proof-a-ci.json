@@ -1,0 +1,82 @@
+{
+  "id": "EV_P06_PROOF_A_EXECUTABLE_V1",
+  "checkpoint": "P0.6 Proof A",
+  "status": "pass",
+  "formal_phase_status": "PASS",
+  "evidence_class": "executable_ci_and_measured_reference_workloads",
+  "subject_version": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
+  "observed_at": "2026-08-16",
+  "checks": {
+    "routine_ci": {
+      "run_id": 31944761344,
+      "result": "success",
+      "covers": [
+        "release_core_build",
+        "core_tests",
+        "architecture_tests",
+        "headless_core_smoke",
+        "godot_csharp_build",
+        "godot_headless_integration_smoke"
+      ]
+    },
+    "canonical_proof_a_measurement": {
+      "run_id": 31944761360,
+      "result": "success",
+      "job": "rw-a-d",
+      "artifact_id": 9262973983,
+      "artifact_name": "p0.6-rw-a-d-results",
+      "artifact_digest": "sha256:6198badeb930ded568fb7b5942a47fb5fbcb8c11c17454bb763caf9509764ff9",
+      "repetitions": 3,
+      "budget_status_after": "MEASURED",
+      "benchmark_result_ids": [
+        "BR_P06_RW_A_KERNEL_EVENTS_V1",
+        "BR_P06_RW_B_SAVE_REPLAY_V1",
+        "BR_P06_RW_C_TRACE_V1",
+        "BR_P06_RW_D_LOD_ROUNDTRIP_V1"
+      ],
+      "schema_validation": "pass"
+    }
+  },
+  "semantic_oracles": {
+    "RW-A_KERNEL_EVENTS": {
+      "transition_failure_count": 0,
+      "ordering_mismatch_count": 0
+    },
+    "RW-B_SAVE_REPLAY": {
+      "replay_mismatch_count": 0
+    },
+    "RW-C_TRACE": {
+      "reconstruction_failure_count": 0
+    },
+    "RW-D_LOD_ROUNDTRIP": {
+      "identity_mismatch_count": 0,
+      "conservation_mismatch_count": 0,
+      "information_mismatch_count": 0
+    }
+  },
+  "formal_linkage": {
+    "phase_result_id": "PR_P06_V1",
+    "proof_result_id": "ER_PROOF_A_P06_V1",
+    "gate_result_ids": [
+      "GR_P06_G20_V1",
+      "GR_P06_G25_V1",
+      "GR_P06_G26_V1",
+      "GR_P06_G27_V1",
+      "GR_P06_G28_V1"
+    ]
+  },
+  "toolchain": {
+    "godot": "4.7.1",
+    "dotnet_sdk": "8.0.423",
+    "measurement_runtime": ".NET 8.0.29",
+    "measurement_os": "Ubuntu 24.04.4 LTS",
+    "measurement_hardware_class": "github-hosted-ubuntu-x64-reference-ci"
+  },
+  "remaining_formal_work": [],
+  "non_blocking_future_scope": [
+    "product-scale capacity calibration",
+    "long-run domain stability beyond Proof A",
+    "export pipeline",
+    "render correctness"
+  ]
+}

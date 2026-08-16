@@ -1,0 +1,24 @@
+{
+  "id": "GR_P06_G26_V1",
+  "gate_id": "G26",
+  "subject_id": "P0.6",
+  "subject_version": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
+  "evidence_ids": [
+    "EV_P06_PROOF_A_EXECUTABLE_V1"
+  ],
+  "system_spec_ids": [],
+  "maturity_record_ids": [],
+  "capability_ids": [],
+  "findings": [],
+  "backtracking_target": null,
+  "reviewer": "proof-a-foundation-review",
+  "timestamp": "2026-08-16T18:45:00+07:00",
+  "applicability": "NOT_APPLICABLE",
+  "applicability_rationale": "P0.6 phase acceptance does not claim promotion of a registered SystemSpec from M0 toward M5; no maturity advancement is being inferred from code or proof results.",
+  "verdict": "NOT_APPLICABLE",
+  "validation_run_ids": [],
+  "benchmark_ids": [],
+  "metrics_or_oracles": [
+    "No SystemSpec maturity promotion is claimed by this P0.6 closure."
+  ]
+}

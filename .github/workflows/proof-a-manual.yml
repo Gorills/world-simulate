@@ -1,0 +1,47 @@
+name: proof-a-manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: "RW-A/B/C/D workload scale (100..200000)"
+        required: false
+        default: "20000"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proof-a-manual
+  cancel-in-progress: true
+
+jobs:
+  workloads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CI: "true"
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.423"
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Restore workload harness
+        run: dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
+      - name: Run RW-A through RW-D
+        run: dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale "${{ inputs.scale }}" --output proof-a-report.json
+      - name: Upload Proof A report
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0.6-proof-a-workloads
+          path: proof-a-report.json
+          retention-days: 14

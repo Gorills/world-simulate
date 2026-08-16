@@ -1,0 +1,27 @@
+{
+  "id": "GR_P06_G28_V1",
+  "gate_id": "G28",
+  "subject_id": "P0.6",
+  "subject_version": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
+  "evidence_ids": [
+    "EV_P06_PROOF_A_EXECUTABLE_V1"
+  ],
+  "system_spec_ids": [],
+  "maturity_record_ids": [],
+  "capability_ids": [],
+  "findings": [],
+  "backtracking_target": null,
+  "reviewer": "proof-a-foundation-review",
+  "timestamp": "2026-08-16T18:45:00+07:00",
+  "applicability": "APPLICABLE",
+  "applicability_rationale": "P0.6 accepts the solo-development workflow with bounded fast checks, core-only incremental build/test scope, conditional Godot execution, stale-run cancellation, hard timeouts, and separate benchmark proof.",
+  "verdict": "PASS",
+  "validation_run_ids": [
+    "GH_ACTIONS_RUN_31944761344"
+  ],
+  "benchmark_ids": [],
+  "metrics_or_oracles": [
+    "Routine unified CI passed core, architecture, headless, and Godot checks.",
+    "Developer fast path and CI scope selection avoid unbounded full-suite execution during routine edits."
+  ]
+}

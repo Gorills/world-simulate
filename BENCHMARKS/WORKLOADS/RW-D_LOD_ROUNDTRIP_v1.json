@@ -1,0 +1,17 @@
+{
+  "id": "RW-D_LOD_ROUNDTRIP",
+  "version": "1",
+  "status": "DEFINED",
+  "purpose": "Measure aggregate/materialize round-trip cost and detect identity, conservation, information, rare-tail or pending-process divergence.",
+  "enabled_systems": ["authoritative_state", "lod_materializer", "lod_aggregator"],
+  "seed_policy": "Fixed recorded seed set; full-detail and aggregate branches share declared coupled antecedents.",
+  "execution_modes": ["headless", "release"],
+  "workload_parameters": {
+    "roundtrips": "recorded positive integer",
+    "persistent_exceptions": "versioned test set including identity, secret, rare tail and pending process"
+  },
+  "required_metrics": ["materialize_latency", "aggregate_latency", "state_bytes", "identity_mismatch_count", "conservation_mismatch_count", "information_mismatch_count"],
+  "duration_contract": {"kind": "iterations", "value_source": "Round-trip count and simulated interval between transitions are recorded in each result."},
+  "instrumentation_contract": "Record differential-check overhead separately when it materially affects timing.",
+  "enabled_at_maturity": "P0.6"
+}
