@@ -1,14 +1,18 @@
 namespace Mws.Domain;
 
-public readonly record struct SimulationScopeId(ulong Value)
+public readonly record struct SimulationScopeId
 {
-    public static SimulationScopeId Root { get; } = new(1);
-
-    public SimulationScopeId
+    public SimulationScopeId(ulong value)
     {
-        if (Value == 0)
+        if (value == 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(Value), Value, "Simulation scope ID must be non-zero.");
+            throw new ArgumentOutOfRangeException(nameof(value), value, "Simulation scope ID must be non-zero.");
         }
+
+        Value = value;
     }
+
+    public ulong Value { get; }
+
+    public static SimulationScopeId Root { get; } = new(1);
 }
