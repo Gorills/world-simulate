@@ -16,17 +16,8 @@ on:
       - ".github/workflows/proof-a-measure.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "BENCHMARKS/Mws.ProofA.Measurements/**"
-      - "BENCHMARKS/WORKLOADS/**"
-      - "src/Mws.Domain/**"
-      - "src/Mws.Simulation.Runtime/Mws.Simulation.Runtime.csproj"
-      - "src/Mws.Simulation.Runtime/Foundation/**"
-      - "src/Mws.Simulation.Runtime/Verification/ProofA/**"
-      - "src/Mws.Simulation.Api/ProofAKernelContracts.cs"
-      - "src/Mws.Persistence.Json/ProofAKernelJson.cs"
-      - "MACHINE/benchmark-result.schema.json"
-      - ".github/workflows/proof-a-measure.yml"
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -53,12 +44,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
 
-      - name: Determine latest measurement scope
+      - name: Determine full measurement scope
         id: scope
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          ACTION: ${{ github.event.action }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -68,14 +58,8 @@ jobs:
             exit 0
           fi
 
-          if [[ "${ACTION}" == "synchronize" ]] && git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
-            FROM_SHA="$(git rev-parse "${HEAD_SHA}^")"
-          else
-            git fetch --no-tags --depth=1 origin "${BASE_SHA}"
-            FROM_SHA="${BASE_SHA}"
-          fi
-
-          git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
+          git fetch --no-tags --depth=1 origin "${BASE_SHA}"
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
           if grep -Eq '^(BENCHMARKS/Mws\.ProofA\.Measurements/|BENCHMARKS/WORKLOADS/|src/Mws\.Domain/|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Simulation\.Runtime/Foundation/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofAKernelContracts\.cs$|src/Mws\.Persistence\.Json/ProofAKernelJson\.cs$|MACHINE/benchmark-result\.schema\.json$|\.github/workflows/proof-a-measure\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "measure_required=true" >> "${GITHUB_OUTPUT}"
           else
@@ -132,3 +116,23 @@ jobs:
           path: artifacts/benchmarks/*.json
           if-no-files-found: error
           retention-days: 14
+
+  required:
+    name: proof-a-required
+    if: always()
+    needs: [scope, rw-a-d]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Verify required Proof A jobs
+        shell: bash
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          MEASURE_REQUIRED: ${{ needs.scope.outputs.measure_required }}
+          MEASURE_RESULT: ${{ needs.rw-a-d.result }}
+        run: |
+          set -euo pipefail
+          test "${SCOPE_RESULT}" = "success"
+          if [[ "${MEASURE_REQUIRED}" == "true" ]]; then
+            test "${MEASURE_RESULT}" = "success"
+          fi
