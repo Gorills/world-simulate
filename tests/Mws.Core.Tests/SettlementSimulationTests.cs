@@ -1,5 +1,6 @@
 using Mws.Domain;
 using Mws.Persistence.Json;
+using Mws.Simulation.Api;
 using Mws.Simulation.Runtime;
 using Xunit;
 
@@ -26,17 +27,18 @@ public sealed class SettlementSimulationTests
     }
 
     [Fact]
-    public void WorkChangesNeedsAndProducesRations()
+    public void WorkplacesProduceAndTransformOwnedItemStacks()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(502));
-        var before = simulation.Project();
 
         simulation.AdvanceHours(12);
-        var after = simulation.Project();
+        var projection = simulation.Project();
 
-        Assert.True(after.PantryRations > before.PantryRations);
-        Assert.All(after.Residents, resident => Assert.True(resident.Hunger > 0));
-        Assert.Contains(after.Residents, resident => resident.Activity == Mws.Simulation.Api.ResidentActivity.Working);
+        Assert.Equal(3, projection.Workplaces.Count);
+        Assert.Contains(projection.Residents, resident => resident.Activity == ResidentActivity.Working);
+        Assert.True(StockpileQuantity(projection, SettlementItems.Ration) > 6);
+        Assert.True(StockpileQuantity(projection, SettlementItems.Herb) > 0);
+        Assert.Equal(4, StockpileQuantity(projection, SettlementItems.Grain));
     }
 
     [Fact]
@@ -58,9 +60,51 @@ public sealed class SettlementSimulationTests
     }
 
     [Fact]
-    public void ProjectionUsesCanonicalDayAndHour()
+    public void ItemTransferPreservesOwnershipAcrossSaveLoad()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(504));
+        simulation.AdvanceHours(12);
+        var resident = simulation.Project().Residents[0];
+        var stockpileBefore = StockpileQuantity(simulation.Project(), SettlementItems.Herb);
+
+        var result = simulation.GiveItemToResident(resident.Id, SettlementItems.Herb, 2);
+        var saved = SettlementStateJson.Serialize(simulation.CaptureState());
+        var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(saved));
+        var projection = restored.Project();
+        var restoredResident = projection.Residents.Single(entry => entry.Id == resident.Id);
+
+        Assert.True(result.Success);
+        Assert.Equal(stockpileBefore - 2, StockpileQuantity(projection, SettlementItems.Herb));
+        Assert.Equal(2, InventoryQuantity(restoredResident, SettlementItems.Herb));
+        Assert.Contains(projection.RecentEvents, entry => entry.Kind == "item-given" && entry.SubjectId == resident.Id);
+    }
+
+    [Fact]
+    public void RpgChoiceChangesAffinityAndSurvivesReload()
+    {
+        var simulation = SettlementSimulation.CreateDefault(new WorldSeed(505));
+        simulation.AdvanceHours(8);
+        var resident = simulation.Project().Residents[1];
+
+        var workAnswer = simulation.InteractWithResident(resident.Id, ResidentInteractionChoice.AskAboutWork);
+        var encouragement = simulation.InteractWithResident(resident.Id, ResidentInteractionChoice.Encourage);
+        var sharedRation = simulation.InteractWithResident(resident.Id, ResidentInteractionChoice.ShareRation);
+        var saved = SettlementStateJson.Serialize(simulation.CaptureState());
+        var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(saved));
+        var restoredResident = restored.Project().Residents.Single(entry => entry.Id == resident.Id);
+
+        Assert.True(workAnswer.Success);
+        Assert.Contains(resident.Profession.ToString(), workAnswer.Message);
+        Assert.True(encouragement.Success);
+        Assert.True(sharedRation.Success);
+        Assert.Equal(3, restoredResident.Affinity);
+        Assert.Contains(restored.Project().RecentEvents, entry => entry.Kind == "shared-ration" && entry.SubjectId == resident.Id);
+    }
+
+    [Fact]
+    public void ProjectionUsesCanonicalDayHourAndAssignments()
+    {
+        var simulation = SettlementSimulation.CreateDefault(new WorldSeed(506));
         simulation.AdvanceHours(27);
 
         var projection = simulation.Project();
@@ -68,6 +112,18 @@ public sealed class SettlementSimulationTests
         Assert.Equal(1, projection.Day);
         Assert.Equal(3, projection.Hour);
         Assert.Equal(3, projection.Residents.Count);
+        Assert.Equal(3, projection.Workplaces.Count);
+        Assert.All(projection.Residents, resident => Assert.False(string.IsNullOrWhiteSpace(resident.WorkplaceName)));
         Assert.Contains(projection.RecentEvents, entry => entry.Kind == "day-began");
     }
+
+    private static int StockpileQuantity(SettlementProjection projection, string itemId) =>
+        projection.Stockpile
+            .Where(stack => string.Equals(stack.ItemId, itemId, StringComparison.Ordinal))
+            .Sum(stack => stack.Quantity);
+
+    private static int InventoryQuantity(ResidentProjection resident, string itemId) =>
+        resident.Inventory
+            .Where(stack => string.Equals(stack.ItemId, itemId, StringComparison.Ordinal))
+            .Sum(stack => stack.Quantity);
 }

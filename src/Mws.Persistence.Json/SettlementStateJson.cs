@@ -31,6 +31,12 @@ public static class SettlementStateJson
             throw new InvalidDataException("Settlement snapshot checksum mismatch.");
         }
 
+        if (envelope.SchemaVersion != SettlementVersions.CurrentSchemaVersion)
+        {
+            throw new NotSupportedException(
+                $"Settlement schema {envelope.SchemaVersion} is unsupported; expected {SettlementVersions.CurrentSchemaVersion}.");
+        }
+
         var state = JsonSerializer.Deserialize(envelope.Payload, SettlementStateJsonContext.Default.SettlementState)
             ?? throw new InvalidDataException("Settlement snapshot payload is missing.");
         if (envelope.SchemaVersion != state.SchemaVersion)
