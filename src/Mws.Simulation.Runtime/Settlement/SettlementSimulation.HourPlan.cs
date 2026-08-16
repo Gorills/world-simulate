@@ -152,7 +152,7 @@ public sealed partial class SettlementSimulation
         return projectedFinal[workplace.OutputItemId] <= int.MaxValue - workplace.OutputQuantity;
     }
 
-    private void ReserveWork(
+    private static void ReserveWork(
         WorkplaceState workplace,
         IDictionary<string, int> availableInputs,
         IDictionary<string, int> projectedFinal,
