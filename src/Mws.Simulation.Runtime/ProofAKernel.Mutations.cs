@@ -85,20 +85,20 @@ public sealed partial class ProofAKernel
             return recorded;
         }
 
-        if (!TryValidateTransfer(ownerId, fromId, toId, amount, out var from, out var to, out var failureCode))
+        if (!TryValidateTransfer(ownerId, fromId, toId, amount, out var source, out var destination, out var failureCode))
         {
             return Record(commandId, false, failureCode, null);
         }
 
-        var fromBefore = from.Resource;
-        var toBefore = to.Resource;
-        _entities[fromId.Value] = from with { Resource = checked(fromBefore - amount) };
-        _entities[toId.Value] = to with { Resource = checked(toBefore + amount) };
+        var sourceBefore = source.Resource;
+        var destinationBefore = destination.Resource;
+        _entities[fromId.Value] = source with { Resource = checked(sourceBefore - amount) };
+        _entities[toId.Value] = destination with { Resource = checked(destinationBefore + amount) };
 
         if (simulateFailure)
         {
-            _entities[fromId.Value] = from with { Resource = fromBefore };
-            _entities[toId.Value] = to with { Resource = toBefore };
+            _entities[fromId.Value] = source with { Resource = sourceBefore };
+            _entities[toId.Value] = destination with { Resource = destinationBefore };
             var rollbackTraceId = AppendTrace(null, "atomic-transfer-rolled-back", "Compensation restored the pre-operation state.");
             return Record(commandId, false, "ROLLED_BACK", rollbackTraceId);
         }
@@ -132,7 +132,7 @@ public sealed partial class ProofAKernel
                     continue;
                 }
 
-                if (!TryValidateTransfer(intent.OwnerId, intent.FromId, intent.ToId, intent.Amount, out var from, out _, out var failureCode))
+                if (!TryValidateTransfer(intent.OwnerId, intent.FromId, intent.ToId, intent.Amount, out var source, out _, out var failureCode))
                 {
                     Record(intent.CommandId, false, failureCode, null);
                     resolutions.Add(new ProofATransferResolution(intent.CommandId, false, failureCode));
@@ -140,7 +140,7 @@ public sealed partial class ProofAKernel
                 }
 
                 reservations.TryGetValue(intent.FromId.Value, out var alreadyReserved);
-                if (from.Resource - alreadyReserved < intent.Amount)
+                if (source.Resource - alreadyReserved < intent.Amount)
                 {
                     const string conflictCode = "RESERVATION_CONFLICT";
                     Record(intent.CommandId, false, conflictCode, null);
@@ -154,10 +154,10 @@ public sealed partial class ProofAKernel
 
             foreach (var intent in accepted)
             {
-                var from = _entities[intent.FromId.Value];
-                var to = _entities[intent.ToId.Value];
-                _entities[intent.FromId.Value] = from with { Resource = checked(from.Resource - intent.Amount) };
-                _entities[intent.ToId.Value] = to with { Resource = checked(to.Resource + intent.Amount) };
+                var source = _entities[intent.FromId.Value];
+                var destination = _entities[intent.ToId.Value];
+                _entities[intent.FromId.Value] = source with { Resource = checked(source.Resource - intent.Amount) };
+                _entities[intent.ToId.Value] = destination with { Resource = checked(destination.Resource + intent.Amount) };
                 var traceId = AppendTrace(null, "same-time-transfer", "Deterministic reservation arbitration committed a transfer.");
                 Record(intent.CommandId, true, "TRANSFERRED", traceId);
                 resolutions.Add(new ProofATransferResolution(intent.CommandId, true, "TRANSFERRED"));
@@ -172,12 +172,12 @@ public sealed partial class ProofAKernel
         EntityId fromId,
         EntityId toId,
         long amount,
-        out ProofAEntityState from,
-        out ProofAEntityState to,
+        out ProofAEntityState source,
+        out ProofAEntityState destination,
         out string failureCode)
     {
-        from = default!;
-        to = default!;
+        source = default!;
+        destination = default!;
         failureCode = string.Empty;
 
         if (amount <= 0)
@@ -186,19 +186,19 @@ public sealed partial class ProofAKernel
             return false;
         }
 
-        if (!_entities.TryGetValue(fromId.Value, out from) || !_entities.TryGetValue(toId.Value, out to))
+        if (!_entities.TryGetValue(fromId.Value, out source) || !_entities.TryGetValue(toId.Value, out destination))
         {
             failureCode = "ENTITY_NOT_FOUND";
             return false;
         }
 
-        if (from.OwnerId != ownerId || to.OwnerId != ownerId)
+        if (source.OwnerId != ownerId || destination.OwnerId != ownerId)
         {
             failureCode = "OWNER_MISMATCH";
             return false;
         }
 
-        if (from.Resource < amount)
+        if (source.Resource < amount)
         {
             failureCode = "INSUFFICIENT_RESOURCE";
             return false;
@@ -206,7 +206,7 @@ public sealed partial class ProofAKernel
 
         try
         {
-            _ = checked(to.Resource + amount);
+            _ = checked(destination.Resource + amount);
         }
         catch (OverflowException)
         {
