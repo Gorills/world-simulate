@@ -334,7 +334,7 @@ public sealed class SettlementSimulation
     private static SettlementCommandResult ResidentNotFound(EntityId residentId) =>
         new(false, "RESIDENT_NOT_FOUND", residentId, "Resident does not exist.");
 
-    private IReadOnlyList<ItemStackProjection> ProjectInventory(EntityId ownerId) =>
+    private ItemStackProjection[] ProjectInventory(EntityId ownerId) =>
         _itemStacks
             .Where(stack => stack.OwnerId == ownerId && stack.Quantity > 0)
             .OrderBy(stack => stack.StackId)
