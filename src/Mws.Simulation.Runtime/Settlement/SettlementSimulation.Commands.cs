@@ -14,8 +14,7 @@ public sealed partial class SettlementSimulation
             throw new ArgumentOutOfRangeException(nameof(command), "Command ID must be positive and allocatable.");
         }
 
-        var recorded = _commandReceipts.FirstOrDefault(receipt => receipt.CommandId == command.Id);
-        if (recorded is not null)
+        if (TryGetCommandReceipt(command.Id, out var recorded))
         {
             return new SettlementCommandResult(
                 recorded.Success,
@@ -24,7 +23,12 @@ public sealed partial class SettlementSimulation
                 recorded.Facts.ToArray());
         }
 
-        _nextCommandId = Math.Max(_nextCommandId, checked(command.Id.Value + 1));
+        if (command.Id.Value < _nextCommandId)
+        {
+            return Result(false, SettlementResultCodes.StaleCommand, null);
+        }
+
+        _nextCommandId = checked(command.Id.Value + 1);
 
         var result = command switch
         {
@@ -34,7 +38,7 @@ public sealed partial class SettlementSimulation
             _ => throw new ArgumentOutOfRangeException(nameof(command), command.GetType().Name, "Unknown settlement command."),
         };
 
-        _commandReceipts.Add(new SettlementCommandReceipt(
+        RecordCommandReceipt(new SettlementCommandReceipt(
             command.Id,
             result.Success,
             result.Code,
