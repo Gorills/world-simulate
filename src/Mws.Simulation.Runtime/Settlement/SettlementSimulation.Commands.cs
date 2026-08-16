@@ -106,11 +106,22 @@ public sealed partial class SettlementSimulation
             return ResidentNotFound(residentId);
         }
 
-        if (!TryTransferItem(_settlementOwnerId, residentId, itemId, quantity))
+        var transfer = TryTransferItem(_settlementOwnerId, residentId, itemId, quantity);
+        if (transfer == ItemTransferStatus.SourceUnavailable)
         {
             return Result(
                 false,
                 SettlementResultCodes.ItemNotAvailable,
+                residentId,
+                Fact(SettlementFactKeys.ItemId, itemId),
+                IntFact(SettlementFactKeys.Quantity, quantity));
+        }
+
+        if (transfer == ItemTransferStatus.DestinationCapacityExceeded)
+        {
+            return Result(
+                false,
+                SettlementResultCodes.InventoryCapacityExceeded,
                 residentId,
                 Fact(SettlementFactKeys.ItemId, itemId),
                 IntFact(SettlementFactKeys.Quantity, quantity));
@@ -167,23 +178,25 @@ public sealed partial class SettlementSimulation
 
     private SettlementCommandResult Encourage(int index, ResidentState resident)
     {
+        var affinity = IncreaseAffinity(resident.Affinity, 1);
         _residents[index] = resident with
         {
             Energy = Math.Min(100, resident.Energy + 10),
-            Affinity = checked(resident.Affinity + 1),
+            Affinity = affinity.Value,
         };
-        AppendEvent(SettlementEventKinds.Encouraged, resident.Id, IntFact(SettlementFactKeys.AffinityDelta, 1));
+        AppendEvent(SettlementEventKinds.Encouraged, resident.Id, IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
 
         return Result(
             true,
             SettlementResultCodes.Encouraged,
             resident.Id,
             Fact(SettlementFactKeys.ResidentName, resident.Name),
-            IntFact(SettlementFactKeys.AffinityDelta, 1));
+            IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
     }
 
     private SettlementCommandResult ShareRation(int index, ResidentState resident)
     {
+        var affinity = IncreaseAffinity(resident.Affinity, 2);
         if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
         {
             return Result(false, SettlementResultCodes.NoRations, resident.Id);
@@ -193,13 +206,13 @@ public sealed partial class SettlementSimulation
         {
             Hunger = Math.Max(0, resident.Hunger - 45),
             Activity = ResidentActivity.Eating,
-            Affinity = checked(resident.Affinity + 2),
+            Affinity = affinity.Value,
         };
         AppendEvent(
             SettlementEventKinds.SharedRation,
             resident.Id,
             Fact(SettlementFactKeys.ItemId, SettlementItems.Ration),
-            IntFact(SettlementFactKeys.AffinityDelta, 2));
+            IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
 
         return Result(
             true,
@@ -207,7 +220,13 @@ public sealed partial class SettlementSimulation
             resident.Id,
             Fact(SettlementFactKeys.ResidentName, resident.Name),
             Fact(SettlementFactKeys.ItemId, SettlementItems.Ration),
-            IntFact(SettlementFactKeys.AffinityDelta, 2));
+            IntFact(SettlementFactKeys.AffinityDelta, affinity.Delta));
+    }
+
+    private static (int Value, int Delta) IncreaseAffinity(int value, int requestedDelta)
+    {
+        var next = Math.Min((long)int.MaxValue, (long)value + requestedDelta);
+        return ((int)next, checked((int)(next - value)));
     }
 
     private static SettlementCommandResult ResidentNotFound(EntityId residentId) =>
