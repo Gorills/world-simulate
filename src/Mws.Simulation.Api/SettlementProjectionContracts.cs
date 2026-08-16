@@ -28,6 +28,7 @@ public sealed record ResidentProjection(
     IReadOnlyList<ItemStackProjection> Inventory);
 
 public sealed record SettlementProjection(
+    SimulationScopeId ScopeId,
     SimulationTime Time,
     int Day,
     int Hour,

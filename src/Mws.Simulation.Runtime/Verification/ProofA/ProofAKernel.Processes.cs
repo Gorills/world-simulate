@@ -1,4 +1,3 @@
-using System.Text;
 using Mws.Domain;
 using Mws.Simulation.Api;
 
@@ -127,7 +126,7 @@ public sealed partial class ProofAKernel
             return existing.Value;
         }
 
-        var value = ComputeDeterministicRandom(domain, subjectId, causalAttempt);
+        var value = DeterministicSimulationHash.BoundOutcome(_worldSeed, domain, subjectId, causalAttempt);
         _boundRandomOutcomes.Add(key, new ProofABoundRandomOutcome(key, value));
         AppendTrace(null, "random-outcome-bound", "Random outcome bound to represented antecedents.");
         return value;
@@ -143,35 +142,5 @@ public sealed partial class ProofAKernel
         var traceId = _nextTraceId++;
         _trace.Add(new ProofACausalTraceEntry(traceId, parentTraceId, Time, kind, detail));
         return traceId;
-    }
-
-    private ulong ComputeDeterministicRandom(string domain, EntityId subjectId, long causalAttempt)
-    {
-        const ulong offset = 14695981039346656037UL;
-        const ulong prime = 1099511628211UL;
-        var hash = offset;
-
-        static ulong MixNumber(ulong current, ulong value, ulong primeValue)
-        {
-            for (var i = 0; i < 8; i++)
-            {
-                current ^= (byte)(value >> (i * 8));
-                current = unchecked(current * primeValue);
-            }
-
-            return current;
-        }
-
-        hash = MixNumber(hash, _worldSeed, prime);
-        hash = MixNumber(hash, unchecked((ulong)subjectId.Value), prime);
-        hash = MixNumber(hash, unchecked((ulong)causalAttempt), prime);
-
-        foreach (var value in Encoding.UTF8.GetBytes(domain))
-        {
-            hash ^= value;
-            hash = unchecked(hash * prime);
-        }
-
-        return hash;
     }
 }

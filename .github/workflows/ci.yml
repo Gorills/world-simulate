@@ -1,7 +1,7 @@
 name: ci
 
 on:
-  pull_request:
+  push:
     branches: [main]
     paths:
       - "src/**"
@@ -14,6 +14,10 @@ on:
       - "global.json"
       - "TOOLS/dev.py"
       - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -41,12 +45,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
 
-      - name: Determine latest update scope
+      - name: Determine full change scope
         id: scope
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          ACTION: ${{ github.event.action }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -58,28 +61,22 @@ jobs:
             exit 0
           fi
 
-          if [[ "${ACTION}" == "synchronize" ]] && git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
-            FROM_SHA="$(git rev-parse "${HEAD_SHA}^")"
-          else
-            git fetch --no-tags --depth=1 origin "${BASE_SHA}"
-            FROM_SHA="${BASE_SHA}"
-          fi
+          git fetch --no-tags --depth=1 origin "${BASE_SHA}"
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
 
-          git diff --name-only "${FROM_SHA}" "${HEAD_SHA}" | tee "${RUNNER_TEMP}/changed-files.txt"
-
-          if grep -Eq '^(src/|tests/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(src/|tests/|benchmarks/|WorldSimulate\.sln$|WorldSimulate\.Core\.slnf$|Directory\.Build\.props$|\.editorconfig$|global\.json$|TOOLS/dev\.py$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "core_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "core_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/Settlement/|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/(WorldSeed|EntityId|SimulationTime)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|\.editorconfig$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/Settlement/|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/(WorldSeed|EntityId|SimulationTime|SimulationScopeId)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|\.editorconfig$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "godot_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/Foundation/|src/Mws\.Simulation\.Runtime/Verification/ProofA/|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime|SimulationScopeId)\.cs$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "proof_a_smoke_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "proof_a_smoke_required=false" >> "${GITHUB_OUTPUT}"
@@ -89,7 +86,7 @@ jobs:
     needs: scope
     if: needs.scope.outputs.core_required == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
@@ -127,6 +124,22 @@ jobs:
           set -euo pipefail
           dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build --no-restore -- 42 100 | tee headless-smoke.log
           grep -q "MWS_HEADLESS_OK seed=42 hours=100 day=4 hour=4 residents=3" headless-smoke.log
+
+      - name: Production settlement scale smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore benchmarks/Mws.Settlement.Benchmarks/Mws.Settlement.Benchmarks.csproj --nologo
+          dotnet run --configuration Release --project benchmarks/Mws.Settlement.Benchmarks/Mws.Settlement.Benchmarks.csproj --no-restore -- --residents 512 --days 30 --output settlement-scale.json | tee settlement-scale.log
+          grep -q "MWS_SETTLEMENT_SCALE_OK residents=512 days=30" settlement-scale.log
+
+      - name: Upload settlement scale metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: settlement-scale-metrics
+          path: settlement-scale.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Proof A workload smoke
         if: needs.scope.outputs.proof_a_smoke_required == 'true'
@@ -199,3 +212,28 @@ jobs:
           set -euo pipefail
           "${GODOT_BIN}" --headless --path src/Mws.Client.Godot --quit-after 120 2>&1 | tee godot-smoke.log
           grep -q "MWS_GODOT_SMOKE_OK" godot-smoke.log
+
+  required:
+    name: ci-required
+    if: always()
+    needs: [scope, core, godot]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Verify required CI jobs
+        shell: bash
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          CORE_REQUIRED: ${{ needs.scope.outputs.core_required }}
+          CORE_RESULT: ${{ needs.core.result }}
+          GODOT_REQUIRED: ${{ needs.scope.outputs.godot_required }}
+          GODOT_RESULT: ${{ needs.godot.result }}
+        run: |
+          set -euo pipefail
+          test "${SCOPE_RESULT}" = "success"
+          if [[ "${CORE_REQUIRED}" == "true" ]]; then
+            test "${CORE_RESULT}" = "success"
+          fi
+          if [[ "${GODOT_REQUIRED}" == "true" ]]; then
+            test "${GODOT_RESULT}" = "success"
+          fi

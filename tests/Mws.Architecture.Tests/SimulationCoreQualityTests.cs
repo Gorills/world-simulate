@@ -43,6 +43,28 @@ public sealed class SimulationCoreQualityTests
     }
 
     [Fact]
+    public void ProofAndProductionUseTheSameDeterministicHashPrimitive()
+    {
+        var root = FindRepositoryRoot();
+        var proof = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Mws.Simulation.Runtime",
+            "Verification",
+            "ProofA",
+            "ProofAKernel.Processes.cs"));
+        var production = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Mws.Simulation.Runtime",
+            "Settlement",
+            "SettlementSimulation.HourPlan.cs"));
+
+        Assert.Contains("DeterministicSimulationHash", proof, StringComparison.Ordinal);
+        Assert.Contains("DeterministicSimulationHash", production, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ProductionSettlementDoesNotDependOnProofOrPersistenceImplementation()
     {
         var settlement = Path.Combine(

@@ -14,8 +14,7 @@ public sealed partial class SettlementSimulation
             throw new ArgumentOutOfRangeException(nameof(command), "Command ID must be positive and allocatable.");
         }
 
-        var recorded = _commandReceipts.FirstOrDefault(receipt => receipt.CommandId == command.Id);
-        if (recorded is not null)
+        if (TryGetCommandReceipt(command.Id, out var recorded))
         {
             return new SettlementCommandResult(
                 recorded.Success,
@@ -24,7 +23,10 @@ public sealed partial class SettlementSimulation
                 recorded.Facts.ToArray());
         }
 
-        _nextCommandId = Math.Max(_nextCommandId, checked(command.Id.Value + 1));
+        if (command.Id.Value < _nextCommandId)
+        {
+            return Result(false, SettlementResultCodes.StaleCommand, null);
+        }
 
         var result = command switch
         {
@@ -34,7 +36,8 @@ public sealed partial class SettlementSimulation
             _ => throw new ArgumentOutOfRangeException(nameof(command), command.GetType().Name, "Unknown settlement command."),
         };
 
-        _commandReceipts.Add(new SettlementCommandReceipt(
+        _nextCommandId = checked(command.Id.Value + 1);
+        RecordCommandReceipt(new SettlementCommandReceipt(
             command.Id,
             result.Success,
             result.Code,
@@ -61,9 +64,15 @@ public sealed partial class SettlementSimulation
             return ResidentNotFound(residentId);
         }
 
-        if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
+        if (ItemQuantity(_settlementOwnerId, SettlementItems.Ration) < 1)
         {
             return Result(false, SettlementResultCodes.NoRations, residentId);
+        }
+
+        EnsureEventCapacity();
+        if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
+        {
+            throw new InvalidOperationException("Validated ration reservation could not be committed.");
         }
 
         var resident = _residents[index];
@@ -106,7 +115,7 @@ public sealed partial class SettlementSimulation
             return ResidentNotFound(residentId);
         }
 
-        if (!TryTransferItem(_settlementOwnerId, residentId, itemId, quantity))
+        if (ItemQuantity(_settlementOwnerId, itemId) < quantity)
         {
             return Result(
                 false,
@@ -114,6 +123,22 @@ public sealed partial class SettlementSimulation
                 residentId,
                 Fact(SettlementFactKeys.ItemId, itemId),
                 IntFact(SettlementFactKeys.Quantity, quantity));
+        }
+
+        if (!CanAddItem(residentId, itemId, quantity))
+        {
+            return Result(
+                false,
+                SettlementResultCodes.InventoryCapacityExceeded,
+                residentId,
+                Fact(SettlementFactKeys.ItemId, itemId),
+                IntFact(SettlementFactKeys.Quantity, quantity));
+        }
+
+        EnsureEventCapacity();
+        if (TryTransferItem(_settlementOwnerId, residentId, itemId, quantity) != ItemTransferStatus.Success)
+        {
+            throw new InvalidOperationException("Validated inventory transfer could not be committed.");
         }
 
         var resident = _residents[index];
@@ -148,66 +173,6 @@ public sealed partial class SettlementSimulation
             ResidentInteractionChoice.ShareRation => ShareRation(index, resident),
             _ => throw new ArgumentOutOfRangeException(nameof(choice), choice, "Unknown resident interaction."),
         };
-    }
-
-    private SettlementCommandResult AskAboutWork(ResidentState resident)
-    {
-        var workplace = FindWorkplace(resident.WorkplaceId);
-        var workplaceName = workplace?.Name ?? string.Empty;
-        AppendEvent(SettlementEventKinds.AskedAboutWork, resident.Id);
-
-        return Result(
-            true,
-            SettlementResultCodes.WorkInfo,
-            resident.Id,
-            Fact(SettlementFactKeys.ResidentName, resident.Name),
-            Fact(SettlementFactKeys.Profession, resident.Profession.ToString()),
-            Fact(SettlementFactKeys.WorkplaceName, workplaceName));
-    }
-
-    private SettlementCommandResult Encourage(int index, ResidentState resident)
-    {
-        _residents[index] = resident with
-        {
-            Energy = Math.Min(100, resident.Energy + 10),
-            Affinity = checked(resident.Affinity + 1),
-        };
-        AppendEvent(SettlementEventKinds.Encouraged, resident.Id, IntFact(SettlementFactKeys.AffinityDelta, 1));
-
-        return Result(
-            true,
-            SettlementResultCodes.Encouraged,
-            resident.Id,
-            Fact(SettlementFactKeys.ResidentName, resident.Name),
-            IntFact(SettlementFactKeys.AffinityDelta, 1));
-    }
-
-    private SettlementCommandResult ShareRation(int index, ResidentState resident)
-    {
-        if (!TryConsumeItem(_settlementOwnerId, SettlementItems.Ration, 1))
-        {
-            return Result(false, SettlementResultCodes.NoRations, resident.Id);
-        }
-
-        _residents[index] = resident with
-        {
-            Hunger = Math.Max(0, resident.Hunger - 45),
-            Activity = ResidentActivity.Eating,
-            Affinity = checked(resident.Affinity + 2),
-        };
-        AppendEvent(
-            SettlementEventKinds.SharedRation,
-            resident.Id,
-            Fact(SettlementFactKeys.ItemId, SettlementItems.Ration),
-            IntFact(SettlementFactKeys.AffinityDelta, 2));
-
-        return Result(
-            true,
-            SettlementResultCodes.RationShared,
-            resident.Id,
-            Fact(SettlementFactKeys.ResidentName, resident.Name),
-            Fact(SettlementFactKeys.ItemId, SettlementItems.Ration),
-            IntFact(SettlementFactKeys.AffinityDelta, 2));
     }
 
     private static SettlementCommandResult ResidentNotFound(EntityId residentId) =>
