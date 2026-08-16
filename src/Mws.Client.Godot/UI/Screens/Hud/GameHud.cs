@@ -1,10 +1,10 @@
 using Godot;
 using Mws.Client.Godot.Input;
 using Mws.Client.Godot.Session;
-using Mws.Client.Godot.UI.Screens.InteractionMenu;
-using Mws.Client.Godot.UI.Screens.ResidentPanel;
 using Mws.Client.Godot.UI.Theme;
 using Mws.Client.Godot.World.Settlement;
+using InteractionMenuView = Mws.Client.Godot.UI.Screens.InteractionMenu.InteractionMenu;
+using ResidentPanelView = Mws.Client.Godot.UI.Screens.ResidentPanel.ResidentPanel;
 
 namespace Mws.Client.Godot.UI.Screens.Hud;
 
@@ -12,8 +12,8 @@ public partial class GameHud : Control
 {
     private GameSession? _session;
     private SettlementView _settlementView = null!;
-    private ResidentPanel _residentPanel = null!;
-    private InteractionMenu _interactionMenu = null!;
+    private ResidentPanelView _residentPanel = null!;
+    private InteractionMenuView _interactionMenu = null!;
     private Label _inputHint = null!;
     private Label _feedback = null!;
 
@@ -21,8 +21,8 @@ public partial class GameHud : Control
     {
         DesignSystem.ApplyBackground(GetNode<ColorRect>("Background"));
         _settlementView = GetNode<SettlementView>("Margin/Root/Columns/SettlementView");
-        _residentPanel = GetNode<ResidentPanel>("Margin/Root/Columns/Sidebar/ResidentPanel");
-        _interactionMenu = GetNode<InteractionMenu>("Margin/Root/Columns/Sidebar/InteractionMenu");
+        _residentPanel = GetNode<ResidentPanelView>("Margin/Root/Columns/Sidebar/ResidentPanel");
+        _interactionMenu = GetNode<InteractionMenuView>("Margin/Root/Columns/Sidebar/InteractionMenu");
         _inputHint = GetNode<Label>("Margin/Root/InputHint");
         _feedback = GetNode<Label>("Margin/Root/Feedback");
         DesignSystem.ApplyLabel(_inputHint, muted: true);
@@ -45,7 +45,7 @@ public partial class GameHud : Control
         };
     }
 
-    public void Bind(GameSession session)
+    internal void Bind(GameSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
         _session = session;
@@ -54,7 +54,7 @@ public partial class GameHud : Control
         _settlementView.FocusSelected();
     }
 
-    public void SetInputDevice(InputDeviceFamily device)
+    internal void SetInputDevice(InputDeviceFamily device)
     {
         _inputHint.Text = device == InputDeviceFamily.Gamepad
             ? "LB/RB select · A interact/confirm · Y advance time · B back"
