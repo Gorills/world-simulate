@@ -28,6 +28,7 @@ public static class SettlementResultCodes
     public const string InvalidQuantity = "INVALID_QUANTITY";
     public const string ItemNotAvailable = "ITEM_NOT_AVAILABLE";
     public const string InventoryCapacityExceeded = "INVENTORY_CAPACITY_EXCEEDED";
+    public const string StaleCommand = "STALE_COMMAND";
 }
 
 public static class SettlementEventKinds
