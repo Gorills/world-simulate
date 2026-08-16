@@ -34,6 +34,7 @@ jobs:
     outputs:
       godot_required: ${{ steps.scope.outputs.godot_required }}
       proof_a_required: ${{ steps.scope.outputs.proof_a_required }}
+      proof_a_measurement_required: ${{ steps.scope.outputs.proof_a_measurement_required }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -51,19 +52,30 @@ jobs:
           if [[ "${EVENT_NAME}" != "pull_request" ]]; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
             echo "proof_a_required=true" >> "${GITHUB_OUTPUT}"
+            echo "proof_a_measurement_required=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
+
           git fetch --no-tags --depth=1 origin "${BASE_SHA}" "${HEAD_SHA}"
           git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files.txt"
+
           if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/DeterministicWorldSimulation\.cs$|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/World(Seed|Tick)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "godot_required=false" >> "${GITHUB_OUTPUT}"
           fi
+
           if grep -Eq '^(benchmarks/|src/Mws\.Persistence\.Json/|src/Mws\.Simulation\.Runtime/ProofAKernel\.|src/Mws\.Simulation\.Api/ProofA|src/Mws\.Domain/(CommandId|EntityId|SimulationTime)\.cs$|\.github/workflows/proof-a-manual\.yml$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "proof_a_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "proof_a_required=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+          git log -1 --format=%B "${HEAD_SHA}" > "${RUNNER_TEMP}/head-message.txt"
+          if grep -Fq '[proof-a]' "${RUNNER_TEMP}/head-message.txt"; then
+            echo "proof_a_measurement_required=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "proof_a_measurement_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
       - uses: actions/setup-dotnet@v6
@@ -105,6 +117,38 @@ jobs:
         run: |
           dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
           dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale 500
+
+  proof-a-measurement:
+    needs: core
+    if: needs.core.outputs.proof_a_measurement_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.423"
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore workload harness
+        run: dotnet restore benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --nologo
+
+      - name: Run bounded RW-A through RW-D measurement
+        run: dotnet run --configuration Release --project benchmarks/Mws.Benchmarks/Mws.Benchmarks.csproj --no-restore -- --scale 20000 --output proof-a-report.json
+
+      - name: Upload Proof A report
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0.6-proof-a-workloads
+          path: proof-a-report.json
+          retention-days: 14
 
   godot:
     needs: core
