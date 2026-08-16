@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/.godot/
+.vs/
+.idea/
+.vscode/
+.ci/godot/
+TestResults/
+*.user
+*.suo

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Mws.Simulation.Api/Mws.Simulation.Api.csproj" />
+  </ItemGroup>
+</Project>
