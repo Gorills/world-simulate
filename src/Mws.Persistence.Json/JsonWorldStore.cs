@@ -105,7 +105,7 @@ public sealed class JsonWorldStore
         return new WorldCheckpointState(manifest, partitions);
     }
 
-    private WorldManifestState LoadManifestFromCheckpoint(string checkpointPath)
+    private static WorldManifestState LoadManifestFromCheckpoint(string checkpointPath)
     {
         var manifestPath = Path.Combine(checkpointPath, ManifestFileName);
         if (!File.Exists(manifestPath))
