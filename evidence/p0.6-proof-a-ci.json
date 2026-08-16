@@ -1,45 +1,42 @@
 {
   "checkpoint": "P0.6 Proof A",
-  "status": "partial_pass",
-  "evidence_class": "executable_ci",
-  "commit": "b2be2d7ff8deafba512fb697a4baf923390a576a",
+  "status": "executable_pass",
+  "formal_phase_status": "pending_foundation_linkage",
+  "evidence_class": "executable_ci_and_measured_reference_workloads",
+  "subject_version": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
   "observed_at": "2026-08-16",
   "checks": {
-    "unified_ci": {
-      "run_id": 31944159434,
+    "routine_ci": {
+      "run_id": 31944761344,
       "result": "success",
-      "covers": [
-        "developer_tooling_syntax",
-        "core_only_restore",
-        "release_core_build",
-        "core_tests",
-        "architecture_tests",
-        "headless_core_smoke",
-        "proof_a_workload_smoke",
-        "godot_csharp_build",
-        "godot_headless_integration_smoke"
-      ]
+      "covers": ["release_core_build","core_tests","architecture_tests","headless_core_smoke","godot_csharp_build","godot_headless_integration_smoke"]
     },
-    "proof_a_workload_smoke": {
+    "canonical_proof_a_measurement": {
+      "run_id": 31944761360,
       "result": "success",
-      "covers": [
-        "RW-A_kernel_events_and_deterministic_ordering",
-        "RW-B_save_load_replay_equivalence",
-        "RW-C_causal_trace_write_and_reconstruction",
-        "RW-D_lod_roundtrip_identity_conservation_and_pending_process_continuity"
-      ],
-      "note": "Executable smoke coverage is proven; formal performance/allocation envelopes still require the bounded measurement run."
+      "job": "rw-a-d",
+      "artifact_id": 9262973983,
+      "artifact_name": "p0.6-rw-a-d-results",
+      "artifact_digest": "sha256:6198badeb930ded568fb7b5942a47fb5fbcb8c11c17454bb763caf9509764ff9",
+      "repetitions": 3,
+      "budget_status_after": "MEASURED",
+      "benchmark_result_ids": ["BR_P06_RW_A_KERNEL_EVENTS_V1","BR_P06_RW_B_SAVE_REPLAY_V1","BR_P06_RW_C_TRACE_V1","BR_P06_RW_D_LOD_ROUNDTRIP_V1"],
+      "schema_validation": "pass"
     }
+  },
+  "semantic_oracles": {
+    "RW-A_KERNEL_EVENTS": {"transition_failure_count": 0,"ordering_mismatch_count": 0},
+    "RW-B_SAVE_REPLAY": {"replay_mismatch_count": 0},
+    "RW-C_TRACE": {"reconstruction_failure_count": 0},
+    "RW-D_LOD_ROUNDTRIP": {"identity_mismatch_count": 0,"conservation_mismatch_count": 0,"information_mismatch_count": 0}
   },
   "toolchain": {
     "godot": "4.7.1",
-    "dotnet_sdk": "8.0.423"
+    "dotnet_sdk": "8.0.423",
+    "measurement_runtime": ".NET 8.0.29",
+    "measurement_os": "Ubuntu 24.04.4 LTS",
+    "measurement_hardware_class": "github-hosted-ubuntu-x64-reference-ci"
   },
-  "not_yet_proven": [
-    "RW-A_to_RW-D_measured_performance_envelope",
-    "allocation_envelope",
-    "long_run_stability",
-    "export_pipeline",
-    "render_correctness"
-  ]
+  "remaining_formal_work": ["Link this executable evidence into canonical GateResult, ProofResult, and PhaseResult records before declaring the foundation P0.6 phase formally PASS."],
+  "non_blocking_future_scope": ["product-scale capacity calibration","long-run domain stability beyond Proof A","export pipeline","render correctness"]
 }

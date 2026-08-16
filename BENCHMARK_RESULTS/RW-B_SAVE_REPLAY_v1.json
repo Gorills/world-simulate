@@ -1,0 +1,23 @@
+{
+  "id": "BR_P06_RW_B_SAVE_REPLAY_V1",
+  "workload_id": "RW-B_SAVE_REPLAY",
+  "workload_version": "1",
+  "subject_id": "P0.6",
+  "subject_version": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7",
+  "version_bundle": {"build": "f7732f735707b96a5231e9dd1ca2d83d6f8affa7","schema": 2,"model": "proof-a-model-v1","configuration": "proof-a-config-v1","benchmark_workload": "1"},
+  "execution_mode": "release",
+  "environment": {"hardware_class": "github-hosted-ubuntu-x64-reference-ci","os": "Ubuntu 24.04.4 LTS","runtime": ".NET 8.0.29","processor_count": 4,"architecture": "X64"},
+  "seed_ids": [42,43,44,45],
+  "workload_parameters": {"iterations": 2000,"fixture": "proof-a-kernel-v1"},
+  "duration": {"iterations": 2000},
+  "instrumentation_overhead": "Stopwatch timing plus runtime allocation/process memory counters; paired paths are used where overhead is compared.",
+  "repetitions": 3,
+  "metrics": {"save_bytes": 722637,"save_latency": 38.134100000000004,"load_latency": 51.03293333333334,"replay_mismatch_count": 0,"peak_memory": 104730624},
+  "budget_status_before": "UNMEASURED_BLOCKER",
+  "budget_status_after": "MEASURED",
+  "interpretation": "Snapshot includes pending process and command/RNG state; identical post-load antecedents must replay to identical serialized state.",
+  "timestamp": "2026-08-16T11:36:25.5148686+00:00",
+  "target_hardware_class": "github-hosted-ubuntu-x64-reference-ci",
+  "safety_margin_rationale": "This runner class is a reproducible CI reference baseline only; no product-scale capacity is inferred.",
+  "regression_threshold": "Investigate a same-workload mean regression above 25%; do not auto-fail before an accepted baseline history exists."
+}
