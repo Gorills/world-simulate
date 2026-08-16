@@ -1,3 +1,5 @@
+using Xunit;
+
 namespace Mws.Architecture.Tests;
 
 public sealed class ArchitectureBoundaryTests
@@ -25,7 +27,9 @@ public sealed class ArchitectureBoundaryTests
             foreach (var file in files)
             {
                 var text = File.ReadAllText(file);
-                Assert.DoesNotContain("Godot", text, StringComparison.OrdinalIgnoreCase);
+                Assert.False(
+                    text.Contains("Godot", StringComparison.OrdinalIgnoreCase),
+                    $"Authoritative core file unexpectedly references Godot: {file}");
             }
         }
     }
@@ -39,7 +43,9 @@ public sealed class ArchitectureBoundaryTests
         {
             var projectFile = Path.Combine(root, "src", project, $"{project}.csproj");
             var text = File.ReadAllText(projectFile);
-            Assert.DoesNotContain("Mws.Client.Godot", text, StringComparison.OrdinalIgnoreCase);
+            Assert.False(
+                text.Contains("Mws.Client.Godot", StringComparison.OrdinalIgnoreCase),
+                $"Core project unexpectedly references the client project: {projectFile}");
         }
     }
 

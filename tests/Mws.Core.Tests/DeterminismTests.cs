@@ -1,6 +1,7 @@
 using Mws.Domain;
 using Mws.Persistence.Json;
 using Mws.Simulation.Runtime;
+using Xunit;
 
 namespace Mws.Core.Tests;
 

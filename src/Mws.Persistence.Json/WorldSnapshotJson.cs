@@ -14,4 +14,6 @@ public static class WorldSnapshotJson
 }
 
 [JsonSerializable(typeof(WorldSnapshot))]
-internal sealed partial class WorldSnapshotJsonContext : JsonSerializerContext;
+internal sealed partial class WorldSnapshotJsonContext : JsonSerializerContext
+{
+}
