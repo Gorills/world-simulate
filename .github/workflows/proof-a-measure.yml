@@ -1,0 +1,71 @@
+name: proof-a-measure
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "BENCHMARKS/Mws.ProofA.Measurements/**"
+      - "BENCHMARKS/WORKLOADS/**"
+      - "MACHINE/benchmark-result.schema.json"
+      - ".github/workflows/proof-a-measure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proof-a-measure-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  MWS_SUBJECT_VERSION: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  rw-a-d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.423"
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Restore measurement harness
+        run: dotnet restore BENCHMARKS/Mws.ProofA.Measurements/Mws.ProofA.Measurements.csproj --nologo
+      - name: Run canonical RW-A through RW-D
+        run: dotnet run --configuration Release --project BENCHMARKS/Mws.ProofA.Measurements/Mws.ProofA.Measurements.csproj --no-restore -- artifacts/benchmarks 20000 3
+      - name: Verify canonical result shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          expected = {"RW-A_KERNEL_EVENTS", "RW-B_SAVE_REPLAY", "RW-C_TRACE", "RW-D_LOD_ROUNDTRIP"}
+          seen = set()
+          for path in sorted(Path("artifacts/benchmarks").glob("RW-*_v1.json")):
+              data = json.loads(path.read_text())
+              seen.add(data["workload_id"])
+              assert data["budget_status_after"] == "MEASURED"
+              assert data["repetitions"] == 3
+              assert data["subject_version"] == os.environ["MWS_SUBJECT_VERSION"]
+              assert data["target_hardware_class"]
+              assert data["safety_margin_rationale"]
+              assert data["regression_threshold"]
+          assert seen == expected, (seen, expected)
+          PY
+      - name: Upload canonical RW-A-D results
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0.6-rw-a-d-results
+          path: artifacts/benchmarks/*.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,17 @@
+{
+  "id": "RW-A_KERNEL_EVENTS",
+  "version": "1",
+  "status": "DEFINED",
+  "purpose": "Measure authoritative event/process/state-transition throughput while checking deterministic ordering and accepted invariants.",
+  "enabled_systems": ["kernel_event_queue", "authoritative_state", "process_scheduler"],
+  "seed_policy": "Fixed recorded seed set; repeated runs must use identical antecedents.",
+  "execution_modes": ["headless", "release"],
+  "workload_parameters": {
+    "transition_mix": "versioned synthetic command/event/process mix",
+    "scale": "parameterized; no product-scale claim before measurement"
+  },
+  "required_metrics": ["wall_time", "cpu_utilization", "peak_memory", "transition_count", "ordering_mismatch_count"],
+  "duration_contract": {"kind": "iterations", "value_source": "Iteration count is recorded in each benchmark result and versioned with the workload parameters."},
+  "instrumentation_contract": "Record tracing/profiling configuration and quantify instrumentation overhead when it materially changes throughput.",
+  "enabled_at_maturity": "P0.6"
+}
