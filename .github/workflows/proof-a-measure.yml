@@ -2,7 +2,7 @@ name: proof-a-measure
 
 on:
   push:
-    branches: [main, "audit/**"]
+    branches: [main]
     paths:
       - "BENCHMARKS/Mws.ProofA.Measurements/**"
       - "BENCHMARKS/WORKLOADS/**"
