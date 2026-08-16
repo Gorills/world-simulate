@@ -5,6 +5,10 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
+    private static readonly DeterministicCadenceScheduler SystemScheduler = new(
+        new SettlementSystemSchedule(SettlementSystemKind.ResidentHourly, 100, HourMilliseconds),
+        new SettlementSystemSchedule(SettlementSystemKind.DayBoundary, 200, DayMilliseconds));
+
     public void AdvanceHours(long hours)
     {
         if (hours < 0)
@@ -12,10 +16,8 @@ public sealed partial class SettlementSimulation
             throw new ArgumentOutOfRangeException(nameof(hours), hours, "Hours cannot be negative.");
         }
 
-        for (long index = 0; index < hours; index++)
-        {
-            AdvanceOneHour();
-        }
+        var delta = checked(hours * HourMilliseconds);
+        AdvanceTo(Time.AddMilliseconds(delta));
     }
 
     public void AdvanceTo(SimulationTime target)
@@ -31,38 +33,56 @@ public sealed partial class SettlementSimulation
             throw new ArgumentException("Settlement simulation advances on canonical whole-hour boundaries.", nameof(target));
         }
 
-        AdvanceHours(delta / HourMilliseconds);
-    }
-
-    private void AdvanceOneHour()
-    {
-        var targetTime = Time.AddMilliseconds(HourMilliseconds);
-        var hour = checked((int)((targetTime.Milliseconds / HourMilliseconds) % 24));
-        int? day = null;
-
-        if (hour == 0)
+        Span<SettlementSystemKind> dueSystems = stackalloc SettlementSystemKind[SystemScheduler.ScheduleCount];
+        while (Time.Milliseconds < target.Milliseconds)
         {
-            if (_nextEventId <= 0 || _nextEventId == long.MaxValue)
+            var activeSystems = SettlementSystemKind.DayBoundary;
+            if (_residents.Length > 0)
             {
-                throw new InvalidOperationException("Settlement event ID space cannot commit the next day boundary.");
+                activeSystems |= SettlementSystemKind.ResidentHourly;
             }
 
-            day = checked((int)(targetTime.Milliseconds / DayMilliseconds));
-        }
+            var nextTime = SystemScheduler.NextDueAfter(Time, target, activeSystems);
+            var dueCount = SystemScheduler.WriteDueSystems(nextTime, activeSystems, dueSystems);
+            var dayBoundaryDue = false;
+            var day = 0;
 
+            for (var index = 0; index < dueCount; index++)
+            {
+                if (dueSystems[index] == SettlementSystemKind.DayBoundary)
+                {
+                    EnsureEventCapacity();
+                    day = checked((int)(nextTime.Milliseconds / DayMilliseconds));
+                    dayBoundaryDue = true;
+                }
+            }
+
+            for (var index = 0; index < dueCount; index++)
+            {
+                if (dueSystems[index] == SettlementSystemKind.ResidentHourly)
+                {
+                    ExecuteHourlyResidentSystem(nextTime);
+                }
+            }
+
+            Time = nextTime;
+            if (dayBoundaryDue)
+            {
+                AppendEvent(
+                    SettlementEventKinds.DayBegan,
+                    null,
+                    IntFact(SettlementFactKeys.Day, day),
+                    IntFact(SettlementFactKeys.Rations, ItemQuantity(_settlementOwnerId, SettlementItems.Ration)));
+            }
+        }
+    }
+
+    private void ExecuteHourlyResidentSystem(SimulationTime targetTime)
+    {
+        var hour = checked((int)((targetTime.Milliseconds / HourMilliseconds) % 24));
         BuildHourlyPlan(targetTime, hour);
         ApplySettlementInventoryDelta(_hourlyPlanWorkspace.Consumed, _hourlyPlanWorkspace.Produced);
         CommitHourlyResidentPlan();
-        Time = targetTime;
-
-        if (day is not null)
-        {
-            AppendEvent(
-                SettlementEventKinds.DayBegan,
-                null,
-                IntFact(SettlementFactKeys.Day, day.Value),
-                IntFact(SettlementFactKeys.Rations, ItemQuantity(_settlementOwnerId, SettlementItems.Ration)));
-        }
     }
 
     private void CommitHourlyResidentPlan()
