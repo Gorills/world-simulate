@@ -62,6 +62,8 @@ public partial class GameHud : Control
             : "WASD move · Shift sprint · mouse camera · Tab world/menu · Q/E select · F interact · Space advance";
     }
 
+    internal void FocusInteraction() => _interactionMenu.FocusFirst();
+
     public bool HandleInput(InputEvent inputEvent)
     {
         if (_session is null)

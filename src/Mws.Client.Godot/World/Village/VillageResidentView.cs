@@ -62,6 +62,13 @@ internal sealed partial class VillageResidentView : Node3D
             Visible = false,
         };
         AddChild(_selectionMarker);
+
+        var interaction = new VillageInteractionArea();
+        interaction.Initialize(
+            VillageInteractionTarget.ForResident(resident.Id, resident.Name),
+            new BoxShape3D { Size = new Vector3(0.95f, totalHeight, 0.95f) },
+            new Vector3(0.0f, totalHeight * 0.5f, 0.0f));
+        AddChild(interaction);
     }
 
     internal void Render(ResidentProjection resident, bool selected)

@@ -19,6 +19,7 @@ public partial class ThirdPersonPlayer : CharacterBody3D
     private Node3D _visual = null!;
     private Node3D _yawPivot = null!;
     private Node3D _pitchPivot = null!;
+    private RayCast3D _interactionRay = null!;
     private bool _inputEnabled = true;
 
     public override void _Ready()
@@ -26,6 +27,7 @@ public partial class ThirdPersonPlayer : CharacterBody3D
         _visual = GetNode<Node3D>("Visual");
         _yawPivot = GetNode<Node3D>("CameraYaw");
         _pitchPivot = GetNode<Node3D>("CameraYaw/CameraPitch");
+        _interactionRay = GetNode<RayCast3D>("CameraYaw/CameraPitch/SpringArm/Camera/InteractionRay");
         FloorSnapLength = 0.25f;
 
         if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
@@ -106,6 +108,17 @@ public partial class ThirdPersonPlayer : CharacterBody3D
             -pointerDelta.X * MouseLookRadiansPerPixel,
             -pointerDelta.Y * MouseLookRadiansPerPixel));
         GetViewport().SetInputAsHandled();
+    }
+
+    internal GodotObject? GetInteractionCollider()
+    {
+        if (!_inputEnabled)
+        {
+            return null;
+        }
+
+        _interactionRay.ForceRaycastUpdate();
+        return _interactionRay.IsColliding() ? _interactionRay.GetCollider() : null;
     }
 
     internal void SetInputEnabled(bool enabled)

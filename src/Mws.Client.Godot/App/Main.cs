@@ -5,6 +5,7 @@ using Mws.Client.Godot.Input;
 using Mws.Client.Godot.Session;
 using Mws.Client.Godot.UI.Screens.Hud;
 using Mws.Client.Godot.World.Village;
+using PromptView = Mws.Client.Godot.UI.Screens.WorldInteractionPrompt.WorldInteractionPrompt;
 
 namespace Mws.Client.Godot.App;
 
@@ -14,6 +15,7 @@ public partial class Main : Node
     private GameSession? _session;
     private GameHud? _hud;
     private VillageWorld? _village;
+    private PromptView? _prompt;
     private bool _hudOpen;
 
     public override void _Ready()
@@ -32,9 +34,13 @@ public partial class Main : Node
             }
 
             _village = GetNode<VillageWorld>("VillageWorld");
+            _prompt = GetNode<PromptView>("WorldInteractionPrompt");
             _hud = GetNode<GameHud>("GameHud");
             _hud.Bind(_session);
             _hud.SetInputDevice(_inputDevice.Current);
+            _prompt.SetInputDevice(_inputDevice.Current);
+            _village.InteractionTargetChanged += _prompt.SetTarget;
+            _village.InteractionRequested += HandleVillageInteraction;
             _session.Changed += RefreshVillage;
             RefreshVillage();
             SetHudOpen(open: false);
@@ -51,6 +57,7 @@ public partial class Main : Node
         if (_inputDevice.Observe(@event))
         {
             _hud?.SetInputDevice(_inputDevice.Current);
+            _prompt?.SetInputDevice(_inputDevice.Current);
         }
 
         if (@event.IsActionPressed(GameInput.Menu) && _hud is not null && _village is not null)
@@ -60,9 +67,45 @@ public partial class Main : Node
             return;
         }
 
+        if (!_hudOpen
+            && @event.IsActionPressed(GameInput.Interact)
+            && _village?.TryRequestInteraction() == true)
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
         if (_hudOpen && _hud?.HandleInput(@event) == true)
         {
             GetViewport().SetInputAsHandled();
+        }
+    }
+
+    private void HandleVillageInteraction(VillageInteractionTarget target)
+    {
+        if (_session is null || _hud is null || _prompt is null)
+        {
+            return;
+        }
+
+        switch (target.Kind)
+        {
+            case VillageInteractionKind.Resident when target.ResidentId.HasValue:
+                _session.SelectResident(target.ResidentId.Value);
+                SetHudOpen(open: true);
+                _hud.FocusInteraction();
+                break;
+            case VillageInteractionKind.ItemStack when target.StackId.HasValue:
+                var stack = _session.FindStockpileStack(target.StackId.Value);
+                if (stack is not null)
+                {
+                    _prompt.ShowItem(stack);
+                }
+
+                break;
+            case VillageInteractionKind.BuildingEntrance:
+                _prompt.ShowEntrance(target.DisplayName);
+                break;
         }
     }
 
@@ -74,6 +117,7 @@ public partial class Main : Node
             _hud.Visible = open;
         }
 
+        _prompt?.SetWorldEnabled(!open);
         _village?.SetPlayerInputEnabled(!open);
     }
 
@@ -97,18 +141,21 @@ public partial class Main : Node
         _session.AdvanceHours(24);
         var interaction = _session.InteractSelected(ResidentInteractionChoice.Encourage);
         var projection = _session.Projection;
+        var stockpileStack = projection.Stockpile[0];
 
         if (!interaction.Success
             || projection.Day != 1
-            || projection.Residents.Count != 3)
+            || projection.Residents.Count != 3
+            || _session.FindStockpileStack(stockpileStack.StackId) is null)
         {
             throw new InvalidOperationException("Client foundation smoke produced an invalid state.");
         }
 
         var resident = _session.SelectedResident;
         GD.Print(
-            $"MWS_GODOT_SMOKE_OK client=village-v0.1 day={projection.Day} resident={resident.Name} " +
-            $"affinity={resident.Affinity} input=third-person-keyboard-gamepad-validated spatial=village-layout-validated");
+            $"MWS_GODOT_SMOKE_OK client=village-v0.2 day={projection.Day} resident={resident.Name} " +
+            $"affinity={resident.Affinity} input=third-person-keyboard-gamepad-validated " +
+            "spatial=village-layout-validated interaction=session-targeting-validated");
         GetTree().Quit(0);
     }
 }

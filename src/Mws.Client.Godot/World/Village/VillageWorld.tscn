@@ -23,6 +23,8 @@ environment = SubResource("Environment_village")
 
 [node name="Items" type="Node3D" parent="."]
 
+[node name="Entrances" type="Node3D" parent="."]
+
 [node name="Player" parent="." instance=ExtResource("2_player")]
 
 [node name="Sun" type="DirectionalLight3D" parent="."]

@@ -51,6 +51,9 @@ internal sealed class GameSession
         Changed?.Invoke();
     }
 
+    public ItemStackProjection? FindStockpileStack(long stackId) =>
+        Projection.Stockpile.SingleOrDefault(stack => stack.StackId == stackId);
+
     public SettlementCommandResult InteractSelected(ResidentInteractionChoice choice)
     {
         var result = _simulation.InteractWithResident(SelectedResidentId, choice);

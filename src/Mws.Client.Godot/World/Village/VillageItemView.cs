@@ -5,9 +5,12 @@ namespace Mws.Client.Godot.World.Village;
 
 internal sealed partial class VillageItemView : Node3D
 {
+    internal long StackId { get; private set; }
+
     internal void Initialize(ItemStackProjection stack)
     {
         ArgumentNullException.ThrowIfNull(stack);
+        StackId = stack.StackId;
         Name = $"Item-{stack.ItemId}-{stack.StackId}";
 
         switch (stack.ItemId)
@@ -25,6 +28,13 @@ internal sealed partial class VillageItemView : Node3D
                 BuildUnknown(stack.Quantity);
                 break;
         }
+
+        var interaction = new VillageInteractionArea();
+        interaction.Initialize(
+            VillageInteractionTarget.ForItem(stack.StackId, stack.ItemId, stack.Quantity),
+            new BoxShape3D { Size = new Vector3(1.15f, 1.25f, 1.15f) },
+            new Vector3(0.0f, 0.62f, 0.0f));
+        AddChild(interaction);
     }
 
     private void BuildGrain(int quantity)

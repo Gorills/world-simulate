@@ -7,25 +7,41 @@ namespace Mws.Client.Godot.World.Village;
 
 public partial class VillageWorld : Node3D
 {
+    private const float InteractionDistanceMeters = 3.6f;
+
     private readonly Dictionary<long, VillageResidentView> _residentViews = new();
     private Node3D _residentsRoot = null!;
     private Node3D _itemsRoot = null!;
+    private Node3D _entrancesRoot = null!;
     private ThirdPersonPlayer _player = null!;
+    private VillageInteractionTarget? _currentInteractionTarget;
+
+    internal event Action<VillageInteractionTarget?>? InteractionTargetChanged;
+    internal event Action<VillageInteractionTarget>? InteractionRequested;
 
     public override void _Ready()
     {
         _residentsRoot = GetNode<Node3D>("Residents");
         _itemsRoot = GetNode<Node3D>("Items");
+        _entrancesRoot = GetNode<Node3D>("Entrances");
         _player = GetNode<ThirdPersonPlayer>("Player");
         VillageLayout.Validate();
 
         if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
         {
+            SetPhysicsProcess(false);
             return;
         }
 
         VillageGeometryBuilder.Build(GetNode<Node3D>("Geometry"));
+        BuildEntranceTargets();
         _player.Position = VillageLayout.PlayerSpawn;
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        _ = delta;
+        UpdateInteractionTarget();
     }
 
     internal void Render(SettlementProjection projection, EntityId selectedResidentId)
@@ -40,6 +56,17 @@ public partial class VillageWorld : Node3D
         RenderItems(projection.Stockpile);
     }
 
+    internal bool TryRequestInteraction()
+    {
+        if (_currentInteractionTarget is null)
+        {
+            return false;
+        }
+
+        InteractionRequested?.Invoke(_currentInteractionTarget);
+        return true;
+    }
+
     internal void SetPlayerInputEnabled(bool enabled)
     {
         if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
@@ -48,9 +75,60 @@ public partial class VillageWorld : Node3D
         }
 
         _player.SetInputEnabled(enabled);
+        if (!enabled)
+        {
+            SetInteractionTarget(null);
+        }
     }
 
     internal static void ValidateSpatialContract() => VillageLayout.Validate();
+
+    private void UpdateInteractionTarget()
+    {
+        VillageInteractionTarget? next = null;
+        if (_player.GetInteractionCollider() is VillageInteractionArea area
+            && area.GlobalPosition.DistanceTo(_player.GlobalPosition) <= InteractionDistanceMeters)
+        {
+            next = area.Target;
+        }
+
+        SetInteractionTarget(next);
+    }
+
+    private void SetInteractionTarget(VillageInteractionTarget? target)
+    {
+        if (Equals(_currentInteractionTarget, target))
+        {
+            return;
+        }
+
+        _currentInteractionTarget = target;
+        InteractionTargetChanged?.Invoke(target);
+    }
+
+    private void BuildEntranceTargets()
+    {
+        foreach (var placement in VillageLayout.Buildings)
+        {
+            var anchor = new Node3D
+            {
+                Name = $"Entrance-{placement.Name}",
+                Position = placement.Position,
+                RotationDegrees = new Vector3(0.0f, placement.YawDegrees, 0.0f),
+            };
+            _entrancesRoot.AddChild(anchor);
+
+            var area = new VillageInteractionArea();
+            area.Initialize(
+                VillageInteractionTarget.ForEntrance(placement.Name),
+                new BoxShape3D
+                {
+                    Size = new Vector3(placement.DoorWidth, 2.2f, 1.2f),
+                },
+                new Vector3(0.0f, 1.1f, (placement.Footprint.Y * 0.5f) + 0.65f));
+            anchor.AddChild(area);
+        }
+    }
 
     private void RenderResidents(IReadOnlyList<ResidentProjection> residents, EntityId selectedResidentId)
     {
