@@ -1,6 +1,6 @@
 # P3 On-Foot Travel Duration Calibration
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract answers one narrow P3 calibration question: what physically plausible reference speed may be used for **ordinary adult on-foot travel** before route, load, condition and environment modifiers are modeled?
 
