@@ -18,7 +18,10 @@ public sealed partial class WorldRuntime
             + (entry.AllocateOperationId is null ? 0 : 1)
             + (entry.AdvanceTo is null ? 0 : 1)
             + (entry.SettlementCommand is null ? 0 : 1)
-            + (entry.ResidentMigration is null ? 0 : 1);
+            + (entry.ResidentMigration is null ? 0 : 1)
+            + (entry.EnqueueResidentMigration is null ? 0 : 1)
+            + (entry.DispatchOutbox is null ? 0 : 1)
+            + (entry.DeliverInbox is null ? 0 : 1);
         if (payloadCount != 1)
         {
             throw new InvalidOperationException("World input journal entry must contain exactly one payload.");
@@ -40,6 +43,15 @@ public sealed partial class WorldRuntime
             WorldInputKind.SettlementCommand =>
                 entry.SettlementCommand is not null && SettlementCommandShapeIsValid(entry.SettlementCommand),
             WorldInputKind.ResidentMigration => entry.ResidentMigration is not null,
+            WorldInputKind.EnqueueResidentMigration =>
+                entry.EnqueueResidentMigration is not null
+                && QueuedResidentMigrationIsValid(entry.EnqueueResidentMigration),
+            WorldInputKind.DispatchOutbox =>
+                entry.DispatchOutbox is not null
+                && TransportBatchShapeIsValid(entry.DispatchOutbox, allowBlocked: false),
+            WorldInputKind.DeliverInbox =>
+                entry.DeliverInbox is not null
+                && TransportBatchShapeIsValid(entry.DeliverInbox, allowBlocked: true),
             _ => false,
         };
 
@@ -68,6 +80,40 @@ public sealed partial class WorldRuntime
                 input.ItemId is null && input.Quantity == 0 && input.InteractionChoice is not null,
             _ => false,
         };
+    }
+
+    private static bool TransportBatchShapeIsValid(WorldTransportBatchInput input, bool allowBlocked)
+    {
+        if (input.MaxMessages <= 0
+            || input.ExpectedProcessedCount < 0
+            || input.ExpectedProcessedCount > input.MaxMessages)
+        {
+            return false;
+        }
+
+        if (!allowBlocked)
+        {
+            return input.ExpectedBlockedCode is null;
+        }
+
+        if (input.ExpectedBlockedCode is null)
+        {
+            return true;
+        }
+
+        if (input.ExpectedProcessedCount >= input.MaxMessages)
+        {
+            return false;
+        }
+
+        return string.Equals(
+                input.ExpectedBlockedCode,
+                WorldTransportCodes.SourcePartitionUnavailable,
+                StringComparison.Ordinal)
+            || string.Equals(
+                input.ExpectedBlockedCode,
+                WorldTransportCodes.DestinationPartitionUnavailable,
+                StringComparison.Ordinal);
     }
 
     private static SettlementCommand ToSettlementCommand(WorldSettlementCommandInput input) =>

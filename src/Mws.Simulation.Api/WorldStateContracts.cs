@@ -5,7 +5,7 @@ namespace Mws.Simulation.Api;
 
 public static class WorldVersions
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
     public const string CurrentModelVersion = "world-model-v1";
     public const string CurrentRulesVersion = "world-rules-v1";
     public const string CurrentContentVersion = "world-content-v1";
@@ -17,6 +17,7 @@ public static class WorldSystemIds
     public const string InputJournal = "world-input-journal";
     public const string ResidentMigration = "world-resident-migration";
     public const string Scheduler = "world-scheduler";
+    public const string Transport = "world-transport";
 }
 
 public static class WorldSystemVersions
@@ -25,6 +26,7 @@ public static class WorldSystemVersions
     public const string InputJournal = "1.0.0";
     public const string ResidentMigration = "1.0.0";
     public const string Scheduler = "1.0.0";
+    public const string Transport = "1.0.0";
 
     public static IReadOnlyList<WorldSystemVersion> CreateCurrent() =>
         Array.AsReadOnly(new[]
@@ -33,6 +35,7 @@ public static class WorldSystemVersions
             new WorldSystemVersion(WorldSystemIds.InputJournal, InputJournal),
             new WorldSystemVersion(WorldSystemIds.ResidentMigration, ResidentMigration),
             new WorldSystemVersion(WorldSystemIds.Scheduler, Scheduler),
+            new WorldSystemVersion(WorldSystemIds.Transport, Transport),
         });
 
     public static bool IsCurrent(IEnumerable<WorldSystemVersion>? versions)
@@ -78,6 +81,12 @@ public static class WorldOperationKinds
     public const string ResidentMigration = "resident-migration";
 }
 
+public static class WorldTransportCodes
+{
+    public const string SourcePartitionUnavailable = "SOURCE_PARTITION_UNAVAILABLE";
+    public const string DestinationPartitionUnavailable = "DESTINATION_PARTITION_UNAVAILABLE";
+}
+
 public enum WorldInputKind
 {
     AddDefaultSettlement,
@@ -85,6 +94,9 @@ public enum WorldInputKind
     AdvanceTo,
     SettlementCommand,
     ResidentMigration,
+    EnqueueResidentMigration,
+    DispatchOutbox,
+    DeliverInbox,
 }
 
 public enum WorldSettlementCommandKind
@@ -92,6 +104,11 @@ public enum WorldSettlementCommandKind
     FeedResident,
     GiveItemToResident,
     InteractWithResident,
+}
+
+public enum WorldTransportMessageKind
+{
+    ResidentMigration,
 }
 
 public sealed record WorldSystemVersion(
@@ -113,6 +130,11 @@ public sealed record ResidentMigrationIntent(
     SimulationScopeId SourceScopeId,
     SimulationScopeId DestinationScopeId);
 
+public sealed record WorldQueuedResidentMigration(
+    EntityId ResidentId,
+    SimulationScopeId SourceScopeId,
+    SimulationScopeId DestinationScopeId);
+
 public sealed record WorldOperationReceipt(
     WorldOperationId OperationId,
     string Kind,
@@ -121,6 +143,31 @@ public sealed record WorldOperationReceipt(
     EntityId? SubjectId,
     SimulationScopeId? SourceScopeId,
     SimulationScopeId? DestinationScopeId);
+
+public sealed record WorldTransportMessageId(
+    long SourceInputSequence,
+    int Ordinal);
+
+public sealed record WorldTransportMessage(
+    WorldTransportMessageId MessageId,
+    SimulationTime EnqueuedAt,
+    SimulationScopeId SourceScopeId,
+    SimulationScopeId DestinationScopeId,
+    WorldTransportMessageKind Kind,
+    WorldQueuedResidentMigration ResidentMigration,
+    int DeliveryAttempts);
+
+public sealed record WorldTransportDeliveryReceipt(
+    WorldTransportMessageId MessageId,
+    SimulationTime DeliveredAt,
+    int DeliveryAttempts,
+    WorldOperationReceipt OperationReceipt);
+
+public sealed record WorldTransportDeliveryBatchResult(
+    int CompletedCount,
+    int RemainingInboxCount,
+    string? BlockedCode,
+    IReadOnlyList<WorldTransportDeliveryReceipt> Receipts);
 
 public sealed record WorldAddDefaultSettlementInput(
     SimulationScopeId CreatedScopeId);
@@ -140,6 +187,11 @@ public sealed record WorldSettlementCommandInput(
     int Quantity,
     ResidentInteractionChoice? InteractionChoice);
 
+public sealed record WorldTransportBatchInput(
+    int MaxMessages,
+    int ExpectedProcessedCount,
+    string? ExpectedBlockedCode);
+
 public sealed record WorldInputJournalEntry(
     long Sequence,
     SimulationTime RecordedAt,
@@ -148,7 +200,10 @@ public sealed record WorldInputJournalEntry(
     WorldAllocateOperationIdInput? AllocateOperationId,
     WorldAdvanceToInput? AdvanceTo,
     WorldSettlementCommandInput? SettlementCommand,
-    ResidentMigrationIntent? ResidentMigration);
+    ResidentMigrationIntent? ResidentMigration,
+    WorldQueuedResidentMigration? EnqueueResidentMigration,
+    WorldTransportBatchInput? DispatchOutbox,
+    WorldTransportBatchInput? DeliverInbox);
 
 public sealed record WorldManifestState(
     int SchemaVersion,
@@ -169,6 +224,12 @@ public sealed record WorldManifestState(
     private IReadOnlyList<WorldSystemVersion> _systemVersions = WorldSystemVersions.CreateCurrent();
     private IReadOnlyList<WorldInputJournalEntry> _inputJournal =
         Array.AsReadOnly(Array.Empty<WorldInputJournalEntry>());
+    private IReadOnlyList<WorldTransportMessage> _outbox =
+        Array.AsReadOnly(Array.Empty<WorldTransportMessage>());
+    private IReadOnlyList<WorldTransportMessage> _inbox =
+        Array.AsReadOnly(Array.Empty<WorldTransportMessage>());
+    private IReadOnlyList<WorldTransportDeliveryReceipt> _transportReceipts =
+        Array.AsReadOnly(Array.Empty<WorldTransportDeliveryReceipt>());
 
     [JsonRequired]
     public IReadOnlyList<WorldSystemVersion> SystemVersions
@@ -191,6 +252,42 @@ public sealed record WorldManifestState(
         {
             ArgumentNullException.ThrowIfNull(value);
             _inputJournal = Array.AsReadOnly(value.ToArray());
+        }
+    }
+
+    [JsonRequired]
+    public long TransportReceiptFloor { get; init; } = 1;
+
+    [JsonRequired]
+    public IReadOnlyList<WorldTransportMessage> Outbox
+    {
+        get => _outbox;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _outbox = Array.AsReadOnly(value.ToArray());
+        }
+    }
+
+    [JsonRequired]
+    public IReadOnlyList<WorldTransportMessage> Inbox
+    {
+        get => _inbox;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _inbox = Array.AsReadOnly(value.ToArray());
+        }
+    }
+
+    [JsonRequired]
+    public IReadOnlyList<WorldTransportDeliveryReceipt> TransportReceipts
+    {
+        get => _transportReceipts;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _transportReceipts = Array.AsReadOnly(value.ToArray());
         }
     }
 }

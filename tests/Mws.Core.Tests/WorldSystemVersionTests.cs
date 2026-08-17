@@ -26,6 +26,7 @@ public sealed class WorldSystemVersionTests
         Assert.Contains(WorldSystemIds.InputJournal, serialized, StringComparison.Ordinal);
         Assert.Contains(WorldSystemIds.ResidentMigration, serialized, StringComparison.Ordinal);
         Assert.Contains(WorldSystemIds.Scheduler, serialized, StringComparison.Ordinal);
+        Assert.Contains(WorldSystemIds.Transport, serialized, StringComparison.Ordinal);
     }
 
     [Fact]

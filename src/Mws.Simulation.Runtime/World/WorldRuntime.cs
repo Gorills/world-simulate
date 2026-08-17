@@ -126,6 +126,7 @@ public sealed partial class WorldRuntime
         }
 
         world.RestoreInputJournal(manifest.InputJournal);
+        world.RestoreTransportState(manifest);
         world.ValidateCounters();
         return world;
     }
@@ -188,6 +189,10 @@ public sealed partial class WorldRuntime
             InputJournalFloor = _inputJournalFloor,
             NextInputSequence = _nextInputSequence,
             InputJournal = _inputJournal.ToArray(),
+            TransportReceiptFloor = _transportReceiptFloor,
+            Outbox = _outbox.ToArray(),
+            Inbox = _inbox.ToArray(),
+            TransportReceipts = _transportReceipts.ToArray(),
         };
         return new WorldCheckpointState(manifest, partitionStates);
     }
@@ -240,7 +245,9 @@ public sealed partial class WorldRuntime
             || _operationReceiptFloor > _nextOperationId
             || _inputJournalFloor <= 0
             || _nextInputSequence <= 0
-            || _inputJournalFloor > _nextInputSequence)
+            || _inputJournalFloor > _nextInputSequence
+            || _transportReceiptFloor <= 0
+            || _transportReceiptFloor > _nextInputSequence)
         {
             throw new InvalidOperationException("World checkpoint next-ID markers are not monotonic.");
         }

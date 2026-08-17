@@ -126,6 +126,44 @@ public sealed partial class WorldRuntime
                 _ = ResolveMigrationCore(entry.ResidentMigration!);
                 break;
 
+            case WorldInputKind.EnqueueResidentMigration:
+            {
+                var messageId = EnqueueResidentMigrationCore(
+                    entry.EnqueueResidentMigration!,
+                    entry.Sequence);
+                if (messageId.SourceInputSequence != entry.Sequence || messageId.Ordinal != 0)
+                {
+                    throw new InvalidOperationException("Replay transport message allocation diverged.");
+                }
+
+                break;
+            }
+
+            case WorldInputKind.DispatchOutbox:
+            {
+                var expected = entry.DispatchOutbox!;
+                var actual = DispatchOutboxCore(expected.MaxMessages);
+                if (actual != expected.ExpectedProcessedCount)
+                {
+                    throw new InvalidOperationException("Replay outbox dispatch count diverged.");
+                }
+
+                break;
+            }
+
+            case WorldInputKind.DeliverInbox:
+            {
+                var expected = entry.DeliverInbox!;
+                var actual = DeliverInboxCore(expected.MaxMessages);
+                if (actual.CompletedCount != expected.ExpectedProcessedCount
+                    || !string.Equals(actual.BlockedCode, expected.ExpectedBlockedCode, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("Replay inbox delivery result diverged.");
+                }
+
+                break;
+            }
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(entry), entry.Kind, "Unknown world input kind.");
         }
@@ -170,7 +208,10 @@ public sealed partial class WorldRuntime
         WorldAllocateOperationIdInput? allocateOperationId = null,
         WorldAdvanceToInput? advanceTo = null,
         WorldSettlementCommandInput? settlementCommand = null,
-        ResidentMigrationIntent? residentMigration = null) =>
+        ResidentMigrationIntent? residentMigration = null,
+        WorldQueuedResidentMigration? enqueueResidentMigration = null,
+        WorldTransportBatchInput? dispatchOutbox = null,
+        WorldTransportBatchInput? deliverInbox = null) =>
         new(
             _nextInputSequence,
             recordedAt,
@@ -179,5 +220,8 @@ public sealed partial class WorldRuntime
             allocateOperationId,
             advanceTo,
             settlementCommand,
-            residentMigration);
+            residentMigration,
+            enqueueResidentMigration,
+            dispatchOutbox,
+            deliverInbox);
 }
