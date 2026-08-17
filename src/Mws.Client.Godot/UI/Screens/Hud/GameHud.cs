@@ -18,6 +18,8 @@ public partial class GameHud : Control
     private InteractionMenuView _interactionMenu = null!;
     private Label _inputHint = null!;
     private Label _feedback = null!;
+    private Label _languageLabel = null!;
+    private Button _advance = null!;
     private OptionButton _language = null!;
     private InputDeviceFamily _inputDevice = InputDeviceFamily.KeyboardMouse;
 
@@ -29,18 +31,20 @@ public partial class GameHud : Control
         _interactionMenu = GetNode<InteractionMenuView>("Margin/Root/Columns/Sidebar/InteractionMenu");
         _inputHint = GetNode<Label>("Margin/Root/InputHint");
         _feedback = GetNode<Label>("Margin/Root/Feedback");
+        _languageLabel = GetNode<Label>("Margin/Root/LanguageRow/Label");
+        _advance = GetNode<Button>("Margin/Root/AdvanceTime");
         _language = GetNode<OptionButton>("Margin/Root/LanguageRow/Language");
+
         DesignSystem.ApplyLabel(_inputHint, muted: true);
         DesignSystem.ApplyLabel(_feedback);
-        DesignSystem.ApplyLabel(GetNode<Label>("Margin/Root/LanguageRow/Label"));
-        DesignSystem.ApplyButton(_language);
+        DesignSystem.ApplyLabel(_languageLabel);
+        DesignSystem.ApplyButton(_advance);
+        DesignSystem.ApplyOptionButton(_language);
 
-        var advance = GetNode<Button>("Margin/Root/AdvanceTime");
-        DesignSystem.ApplyButton(advance);
-        advance.Pressed += () => _session?.AdvanceHours(1);
-
+        _advance.Pressed += () => _session?.AdvanceHours(1);
         ConfigureLanguagePicker();
-        GameLocalization.Changed += HandleLocaleChanged;
+        GameLocalization.RegisterUiRefresh(RefreshAllUi);
+
         _settlementView.ResidentSelected += residentId => _session?.SelectResident(residentId);
         _interactionMenu.ChoiceRequested += choice =>
         {
@@ -52,27 +56,37 @@ public partial class GameHud : Control
             var result = _session.InteractSelected(choice);
             _feedback.Text = SettlementFeedbackText.Format(result, _session.SelectedResident);
         };
+
+        RefreshAllUi();
     }
 
     public override void _ExitTree()
     {
-        GameLocalization.Changed -= HandleLocaleChanged;
+        GameLocalization.UnregisterUiRefresh(RefreshAllUi);
+        if (_session is not null)
+        {
+            _session.Changed -= RefreshData;
+        }
     }
 
     internal void Bind(GameSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
+        if (_session is not null)
+        {
+            _session.Changed -= RefreshData;
+        }
+
         _session = session;
-        _session.Changed += Refresh;
-        Refresh();
+        _session.Changed += RefreshData;
+        RefreshAllUi();
         _settlementView.FocusSelected();
     }
 
     internal void SetInputDevice(InputDeviceFamily device)
     {
         _inputDevice = device;
-        _inputHint.Text = GameLocalization.Tr(
-            device == InputDeviceFamily.Gamepad ? "UI_HINT_GAMEPAD" : "UI_HINT_KEYBOARD");
+        RefreshInputHint();
     }
 
     internal void FocusInteraction() => _interactionMenu.FocusFirst();
@@ -119,26 +133,56 @@ public partial class GameHud : Control
         return false;
     }
 
+    internal void RefreshAllUi()
+    {
+        _advance.Text = GameLocalization.Tr("UI_ADVANCE_ONE_HOUR");
+        _languageLabel.Text = GameLocalization.Tr("UI_LANGUAGE");
+        SyncLanguagePicker();
+        RefreshInputHint();
+        _settlementView.RefreshLocalization();
+        _residentPanel.RefreshLocalization();
+        _interactionMenu.RefreshLocalization();
+        RefreshData();
+    }
+
     private void ConfigureLanguagePicker()
     {
+        _language.AutoTranslateMode = Node.AutoTranslateModeEnum.Disabled;
         _language.AddItem(GameLocalization.LanguageSelfName(GameLocalization.English));
         _language.AddItem(GameLocalization.LanguageSelfName(GameLocalization.Russian));
+        for (var index = 0; index < _language.ItemCount; index++)
+        {
+            _language.SetItemAutoTranslateMode(index, Node.AutoTranslateModeEnum.Disabled);
+        }
+
         _language.ItemSelected += index => GameLocalization.SetLocale(
             index == 1 ? GameLocalization.Russian : GameLocalization.English);
         SyncLanguagePicker();
     }
 
-    private void HandleLocaleChanged()
+    private void SyncLanguagePicker()
     {
-        SyncLanguagePicker();
-        SetInputDevice(_inputDevice);
-        Refresh();
+        if (_language.ItemCount >= 2)
+        {
+            _language.SetItemText(0, GameLocalization.LanguageSelfName(GameLocalization.English));
+            _language.SetItemText(1, GameLocalization.LanguageSelfName(GameLocalization.Russian));
+        }
+
+        _language.Select(GameLocalization.CurrentLocale == GameLocalization.Russian ? 1 : 0);
     }
 
-    private void SyncLanguagePicker() =>
-        _language.Select(GameLocalization.CurrentLocale == GameLocalization.Russian ? 1 : 0);
+    private void RefreshInputHint()
+    {
+        if (_inputHint is null)
+        {
+            return;
+        }
 
-    private void Refresh()
+        _inputHint.Text = GameLocalization.Tr(
+            _inputDevice == InputDeviceFamily.Gamepad ? "UI_HINT_GAMEPAD" : "UI_HINT_KEYBOARD");
+    }
+
+    private void RefreshData()
     {
         if (_session is null)
         {

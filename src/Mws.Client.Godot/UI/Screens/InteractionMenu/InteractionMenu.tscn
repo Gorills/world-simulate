@@ -9,22 +9,18 @@ script = ExtResource("1")
 
 [node name="Heading" type="Label" parent="."]
 layout_mode = 2
-text = "UI_INTERACT"
 
 [node name="AskAboutWork" type="Button" parent="."]
 layout_mode = 2
 focus_neighbor_top = NodePath("../ShareRation")
 focus_neighbor_bottom = NodePath("../Encourage")
-text = "UI_ASK_ABOUT_WORK"
 
 [node name="Encourage" type="Button" parent="."]
 layout_mode = 2
 focus_neighbor_top = NodePath("../AskAboutWork")
 focus_neighbor_bottom = NodePath("../ShareRation")
-text = "UI_ENCOURAGE"
 
 [node name="ShareRation" type="Button" parent="."]
 layout_mode = 2
 focus_neighbor_top = NodePath("../Encourage")
 focus_neighbor_bottom = NodePath("../AskAboutWork")
-text = "UI_SHARE_RATION"

@@ -19,17 +19,32 @@ msgstr "Stockpile: {0}"
 msgid "UI_RESIDENT"
 msgstr "Resident"
 
+msgid "UI_NAME"
+msgstr "Name"
+
 msgid "UI_PROFESSION"
 msgstr "Profession"
 
+msgid "UI_HOME"
+msgstr "Home"
+
 msgid "UI_NEEDS"
 msgstr "Needs"
+
+msgid "UI_AFFINITY"
+msgstr "Affinity"
 
 msgid "UI_RELATIONSHIP"
 msgstr "Relationship"
 
 msgid "UI_INVENTORY"
 msgstr "Inventory"
+
+msgid "UI_VALUE_UNASSIGNED"
+msgstr "Unassigned"
+
+msgid "UI_VALUE_EMPTY"
+msgstr "Empty"
 
 msgid "UI_INTERACT"
 msgstr "Interact"

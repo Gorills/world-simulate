@@ -8,6 +8,7 @@ namespace Mws.Client.Godot.World.Settlement;
 
 public partial class SettlementView : VBoxContainer
 {
+    private Label _heading = null!;
     private Label _timeLabel = null!;
     private Label _stockpileLabel = null!;
     private VBoxContainer _residentList = null!;
@@ -17,12 +18,22 @@ public partial class SettlementView : VBoxContainer
 
     public override void _Ready()
     {
+        _heading = GetNode<Label>("Heading");
         _timeLabel = GetNode<Label>("Time");
         _stockpileLabel = GetNode<Label>("Stockpile");
         _residentList = GetNode<VBoxContainer>("Residents");
-        DesignSystem.ApplyHeading(GetNode<Label>("Heading"));
+        DesignSystem.ApplyHeading(_heading);
         DesignSystem.ApplyLabel(_timeLabel);
         DesignSystem.ApplyLabel(_stockpileLabel, muted: true);
+        RefreshLocalization();
+    }
+
+    public void RefreshLocalization()
+    {
+        if (_heading is not null)
+        {
+            _heading.Text = GameLocalization.Tr("UI_SETTLEMENT");
+        }
     }
 
     public void Render(SettlementProjection projection, EntityId selectedResidentId)
@@ -58,6 +69,7 @@ public partial class SettlementView : VBoxContainer
                     LocalizedContent.Profession(resident.Profession),
                     LocalizedContent.Activity(resident.Activity)),
                 Alignment = HorizontalAlignment.Left,
+                AutoTranslateMode = Node.AutoTranslateModeEnum.Disabled,
             };
             DesignSystem.ApplyButton(button);
             if (selected)

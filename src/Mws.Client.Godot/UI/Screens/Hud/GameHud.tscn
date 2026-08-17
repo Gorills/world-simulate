@@ -60,11 +60,9 @@ layout_mode = 2
 
 [node name="Feedback" type="Label" parent="Margin/Root"]
 layout_mode = 2
-text = "UI_WORLD_STATE"
 
 [node name="AdvanceTime" type="Button" parent="Margin/Root"]
 layout_mode = 2
-text = "UI_ADVANCE_ONE_HOUR"
 
 [node name="LanguageRow" type="HBoxContainer" parent="Margin/Root"]
 layout_mode = 2
@@ -72,7 +70,6 @@ theme_override_constants/separation = 12
 
 [node name="Label" type="Label" parent="Margin/Root/LanguageRow"]
 layout_mode = 2
-text = "UI_LANGUAGE"
 
 [node name="Language" type="OptionButton" parent="Margin/Root/LanguageRow"]
 layout_mode = 2
@@ -80,4 +77,3 @@ size_flags_horizontal = 3
 
 [node name="InputHint" type="Label" parent="Margin/Root"]
 layout_mode = 2
-text = "UI_INPUT"

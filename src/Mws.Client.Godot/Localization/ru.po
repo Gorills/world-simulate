@@ -19,17 +19,32 @@ msgstr "Запасы: {0}"
 msgid "UI_RESIDENT"
 msgstr "Житель"
 
+msgid "UI_NAME"
+msgstr "Имя"
+
 msgid "UI_PROFESSION"
 msgstr "Профессия"
 
+msgid "UI_HOME"
+msgstr "Дом"
+
 msgid "UI_NEEDS"
 msgstr "Потребности"
+
+msgid "UI_AFFINITY"
+msgstr "Отношение"
 
 msgid "UI_RELATIONSHIP"
 msgstr "Отношения"
 
 msgid "UI_INVENTORY"
 msgstr "Инвентарь"
+
+msgid "UI_VALUE_UNASSIGNED"
+msgstr "Не назначен"
+
+msgid "UI_VALUE_EMPTY"
+msgstr "Пусто"
 
 msgid "UI_INTERACT"
 msgstr "Взаимодействие"

@@ -22,14 +22,11 @@ public partial class WorldInteractionPrompt : Control
     {
         _label = GetNode<Label>("Anchor/Panel/Label");
         DesignSystem.ApplyLabel(_label);
-        GameLocalization.Changed += Render;
-        Render();
+        GameLocalization.RegisterUiRefresh(RefreshAllUi);
+        RefreshAllUi();
     }
 
-    public override void _ExitTree()
-    {
-        GameLocalization.Changed -= Render;
-    }
+    public override void _ExitTree() => GameLocalization.UnregisterUiRefresh(RefreshAllUi);
 
     public override void _Process(double delta)
     {
@@ -83,6 +80,8 @@ public partial class WorldInteractionPrompt : Control
             LocalizedContent.Building(buildingName)));
     }
 
+    internal void RefreshAllUi() => Render();
+
     private void ShowFeedback(Func<string> text)
     {
         _feedbackText = text;
@@ -121,19 +120,16 @@ public partial class WorldInteractionPrompt : Control
         var key = _device == InputDeviceFamily.Gamepad ? "A" : "F";
         _label.Text = _target.Kind switch
         {
-            VillageInteractionKind.Resident =>
-                GameLocalization.Format("UI_PROMPT_TALK", key, _target.DisplayName),
-            VillageInteractionKind.ItemStack =>
-                GameLocalization.Format(
-                    "UI_PROMPT_INSPECT_ITEM",
-                    key,
-                    LocalizedContent.Item(_target.ItemId ?? _target.DisplayName),
-                    _target.Quantity),
-            VillageInteractionKind.BuildingEntrance =>
-                GameLocalization.Format(
-                    "UI_PROMPT_INSPECT_BUILDING",
-                    key,
-                    LocalizedContent.Building(_target.DisplayName)),
+            VillageInteractionKind.Resident => GameLocalization.Format("UI_PROMPT_TALK", key, _target.DisplayName),
+            VillageInteractionKind.ItemStack => GameLocalization.Format(
+                "UI_PROMPT_INSPECT_ITEM",
+                key,
+                LocalizedContent.Item(_target.ItemId ?? _target.DisplayName),
+                _target.Quantity),
+            VillageInteractionKind.BuildingEntrance => GameLocalization.Format(
+                "UI_PROMPT_INSPECT_BUILDING",
+                key,
+                LocalizedContent.Building(_target.DisplayName)),
             _ => string.Empty,
         };
     }

@@ -38,6 +38,18 @@ internal static class DesignSystem
         button.AddThemeColorOverride("font_pressed_color", DesignTokens.Positive);
     }
 
+    public static void ApplyOptionButton(OptionButton button)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ApplyButton(button);
+
+        var popup = button.GetPopup();
+        popup.AddThemeFontSizeOverride("font_size", DesignTokens.BodyFontSize);
+        popup.AddThemeColorOverride("font_color", DesignTokens.TextPrimary);
+        popup.AddThemeColorOverride("font_hover_color", DesignTokens.Accent);
+        popup.AddThemeColorOverride("font_disabled_color", DesignTokens.TextMuted);
+    }
+
     public static void ApplySelectedButton(Button button)
     {
         ArgumentNullException.ThrowIfNull(button);

@@ -12,10 +12,9 @@ internal static class GameLocalization
     private const string SettingsSection = "language";
     private const string LocaleSetting = "locale";
 
+    private static readonly HashSet<Action> UiRefreshers = [];
     private static bool _initialized;
     private static string _currentLocale = English;
-
-    internal static event Action? Changed;
 
     internal static string CurrentLocale
     {
@@ -34,7 +33,7 @@ internal static class GameLocalization
         }
 
         _initialized = true;
-        ApplyLocale(NormalizeLocale(LoadRequestedLocale()), persist: false, notify: false);
+        ApplyLocale(NormalizeLocale(LoadRequestedLocale()), persist: false);
     }
 
     internal static void SetLocale(string locale)
@@ -42,7 +41,31 @@ internal static class GameLocalization
         Initialize();
         var normalized = NormalizeLocale(locale);
         var changed = !string.Equals(_currentLocale, normalized, StringComparison.Ordinal);
-        ApplyLocale(normalized, persist: true, notify: changed);
+        ApplyLocale(normalized, persist: true);
+        if (changed)
+        {
+            RefreshAllUi();
+        }
+    }
+
+    internal static void RegisterUiRefresh(Action refresh)
+    {
+        ArgumentNullException.ThrowIfNull(refresh);
+        UiRefreshers.Add(refresh);
+    }
+
+    internal static void UnregisterUiRefresh(Action refresh)
+    {
+        ArgumentNullException.ThrowIfNull(refresh);
+        _ = UiRefreshers.Remove(refresh);
+    }
+
+    internal static void RefreshAllUi()
+    {
+        foreach (var refresh in UiRefreshers.ToArray())
+        {
+            refresh();
+        }
     }
 
     internal static string Tr(string key)
@@ -109,26 +132,23 @@ internal static class GameLocalization
         return string.IsNullOrWhiteSpace(stored) ? OS.GetLocaleLanguage() : stored;
     }
 
-    private static void ApplyLocale(string locale, bool persist, bool notify)
+    private static void ApplyLocale(string locale, bool persist)
     {
         _currentLocale = locale;
         TranslationServer.SetLocale(locale);
 
-        if (persist)
+        if (!persist)
         {
-            var config = new ConfigFile();
-            _ = config.Load(SettingsPath);
-            config.SetValue(SettingsSection, LocaleSetting, locale);
-            var error = config.Save(SettingsPath);
-            if (error != Error.Ok)
-            {
-                GD.PushWarning($"MWS_LOCALE_SAVE_FAIL locale={locale} error={error}");
-            }
+            return;
         }
 
-        if (notify)
+        var config = new ConfigFile();
+        _ = config.Load(SettingsPath);
+        config.SetValue(SettingsSection, LocaleSetting, locale);
+        var error = config.Save(SettingsPath);
+        if (error != Error.Ok)
         {
-            Changed?.Invoke();
+            GD.PushWarning($"MWS_LOCALE_SAVE_FAIL locale={locale} error={error}");
         }
     }
 

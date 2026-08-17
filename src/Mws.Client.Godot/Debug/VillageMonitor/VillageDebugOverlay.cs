@@ -47,16 +47,13 @@ public partial class VillageDebugOverlay : Control
             SetProcessInput(false);
         }
 
-        GameLocalization.Changed += Refresh;
+        GameLocalization.RegisterUiRefresh(RefreshAllUi);
         Visible = false;
         SetProcess(false);
         RefreshStaticText();
     }
 
-    public override void _ExitTree()
-    {
-        GameLocalization.Changed -= Refresh;
-    }
+    public override void _ExitTree() => GameLocalization.UnregisterUiRefresh(RefreshAllUi);
 
     public override void _Input(InputEvent @event)
     {
@@ -70,7 +67,7 @@ public partial class VillageDebugOverlay : Control
         _refreshRemaining = 0.0;
         if (Visible)
         {
-            Refresh();
+            RefreshAllUi();
         }
 
         GetViewport().SetInputAsHandled();
@@ -85,10 +82,10 @@ public partial class VillageDebugOverlay : Control
         }
 
         _refreshRemaining = RefreshIntervalSeconds;
-        Refresh();
+        RefreshAllUi();
     }
 
-    private void Refresh()
+    private void RefreshAllUi()
     {
         RefreshStaticText();
         if (!Visible || _world is null || _hud is null)

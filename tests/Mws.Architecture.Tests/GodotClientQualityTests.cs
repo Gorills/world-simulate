@@ -125,12 +125,86 @@ public sealed class GodotClientQualityTests
 
         Assert.Equal(english, russian);
         Assert.Contains("UI_SETTLEMENT", english);
+        Assert.Contains("UI_NAME", english);
+        Assert.Contains("UI_HOME", english);
+        Assert.Contains("UI_AFFINITY", english);
         Assert.Contains("UI_DEBUG_TITLE", english);
         Assert.Contains("CONTENT_ITEM_RATION", english);
         Assert.Contains("FEEDBACK_ACTION_FAILED", english);
         Assert.Contains("locale/fallback=\"en\"", project, StringComparison.Ordinal);
         Assert.Contains("res://Localization/en.po", project, StringComparison.Ordinal);
         Assert.Contains("res://Localization/ru.po", project, StringComparison.Ordinal);
+        Assert.Contains("rendering/root_node_auto_translate=false", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LocalizationRefreshUsesSingleRegistryAndLanguageItemsDoNotAutoTranslate()
+    {
+        var client = FindClientRoot();
+        var localization = File.ReadAllText(Path.Combine(client, "Localization", "GameLocalization.cs"));
+        var hud = File.ReadAllText(Path.Combine(client, "UI", "Screens", "Hud", "GameHud.cs"));
+
+        Assert.Contains("RefreshAllUi()", localization, StringComparison.Ordinal);
+        Assert.Contains("RegisterUiRefresh", localization, StringComparison.Ordinal);
+        Assert.DoesNotContain("event Action? Changed", localization, StringComparison.Ordinal);
+        Assert.Contains("SetItemAutoTranslateMode", hud, StringComparison.Ordinal);
+        Assert.Contains("AutoTranslateModeEnum.Disabled", hud, StringComparison.Ordinal);
+
+        foreach (var file in ClientSourceFiles(client))
+        {
+            var relative = Relative(client, file);
+            if (relative.StartsWith("Localization/", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            Assert.DoesNotContain(
+                "GameLocalization.Changed",
+                File.ReadAllText(file),
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void PlayerFacingTextIsNotStoredInScenes()
+    {
+        var client = FindClientRoot();
+        foreach (var scene in Directory.EnumerateFiles(client, "*.tscn", SearchOption.AllDirectories))
+        {
+            foreach (var line in File.ReadLines(scene))
+            {
+                Assert.False(
+                    line.TrimStart().StartsWith("text = \"", StringComparison.Ordinal),
+                    $"Player-facing scene text must be assigned through GameLocalization: {Relative(client, scene)} -> {line.Trim()}");
+            }
+        }
+    }
+
+    [Fact]
+    public void ResidentPanelSeparatesLocalizedLabelsFromRuntimeValues()
+    {
+        var client = FindClientRoot();
+        var scene = File.ReadAllText(
+            Path.Combine(client, "UI", "Screens", "ResidentPanel", "ResidentPanel.tscn"));
+        var code = File.ReadAllText(
+            Path.Combine(client, "UI", "Screens", "ResidentPanel", "ResidentPanel.cs"));
+
+        string[] requiredNodes =
+        [
+            "NameLabel", "NameValue",
+            "ProfessionLabel", "ProfessionValue",
+            "HomeLabel", "HomeValue",
+            "NeedsLabel", "NeedsValue",
+            "AffinityLabel", "AffinityValue",
+            "InventoryLabel", "InventoryValue",
+        ];
+        foreach (var node in requiredNodes)
+        {
+            Assert.Contains($"name=\"{node}\"", scene, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("_nameLabel.Text = GameLocalization.Tr(\"UI_NAME\")", code, StringComparison.Ordinal);
+        Assert.Contains("_nameValue.Text = resident.Name", code, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -155,30 +229,6 @@ public sealed class GodotClientQualityTests
         Assert.DoesNotContain("VillageDebug", main, StringComparison.Ordinal);
         Assert.Contains("res://Debug/VillageMonitor/VillageDebugOverlay.tscn", mainScene, StringComparison.Ordinal);
         Assert.Contains("Key.F3", debugInput, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void PlayerFacingSceneTextUsesLocalizationKeys()
-    {
-        var client = FindClientRoot();
-        const string prefix = "text = \"";
-
-        foreach (var scene in Directory.EnumerateFiles(client, "*.tscn", SearchOption.AllDirectories))
-        {
-            foreach (var line in File.ReadLines(scene))
-            {
-                var trimmed = line.Trim();
-                if (!trimmed.StartsWith(prefix, StringComparison.Ordinal) || !trimmed.EndsWith('"'))
-                {
-                    continue;
-                }
-
-                var value = trimmed[prefix.Length..^1];
-                Assert.True(
-                    value.StartsWith("UI_", StringComparison.Ordinal),
-                    $"Player-facing scene text must use a localization key: {Relative(client, scene)} -> '{value}'");
-            }
-        }
     }
 
     [Fact]

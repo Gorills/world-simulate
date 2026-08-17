@@ -20,6 +20,7 @@ window/stretch/mode="canvas_items"
 [internationalization]
 locale/fallback="en"
 locale/translations=PackedStringArray("res://Localization/en.po", "res://Localization/ru.po")
+rendering/root_node_auto_translate=false
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
