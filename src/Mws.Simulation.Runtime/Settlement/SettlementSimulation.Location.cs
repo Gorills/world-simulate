@@ -45,8 +45,8 @@ public sealed partial class SettlementSimulation
     {
         foreach (var resident in _residents)
         {
-            ValidateResidentPlaceReference(resident.Location.CurrentPlace);
-            ValidateResidentPlaceReference(resident.Location.DestinationPlace);
+            ValidateSettlementPlaceReference(resident.Location.CurrentPlace);
+            ValidateSettlementPlaceReference(resident.Location.DestinationPlace);
             if (resident.SelectedTask is not null)
             {
                 ValidateResidentSelectedTask(resident.SelectedTask);
@@ -54,16 +54,16 @@ public sealed partial class SettlementSimulation
         }
     }
 
-    private void ValidateResidentPlaceReference(SettlementPlaceRef place)
+    private void ValidateSettlementPlaceReference(SettlementPlaceRef place)
     {
         if (place.Kind == SettlementPlaceKind.Home && !_homesById.ContainsKey(place.EntityId))
         {
-            throw new InvalidOperationException("Resident semantic location references a missing home.");
+            throw new InvalidOperationException("Settlement semantic place references a missing home.");
         }
 
         if (place.Kind == SettlementPlaceKind.Workplace && !_workplacesById.ContainsKey(place.EntityId))
         {
-            throw new InvalidOperationException("Resident semantic location references a missing workplace.");
+            throw new InvalidOperationException("Settlement semantic place references a missing workplace.");
         }
     }
 

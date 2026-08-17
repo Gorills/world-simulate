@@ -91,4 +91,6 @@ public sealed record SettlementState(
     IReadOnlyList<SettlementCommandReceipt> CommandReceipts,
     IReadOnlyList<HomeState>? Homes = null,
     IReadOnlyList<HouseholdState>? Households = null,
-    int ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion);
+    int ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion,
+    IReadOnlyList<SettlementRouteConnectionState>? RouteConnections = null,
+    IReadOnlyList<SettlementResidentRouteKnowledgeState>? ResidentRouteKnowledge = null);

@@ -34,7 +34,7 @@ public sealed partial class SettlementSimulation
         }
 
         _ = SettlementSemanticLocation.Normalize(SettlementActorLocationState.At(requiredPlace));
-        ValidateResidentPlaceReference(requiredPlace);
+        ValidateSettlementPlaceReference(requiredPlace);
     }
 
     private static SettlementSelectedTaskProjection? ProjectSelectedTask(ResidentRuntimeState resident)

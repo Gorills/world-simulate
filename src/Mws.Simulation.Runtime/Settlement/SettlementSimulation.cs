@@ -38,7 +38,9 @@ public sealed partial class SettlementSimulation
         IEnumerable<SettlementCommandReceipt> commandReceipts,
         IEnumerable<HomeState> homes,
         IEnumerable<HouseholdState> households,
-        int residentLocationEncodingVersion)
+        int residentLocationEncodingVersion,
+        IEnumerable<SettlementRouteConnectionState> routeConnections,
+        IEnumerable<SettlementResidentRouteKnowledgeState> residentRouteKnowledge)
     {
         _scopeId = scopeId;
         _worldSeed = worldSeed;
@@ -61,8 +63,19 @@ public sealed partial class SettlementSimulation
         _commandReceipts = commandReceipts.OrderBy(entry => entry.CommandId.Value).ToList();
         _homes = homes.OrderBy(home => home.Id.Value).ToList();
         _households = households.OrderBy(household => household.Id.Value).ToList();
+        _routeConnections = routeConnections.OrderBy(connection => connection.ConnectionId).ToList();
+        _residentRouteKnowledge = residentRouteKnowledge
+            .OrderBy(entry => entry.ResidentId.Value)
+            .Select(entry => new SettlementResidentRouteKnowledgeState(
+                entry.ResidentId,
+                entry.KnownConnectionIds?.OrderBy(connectionId => connectionId).ToArray()
+                    ?? throw new InvalidOperationException("Resident route knowledge is missing connection IDs.")))
+            .ToList();
         _residentIndicesById = new Dictionary<EntityId, int>(_residents.Length);
         _workplacesById = new Dictionary<EntityId, WorkplaceState>(_workplaces.Count);
+        _routeConnectionsById = new Dictionary<long, SettlementRouteConnectionState>(_routeConnections.Count);
+        _routeConnectionsByPlace = new Dictionary<SettlementPlaceRef, List<SettlementRouteConnectionState>>();
+        _knownRouteConnectionIdsByResident = new Dictionary<EntityId, HashSet<long>>(_residentRouteKnowledge.Count);
         _hourlyPlanWorkspace = new HourlyPlanWorkspace(_residents.Length);
 
         ValidateState();
@@ -71,6 +84,9 @@ public sealed partial class SettlementSimulation
         RebuildResidenceIndexes();
         RestoreOmittedResidentSemanticLocations(residentLocationEncodingVersion);
         ValidateResidentSemanticLocationReferences();
+        ValidateRouteConnections();
+        RebuildRouteIndexes();
+        RebuildResidentRouteKnowledgeIndex();
         RebuildInventoryIndexes();
         ValidateInventoryTotals();
         RebuildHistoryIndexes();
@@ -113,7 +129,9 @@ public sealed partial class SettlementSimulation
             [],
             homes,
             households,
-            SettlementVersions.CurrentResidentLocationEncodingVersion);
+            SettlementVersions.CurrentResidentLocationEncodingVersion,
+            [],
+            []);
     }
 
     public static SettlementSimulation Restore(SettlementState state)
@@ -150,7 +168,9 @@ public sealed partial class SettlementSimulation
             state.CommandReceipts,
             state.Homes ?? [],
             state.Households ?? [],
-            state.ResidentLocationEncodingVersion);
+            state.ResidentLocationEncodingVersion,
+            state.RouteConnections ?? [],
+            state.ResidentRouteKnowledge ?? []);
     }
 
     public SettlementState CaptureState() => new(
@@ -174,7 +194,9 @@ public sealed partial class SettlementSimulation
         _commandReceipts.OrderBy(entry => entry.CommandId.Value).ToArray(),
         _homes.OrderBy(home => home.Id.Value).ToArray(),
         _households.OrderBy(household => household.Id.Value).ToArray(),
-        SettlementVersions.CurrentResidentLocationEncodingVersion);
+        SettlementVersions.CurrentResidentLocationEncodingVersion,
+        CaptureRouteConnections(),
+        CaptureResidentRouteKnowledge());
 
     private CommandId AllocateCommandId()
     {

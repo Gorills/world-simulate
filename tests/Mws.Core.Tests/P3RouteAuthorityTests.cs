@@ -1,0 +1,217 @@
+using Mws.Domain;
+using Mws.Persistence.Json;
+using Mws.Simulation.Api;
+using Mws.Simulation.Runtime;
+using Xunit;
+
+namespace Mws.Core.Tests;
+
+public sealed class P3RouteAuthorityTests
+{
+    [Fact]
+    public void DestinationRequestDerivesKnownOpenRoutePathWithoutStartingTravel()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9330)).CaptureState();
+        var resident = state.Residents[0];
+        var home = ResidentHome(state, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var task = SelectedTask(10, workplace);
+        var routes = new[]
+        {
+            Route(3, home, workplace, 1_200),
+            Route(2, SettlementPlaceRef.Settlement, workplace, 700),
+            Route(1, home, SettlementPlaceRef.Settlement, 300),
+        };
+        var simulation = SettlementSimulation.Restore(state with
+        {
+            Residents = WithSelectedTask(state, resident.Id, task),
+            RouteConnections = routes,
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(resident.Id, [3, 2, 1]),
+            ],
+        });
+
+        var projected = Assert.Single(simulation.Project().Residents, entry => entry.Id == resident.Id);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+        var request = Assert.IsType<SettlementDestinationRequestProjection>(projected.DestinationRequest);
+        var routePath = Assert.IsType<SettlementRoutePathProjection>(projected.RoutePath);
+
+        Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+        Assert.Equal(home, location.CurrentPlace);
+        Assert.Null(location.Travel);
+        Assert.Equal(workplace, request.Destination);
+        Assert.Equal(task.TaskId, routePath.TaskId);
+        Assert.Equal(home, routePath.Origin);
+        Assert.Equal(workplace, routePath.Destination);
+        Assert.Equal(new long[] { 1, 2 }, routePath.ConnectionIds);
+        Assert.Equal(1_000, routePath.TotalDistanceMeters);
+
+        var captured = simulation.CaptureState();
+        Assert.Equal(new long[] { 1, 2, 3 }, captured.RouteConnections!.Select(route => route.ConnectionId));
+        var capturedKnowledge = Assert.Single(captured.ResidentRouteKnowledge!);
+        Assert.Equal(new long[] { 1, 2, 3 }, capturedKnowledge.KnownConnectionIds);
+
+        var restored = SettlementSimulation.Restore(
+            SettlementStateJson.Deserialize(SettlementStateJson.Serialize(captured)));
+        var restoredResident = Assert.Single(restored.Project().Residents, entry => entry.Id == resident.Id);
+        var restoredPath = Assert.IsType<SettlementRoutePathProjection>(restoredResident.RoutePath);
+
+        Assert.Equal(routePath.TaskId, restoredPath.TaskId);
+        Assert.Equal(routePath.Origin, restoredPath.Origin);
+        Assert.Equal(routePath.Destination, restoredPath.Destination);
+        Assert.Equal(routePath.ConnectionIds, restoredPath.ConnectionIds);
+        Assert.Equal(routePath.TotalDistanceMeters, restoredPath.TotalDistanceMeters);
+        Assert.Equal(projected.Location, restoredResident.Location);
+    }
+
+    [Fact]
+    public void RestrictedBlockedOrUnknownConnectionsDoNotBecomeRouteAuthority()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9331)).CaptureState();
+        var resident = state.Residents[0];
+        var home = ResidentHome(state, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var routes = new[]
+        {
+            Route(1, home, SettlementPlaceRef.Settlement, 300),
+            Route(2, SettlementPlaceRef.Settlement, workplace, 700) with
+            {
+                PassageStatus = SettlementRoutePassageStatus.Restricted,
+            },
+            Route(3, home, workplace, 900) with
+            {
+                PhysicalState = SettlementRoutePhysicalState.Blocked,
+            },
+            Route(4, SettlementPlaceRef.Settlement, workplace, 650),
+        };
+        var simulation = SettlementSimulation.Restore(state with
+        {
+            Residents = WithSelectedTask(state, resident.Id, SelectedTask(11, workplace)),
+            RouteConnections = routes,
+            ResidentRouteKnowledge =
+            [
+                // Connection 4 is physically/open usable but deliberately unknown to this resident.
+                new SettlementResidentRouteKnowledgeState(resident.Id, [1, 2, 3]),
+            ],
+        });
+
+        var projected = Assert.Single(simulation.Project().Residents, entry => entry.Id == resident.Id);
+
+        Assert.NotNull(projected.DestinationRequest);
+        Assert.Null(projected.RoutePath);
+    }
+
+    [Fact]
+    public void RestoreRejectsInvalidRouteAuthorityState()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9332)).CaptureState();
+        var resident = state.Residents[0];
+        var home = ResidentHome(state, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var valid = Route(1, home, workplace, 500);
+        var missingHome = new SettlementPlaceRef(SettlementPlaceKind.Home, new EntityId(999_999));
+
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections = [valid with { DistanceMeters = 0 }],
+        }));
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections = [valid with { FirstPlace = missingHome }],
+        }));
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections =
+            [
+                valid,
+                Route(1, SettlementPlaceRef.Settlement, workplace, 600),
+            ],
+        }));
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections = [valid],
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(resident.Id, [2]),
+            ],
+        }));
+    }
+
+    [Fact]
+    public void ActiveTravelDoesNotCreateASecondRoutePath()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9333)).CaptureState();
+        var resident = state.Residents[0];
+        var home = ResidentHome(state, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var travelling = new SettlementActorLocationState(
+            SettlementActorLocationKind.Travelling,
+            home,
+            workplace,
+            new SettlementTravelProgressState(
+                2 * SettlementSimulation.HourMilliseconds,
+                ElapsedMilliseconds: 0));
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id
+                ? entry with
+                {
+                    Location = travelling,
+                    SelectedTask = SelectedTask(12, workplace),
+                }
+                : entry)
+            .ToArray();
+        var simulation = SettlementSimulation.Restore(state with
+        {
+            Residents = residents,
+            RouteConnections = [Route(1, home, workplace, 500)],
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(resident.Id, [1]),
+            ],
+        });
+
+        var projected = Assert.Single(simulation.Project().Residents, entry => entry.Id == resident.Id);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, location.Kind);
+        Assert.Null(projected.RoutePath);
+    }
+
+    private static SettlementSelectedTaskState SelectedTask(long taskId, SettlementPlaceRef destination) =>
+        new(
+            taskId,
+            "fixture.explicit-route-task",
+            "fixture:test-route-authority",
+            new SimulationTime(0),
+            destination);
+
+    private static SettlementRouteConnectionState Route(
+        long connectionId,
+        SettlementPlaceRef first,
+        SettlementPlaceRef second,
+        long distanceMeters) =>
+        new(
+            connectionId,
+            first,
+            second,
+            distanceMeters,
+            SettlementRoutePhysicalState.Passable,
+            SettlementRoutePassageStatus.Open,
+            "fixture:test-route-authority",
+            IsFixture: true);
+
+    private static ResidentState[] WithSelectedTask(
+        SettlementState state,
+        EntityId residentId,
+        SettlementSelectedTaskState task) =>
+        state.Residents
+            .Select(entry => entry.Id == residentId ? entry with { SelectedTask = task } : entry)
+            .ToArray();
+
+    private static SettlementPlaceRef ResidentHome(SettlementState state, ResidentState resident)
+    {
+        var household = Assert.Single(state.Households!, entry => entry.Id == resident.HouseholdId);
+        return new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
+    }
+}
