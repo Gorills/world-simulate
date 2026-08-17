@@ -140,6 +140,43 @@ public sealed class P3SelectedTaskDestinationTests
     }
 
     [Fact]
+    public void SelectedTaskSuppressesCompatibilityHourlyActivitySelection()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9325)).CaptureState();
+        var resident = state.Residents[0];
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var task = new SettlementSelectedTaskState(
+            TaskId: 6,
+            Kind: "fixture.explicit-non-work",
+            ReasonReference: "fixture:test-selected-task-authority",
+            SelectedAt: new SimulationTime(0),
+            RequiredPlace: SettlementPlaceRef.Settlement);
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id
+                ? entry with
+                {
+                    Hunger = 100,
+                    Energy = 100,
+                    Location = SettlementActorLocationState.At(workplace),
+                    SelectedTask = task,
+                }
+                : entry with { Hunger = 0 })
+            .ToArray();
+        var simulation = SettlementSimulation.Restore(state with { Residents = residents });
+
+        simulation.AdvanceHours(8);
+
+        var projected = Assert.Single(simulation.Project().Residents, entry => entry.Id == resident.Id);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+
+        Assert.Equal(ResidentActivity.Idle, projected.Activity);
+        Assert.Equal(100, projected.Hunger);
+        Assert.Equal(92, projected.Energy);
+        Assert.Equal(workplace, location.CurrentPlace);
+        Assert.Equal(SettlementPlaceRef.Settlement, projected.DestinationRequest?.Destination);
+    }
+
+    [Fact]
     public void MigrationSafeFailsWhileSelectedTaskIsActive()
     {
         var world = WorldRuntime.Create(new WorldSeed(9324));
