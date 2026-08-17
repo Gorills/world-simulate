@@ -1,6 +1,6 @@
 # Settlement Agricultural Year, Seed, Labour and Livestock — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the minimum causal structure for arable production, seed continuity, seasonal work, labour allocation, draft power, livestock maintenance and pasture dependence. It does **not** define universal medieval English crop calendars, crop yields, seed rates, labour coefficients, herd structures, fodder requirements or grazing capacities; those remain local/calibration questions and are `MODEL_UNDERDEFINED` where material.
 
