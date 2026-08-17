@@ -38,7 +38,8 @@ internal static class HeadlessClientSmoke
             resident => resident.Id == session.SelectedResidentId);
         var restoredPlayer = restored.Player;
 
-        if (!interaction.Success
+        if (interaction.Success
+            || interaction.Code != SettlementResultCodes.InteractionNotCoLocated
             || projection.Day != 1
             || projection.Hour != PlaytestTimeProfile.StartHour
             || projection.Residents.Count != VillageLayout.PlaytestResidentCount
@@ -63,7 +64,7 @@ internal static class HeadlessClientSmoke
             $"player={session.PlayerId.Value} player_scope={player.ScopeId.Value} " +
             "clock=continuous-hourly-playtest input=third-person-keyboard-gamepad-validated " +
             "locale=en-ru-validated spatial=village-layout-validated " +
-            "interaction=world-runtime-targeting-validated checkpoint=world-runtime-roundtrip-validated " +
+            "interaction=semantic-colocation-rejection-validated checkpoint=world-runtime-roundtrip-validated " +
             "player_actor=authoritative-persisted-replayable life=authoritative-residence-routing-validated";
     }
 }
