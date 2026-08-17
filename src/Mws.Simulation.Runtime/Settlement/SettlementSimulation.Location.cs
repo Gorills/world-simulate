@@ -5,9 +5,10 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
-    private const int MorningCommuteHour = 7;
-    private const int WorkStartHour = 8;
-    private const int WorkEndHour = 17;
+    private const int PrototypeMorningCommuteHour = 7;
+    private const int PrototypeWorkStartHour = 8;
+    private const int PrototypeWorkEndHour = 17;
+    private const long PrototypeTravelDurationMilliseconds = HourMilliseconds;
 
     internal SettlementActorLocationState? TryGetResidentSemanticLocation(EntityId residentId)
     {
@@ -25,8 +26,13 @@ public sealed partial class SettlementSimulation
                 continue;
             }
 
+            // New runtime starts at the resident's residence fixture.
+            // The time-based branch exists only to hydrate snapshots written by
+            // the old schedule-compacted format; it is not a canonical location rule.
             resident.Location = SettlementActorLocationState.At(
-                ScheduledResidentStablePlace(resident, hour));
+                Time.Milliseconds == 0
+                    ? ResidentHomePlace(resident)
+                    : LegacyScheduledResidentStablePlace(resident, hour));
         }
     }
 
@@ -56,20 +62,32 @@ public sealed partial class SettlementSimulation
     {
         foreach (var resident in _residents)
         {
-            var target = ScheduledResidentDestination(resident, hour);
-            resident.Location = StepResidentLocation(resident.Location, target);
+            if (resident.Location.Kind == SettlementActorLocationKind.Travelling)
+            {
+                resident.Location = SettlementSemanticLocation.AdvanceTravel(
+                    resident.Location,
+                    HourMilliseconds);
+                continue;
+            }
+
+            // Compatibility feeder only. The 07/17 fixture still starts travel while
+            // authoritative Task/Intention runtime state is not yet implemented. The travel
+            // engine below is no longer derived from the clock and persists its own progress.
+            var target = PrototypeScheduledResidentDestination(resident, hour);
+            if (IsAtPlace(resident.Location, target))
+            {
+                continue;
+            }
+
+            resident.Location = SettlementSemanticLocation.BeginTravel(
+                resident.Location,
+                target,
+                PrototypeTravelDurationMilliseconds);
         }
     }
 
-    private SettlementActorLocationState? CaptureResidentSemanticLocation(ResidentRuntimeState resident)
-    {
-        var location = SettlementSemanticLocation.Normalize(resident.Location);
-        var canonical = ScheduledResidentStablePlace(resident, CurrentHour(Time));
-        return location.Kind == SettlementActorLocationKind.AtPlace
-            && location.CurrentPlace == canonical
-            ? null
-            : location;
-    }
+    private SettlementActorLocationState? CaptureResidentSemanticLocation(ResidentRuntimeState resident) =>
+        SettlementSemanticLocation.Capture(resident.Location);
 
     private bool IsResidentAtHome(ResidentRuntimeState resident) =>
         IsAtPlace(resident.Location, ResidentHomePlace(resident));
@@ -77,13 +95,13 @@ public sealed partial class SettlementSimulation
     private bool IsResidentAtWorkplace(ResidentRuntimeState resident) =>
         IsAtPlace(resident.Location, ResidentWorkplacePlace(resident));
 
-    private SettlementPlaceRef ScheduledResidentDestination(ResidentRuntimeState resident, int hour) =>
-        hour >= MorningCommuteHour && hour < WorkEndHour
+    private SettlementPlaceRef PrototypeScheduledResidentDestination(ResidentRuntimeState resident, int hour) =>
+        hour >= PrototypeMorningCommuteHour && hour < PrototypeWorkEndHour
             ? ResidentWorkplacePlace(resident)
             : ResidentHomePlace(resident);
 
-    private SettlementPlaceRef ScheduledResidentStablePlace(ResidentRuntimeState resident, int hour) =>
-        hour >= WorkStartHour && hour < WorkEndHour
+    private SettlementPlaceRef LegacyScheduledResidentStablePlace(ResidentRuntimeState resident, int hour) =>
+        hour >= PrototypeWorkStartHour && hour < PrototypeWorkEndHour
             ? ResidentWorkplacePlace(resident)
             : ResidentHomePlace(resident);
 
@@ -102,39 +120,6 @@ public sealed partial class SettlementSimulation
         return workplace is null
             ? SettlementPlaceRef.Settlement
             : new SettlementPlaceRef(SettlementPlaceKind.Workplace, workplace.Id);
-    }
-
-    private static SettlementActorLocationState StepResidentLocation(
-        SettlementActorLocationState location,
-        SettlementPlaceRef target)
-    {
-        location = SettlementSemanticLocation.Normalize(location);
-        ArgumentNullException.ThrowIfNull(target);
-
-        if (location.Kind == SettlementActorLocationKind.Travelling)
-        {
-            if (location.DestinationPlace == target)
-            {
-                return SettlementActorLocationState.At(target);
-            }
-
-            if (location.CurrentPlace == target)
-            {
-                return SettlementActorLocationState.At(target);
-            }
-
-            return new SettlementActorLocationState(
-                SettlementActorLocationKind.Travelling,
-                location.CurrentPlace,
-                target);
-        }
-
-        return location.CurrentPlace == target
-            ? location
-            : new SettlementActorLocationState(
-                SettlementActorLocationKind.Travelling,
-                location.CurrentPlace,
-                target);
     }
 
     private static bool IsAtPlace(

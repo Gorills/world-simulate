@@ -21,6 +21,7 @@ public sealed class P3SemanticLocationFoundationTests
             Assert.Equal(SettlementPlaceKind.Home, location.CurrentPlace.Kind);
             Assert.Equal(resident.HomeId, location.CurrentPlace.EntityId);
             Assert.Equal(location.CurrentPlace, location.DestinationPlace);
+            Assert.Null(location.Travel);
         });
 
         var json = SettlementStateJson.Serialize(simulation.CaptureState());
@@ -36,9 +37,52 @@ public sealed class P3SemanticLocationFoundationTests
         Assert.Equal(SettlementActorLocationKind.AtPlace, playerLocation.Kind);
         Assert.Equal(SettlementPlaceRef.Settlement, playerLocation.CurrentPlace);
         Assert.Equal(playerLocation.CurrentPlace, playerLocation.DestinationPlace);
+        Assert.Null(playerLocation.Travel);
 
         var restoredWorld = WorldRuntime.Restore(world.CaptureCheckpoint());
         Assert.Equal(player.Location, restoredWorld.ProjectPlayer().Location);
+    }
+
+    [Fact]
+    public void ActiveTravelProgressPersistsAcrossHoursAndSaveLoad()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9304)).CaptureState();
+        var resident = state.Residents[0];
+        var household = Assert.Single(state.Households!.Where(entry => entry.Id == resident.HouseholdId));
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
+        var travel = new SettlementActorLocationState(
+            SettlementActorLocationKind.Travelling,
+            home,
+            SettlementPlaceRef.Settlement,
+            new SettlementTravelProgressState(
+                2 * SettlementSimulation.HourMilliseconds,
+                ElapsedMilliseconds: 0));
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id ? entry with { Location = travel } : entry)
+            .ToArray();
+        var simulation = SettlementSimulation.Restore(state with { Residents = residents });
+
+        simulation.AdvanceHours(1);
+        var afterOneHour = RequireLocation(simulation, resident.Id);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, afterOneHour.Kind);
+        Assert.Equal(home, afterOneHour.CurrentPlace);
+        Assert.Equal(SettlementPlaceRef.Settlement, afterOneHour.DestinationPlace);
+        Assert.NotNull(afterOneHour.Travel);
+        Assert.Equal(2 * SettlementSimulation.HourMilliseconds, afterOneHour.Travel.DurationMilliseconds);
+        Assert.Equal(SettlementSimulation.HourMilliseconds, afterOneHour.Travel.ElapsedMilliseconds);
+
+        var json = SettlementStateJson.Serialize(simulation.CaptureState());
+        var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(json));
+        Assert.Equal(afterOneHour, RequireLocation(restored, resident.Id));
+
+        restored.AdvanceHours(1);
+        var arrived = RequireLocation(restored, resident.Id);
+
+        Assert.Equal(SettlementActorLocationKind.AtPlace, arrived.Kind);
+        Assert.Equal(SettlementPlaceRef.Settlement, arrived.CurrentPlace);
+        Assert.Equal(arrived.CurrentPlace, arrived.DestinationPlace);
+        Assert.Null(arrived.Travel);
     }
 
     [Fact]
@@ -56,5 +100,31 @@ public sealed class P3SemanticLocationFoundationTests
 
         Assert.Throws<InvalidOperationException>(() =>
             SettlementSimulation.Restore(state with { Residents = residents }));
+    }
+
+    [Fact]
+    public void RestoreRejectsInvalidActiveTravelProgress()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9305)).CaptureState();
+        var resident = state.Residents[0];
+        var invalidLocation = new SettlementActorLocationState(
+            SettlementActorLocationKind.Travelling,
+            SettlementPlaceRef.Settlement,
+            new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId),
+            new SettlementTravelProgressState(DurationMilliseconds: 0, ElapsedMilliseconds: 0));
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id ? entry with { Location = invalidLocation } : entry)
+            .ToArray();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            SettlementSimulation.Restore(state with { Residents = residents }));
+    }
+
+    private static SettlementActorLocationProjection RequireLocation(
+        SettlementSimulation simulation,
+        EntityId residentId)
+    {
+        var resident = simulation.Project().Residents.Single(entry => entry.Id == residentId);
+        return Assert.IsType<SettlementActorLocationProjection>(resident.Location);
     }
 }

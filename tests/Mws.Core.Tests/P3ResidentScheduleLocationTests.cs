@@ -9,7 +9,7 @@ namespace Mws.Core.Tests;
 public sealed class P3ResidentScheduleLocationTests
 {
     [Fact]
-    public void ResidentCommutesBetweenHomeAndWorkplaceOnAuthoritativeHours()
+    public void PrototypeScheduleFeedsPersistentTravelWithoutOwningTravelProgress()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(9310));
         var initial = Mira(simulation);
@@ -17,6 +17,7 @@ public sealed class P3ResidentScheduleLocationTests
 
         Assert.Equal(SettlementActorLocationKind.AtPlace, initialLocation.Kind);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), initialLocation.CurrentPlace);
+        Assert.Null(initialLocation.Travel);
 
         simulation.AdvanceHours(7);
         var commutingToWork = Mira(simulation);
@@ -25,6 +26,9 @@ public sealed class P3ResidentScheduleLocationTests
         Assert.Equal(SettlementActorLocationKind.Travelling, outbound.Kind);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), outbound.CurrentPlace);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Workplace, initial.WorkplaceId), outbound.DestinationPlace);
+        Assert.NotNull(outbound.Travel);
+        Assert.Equal(SettlementSimulation.HourMilliseconds, outbound.Travel.DurationMilliseconds);
+        Assert.Equal(0, outbound.Travel.ElapsedMilliseconds);
         Assert.NotEqual(ResidentActivity.Working, commutingToWork.Activity);
 
         var travellingState = simulation.CaptureState();
@@ -39,8 +43,9 @@ public sealed class P3ResidentScheduleLocationTests
 
         Assert.Equal(SettlementActorLocationKind.AtPlace, workLocation.Kind);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Workplace, initial.WorkplaceId), workLocation.CurrentPlace);
+        Assert.Null(workLocation.Travel);
         Assert.Equal(ResidentActivity.Working, atWork.Activity);
-        Assert.Null(simulation.CaptureState().Residents.Single(resident => resident.Id == initial.Id).Location);
+        Assert.NotNull(simulation.CaptureState().Residents.Single(resident => resident.Id == initial.Id).Location);
 
         simulation.AdvanceHours(9);
         var commutingHome = Mira(simulation);
@@ -49,6 +54,8 @@ public sealed class P3ResidentScheduleLocationTests
         Assert.Equal(SettlementActorLocationKind.Travelling, inbound.Kind);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Workplace, initial.WorkplaceId), inbound.CurrentPlace);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), inbound.DestinationPlace);
+        Assert.NotNull(inbound.Travel);
+        Assert.Equal(0, inbound.Travel.ElapsedMilliseconds);
         Assert.NotEqual(ResidentActivity.Working, commutingHome.Activity);
 
         simulation.AdvanceHours(1);
@@ -57,16 +64,24 @@ public sealed class P3ResidentScheduleLocationTests
 
         Assert.Equal(SettlementActorLocationKind.AtPlace, homeLocation.Kind);
         Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), homeLocation.CurrentPlace);
+        Assert.Null(homeLocation.Travel);
     }
 
     [Fact]
-    public void StableScheduledLocationRoundTripsThroughCompactPersistence()
+    public void StableLocationRoundTripsWithoutClockDerivedCompaction()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(9311));
         simulation.AdvanceHours(8);
 
         var state = simulation.CaptureState();
-        Assert.All(state.Residents, resident => Assert.Null(resident.Location));
+        Assert.All(state.Residents, resident =>
+        {
+            var location = Assert.IsType<SettlementActorLocationState>(resident.Location);
+            Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+            Assert.Equal(SettlementPlaceKind.Workplace, location.CurrentPlace.Kind);
+            Assert.Equal(resident.WorkplaceId, location.CurrentPlace.EntityId);
+            Assert.Null(location.Travel);
+        });
 
         var json = SettlementStateJson.Serialize(state);
         var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(json));
@@ -78,6 +93,7 @@ public sealed class P3ResidentScheduleLocationTests
             Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
             Assert.Equal(SettlementPlaceKind.Workplace, location.CurrentPlace.Kind);
             Assert.Equal(resident.WorkplaceId, location.CurrentPlace.EntityId);
+            Assert.Null(location.Travel);
         });
     }
 

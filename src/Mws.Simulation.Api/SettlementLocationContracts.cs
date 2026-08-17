@@ -23,10 +23,15 @@ public enum SettlementActorLocationKind
     Travelling,
 }
 
+public sealed record SettlementTravelProgressState(
+    long DurationMilliseconds,
+    long ElapsedMilliseconds);
+
 public sealed record SettlementActorLocationState(
     SettlementActorLocationKind Kind,
     SettlementPlaceRef CurrentPlace,
-    SettlementPlaceRef DestinationPlace)
+    SettlementPlaceRef DestinationPlace,
+    SettlementTravelProgressState? Travel = null)
 {
     public static SettlementActorLocationState At(SettlementPlaceRef place)
     {
@@ -41,4 +46,5 @@ public sealed record SettlementActorLocationState(
 public sealed record SettlementActorLocationProjection(
     SettlementActorLocationKind Kind,
     SettlementPlaceRef CurrentPlace,
-    SettlementPlaceRef DestinationPlace);
+    SettlementPlaceRef DestinationPlace,
+    SettlementTravelProgressState? Travel = null);
