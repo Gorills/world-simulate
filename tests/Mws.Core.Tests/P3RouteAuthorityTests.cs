@@ -162,6 +162,7 @@ public sealed class P3RouteAuthorityTests
             [
                 Route(1, home, workplace, 500) with { SupportedModes = null },
             ],
+            RouteModeEncodingVersion = SettlementVersions.LegacyRouteModeEncodingVersion,
         });
         var mountedOnly = SettlementSimulation.Restore(taskState with
         {
