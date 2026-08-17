@@ -4,6 +4,15 @@ Scope: C# source under `src/`, except `Mws.Client.Godot/` which has its own more
 
 The goal is fast solo development with a deterministic authoritative simulation. Prefer plain C# and explicit ownership over framework layers.
 
+## Reality-model rule
+Authoritative rules must also follow `DESIGN/REALITY_MODELING_POLICY.md`.
+
+- A technically deterministic rule can still be an invalid simulation model. Ask what world cause produces the transition and what evidence supports human/economic/social assumptions.
+- Do not promote `SettlementPrototypeContent`, fixed schedules, profession labels, interaction verbs or existing regression expectations into canonical world law without a model contract/evidence.
+- Player-controlled and AI-controlled people must obey the same world rules; differences come from ordinary authoritative state, not a player-only mutation path.
+- Ownership, permission, obligations and access must be explicit before an actor can consume, transfer or command resources.
+- If the real-world model is underdefined, stop with `MODEL_UNDERDEFINED`; do not fill the gap with convenient constants.
+
 ## Project ownership
 
 - `Mws.Domain` — tiny engine-free value types that are genuinely shared.
@@ -50,7 +59,7 @@ Core outputs structured codes/facts. Human-readable UI sentences belong in the c
 
 Persist stable IDs and authoritative facts, not Godot nodes or presentation objects.
 
-Prototype content is centralized in `SettlementPrototypeContent`; do not scatter item/job/NPC fixture definitions through rule code. When content becomes canonical, promote it to validated immutable definitions rather than hard-coding it into algorithms.
+Prototype content is centralized in `SettlementPrototypeContent`; do not scatter item/job/NPC fixture definitions through rule code. When content becomes canonical, promote it only after the reality/model contract and validation required by `DESIGN/REALITY_MODELING_POLICY.md`; do not hard-code fixtures into algorithms.
 
 ## File responsibility
 
@@ -78,6 +87,7 @@ For a new simulation mechanic, cover at least:
 - safe failure;
 - save/load continuity when state changes;
 - deterministic replay when ordering/randomness matters;
-- invariant preservation (no negative resources, duplicate IDs, or out-of-range bounded state).
+- invariant preservation (no negative resources, duplicate IDs, or out-of-range bounded state);
+- a causal/model acceptance scenario from its `DESIGN/MODELS/` contract when the mechanic changes world behavior.
 
 Do not run Godot or Proof A benchmarks for ordinary core-only edits unless the changed public boundary requires them.

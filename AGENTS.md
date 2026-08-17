@@ -2,6 +2,16 @@
 
 Optimize for a solo developer using coding agents. Quality gates exist to shorten debugging, not to create ceremony.
 
+## Reality/modeling gate
+`DESIGN/REALITY_MODELING_POLICY.md` is a blocking global policy for authoritative simulation work.
+
+- Do not preserve a prototype fixture or regression test when it conflicts with causal logic, historical evidence or player/NPC symmetry. Fix/delete the fixture or test instead.
+- Before treating human, economic, social, institutional or physical-world behavior as canonical, create/update a model contract under `DESIGN/MODELS/` using `DESIGN/MECHANIC_CONTRACT_TEMPLATE.md`.
+- Historical human behavior needs an explicit reference context and credible evidence; do not invent universal rules from intuition.
+- The player is not a privileged simulation species. Player-only powers require ordinary world-state justification such as ownership, office, permission, contract, skill or physical access.
+- Prefer `MODEL_UNDERDEFINED` and stop implementation over filling a research gap with a convenient constant.
+- `python TOOLS/validate_reality_model.py` is part of routine validation. Starting at P3, a phase cannot PASS without the required model-review evidence.
+
 ## Git
 - Keep `main` plus one active milestone/feature branch. Do not create a branch for each task, fix, test, or agent.
 - Batch coherent edits into one commit. Do not push intermediate placeholders.
@@ -39,7 +49,7 @@ The active playable-prototype program is defined by `DESIGN/PLAYABLE_PROTOTYPE_P
 - A phase in `AUDIT_REQUIRED` is frozen. Review the exact committed implementation; do not keep coding in the audit pass.
 - `FAILED` means repair the same phase: move that phase back to `IMPLEMENTING`, then repair it. Do not start a later phase.
 - A later phase must remain `LOCKED` until all dependencies are `PASSED`.
-- Passing tests is not enough to mark a phase `PASSED`; both independent post-commit code review and systems audit must pass and be recorded under `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`.
+- Passing tests is not enough to mark a phase `PASSED`; independent post-commit code review, systems audit and any required reality/model review must pass and be recorded under `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`.
 - Audit JSON records are append-only evidence. Never rewrite a previous result; a new review creates a new JSON record.
 - Passing a phase does not automatically authorize or start the next phase. Record `PASS` and start the next phase in separate state transitions.
 - Respect the program scope freeze. Do not add polish or unrelated systems while authority, scaling and gameplay-causality phases are unresolved.

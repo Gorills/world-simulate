@@ -27,10 +27,16 @@ jobs:
           fetch-depth: 0
 
       - name: Validate gate tooling syntax
-        run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py TOOLS/test_playable_prototype_gate.py
+        run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py TOOLS/test_playable_prototype_gate.py TOOLS/validate_reality_model.py TOOLS/test_reality_model_gate.py
 
-      - name: Run gate negative self-tests
+      - name: Run phase-gate negative self-tests
         run: python TOOLS/test_playable_prototype_gate.py
+
+      - name: Run reality/model negative self-tests
+        run: python TOOLS/test_reality_model_gate.py
 
       - name: Validate playable prototype phase state and scope
         run: python TOOLS/validate_playable_prototype.py
+
+      - name: Validate reality/model audit policy
+        run: python TOOLS/validate_reality_model.py

@@ -29,6 +29,7 @@ CACHE_DIR = ROOT / ".cache/dev"
 CORE_STAMP = CACHE_DIR / "core-restore.stamp"
 GODOT_STAMP = CACHE_DIR / "godot-restore.stamp"
 PLAYABLE_GATE = ROOT / "TOOLS/validate_playable_prototype.py"
+REALITY_GATE = ROOT / "TOOLS/validate_reality_model.py"
 
 
 def run(cmd: list[str], *, timeout: int, label: str) -> None:
@@ -112,8 +113,21 @@ def validate_playable_program() -> None:
     )
 
 
-def fast() -> None:
+def validate_reality_model() -> None:
+    run(
+        [sys.executable, str(REALITY_GATE)],
+        timeout=5,
+        label="reality/model gate",
+    )
+
+
+def validate_policy_gates() -> None:
     validate_playable_program()
+    validate_reality_model()
+
+
+def fast() -> None:
+    validate_policy_gates()
     restore_core()
     run(
         [dotnet(), "test", str(CORE_TEST), "-c", "Debug", "--no-restore", "--nologo", "--verbosity", "minimal"],
@@ -123,7 +137,7 @@ def fast() -> None:
 
 
 def check(configuration: str = "Debug") -> None:
-    validate_playable_program()
+    validate_policy_gates()
     restore_core()
     run(
         [dotnet(), "build", str(CORE_FILTER), "-c", configuration, "--no-restore", "--nologo", "--verbosity", "minimal"],
