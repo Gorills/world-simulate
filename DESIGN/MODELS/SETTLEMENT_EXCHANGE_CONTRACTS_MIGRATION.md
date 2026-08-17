@@ -1,6 +1,6 @@
 # Settlement Exchange, Contracts and Migration — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the minimum causal structure for exchange, payment, credit/debt, private contracts, labour/service agreements and migration between settlements/households. It does **not** define universal prices, wage levels, interest rates, credit limits, contract-form probabilities, market-day frequencies, migration rates, travel speeds or settlement-specific legal procedure; those remain calibration/context questions and are `MODEL_UNDERDEFINED` where material.
 
