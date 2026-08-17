@@ -46,21 +46,21 @@ public partial class Main : Node
         }
     }
 
-    public override void _Input(InputEvent inputEvent)
+    public override void _Input(InputEvent @event)
     {
-        if (_inputDevice.Observe(inputEvent))
+        if (_inputDevice.Observe(@event))
         {
             _hud?.SetInputDevice(_inputDevice.Current);
         }
 
-        if (inputEvent.IsActionPressed(GameInput.Menu) && _hud is not null && _village is not null)
+        if (@event.IsActionPressed(GameInput.Menu) && _hud is not null && _village is not null)
         {
             SetHudOpen(!_hudOpen);
             GetViewport().SetInputAsHandled();
             return;
         }
 
-        if (_hudOpen && _hud?.HandleInput(inputEvent) == true)
+        if (_hudOpen && _hud?.HandleInput(@event) == true)
         {
             GetViewport().SetInputAsHandled();
         }

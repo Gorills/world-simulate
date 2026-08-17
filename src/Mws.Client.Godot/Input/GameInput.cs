@@ -103,12 +103,12 @@ internal static class GameInput
 
     internal static Vector2 ReadMovement()
     {
-        var raw = Godot.Input.GetVector(MoveLeft, MoveRight, MoveUp, MoveDown);
+        var raw = global::Godot.Input.GetVector(MoveLeft, MoveRight, MoveUp, MoveDown);
         return new Vector2(raw.X, -raw.Y);
     }
 
     internal static Vector2 ReadCameraLook() =>
-        Godot.Input.GetVector(LookLeft, LookRight, LookUp, LookDown);
+        global::Godot.Input.GetVector(LookLeft, LookRight, LookUp, LookDown);
 
     internal static bool TryReadPointerLook(InputEvent inputEvent, out Vector2 delta)
     {

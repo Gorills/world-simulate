@@ -35,7 +35,7 @@ public partial class ThirdPersonPlayer : CharacterBody3D
             return;
         }
 
-        Godot.Input.MouseMode = Godot.Input.MouseModeEnum.Captured;
+        global::Godot.Input.MouseMode = global::Godot.Input.MouseModeEnum.Captured;
     }
 
     public override void _PhysicsProcess(double delta)
@@ -62,7 +62,7 @@ public partial class ThirdPersonPlayer : CharacterBody3D
             direction = direction.Normalized();
         }
 
-        var speed = Godot.Input.IsActionPressed(GameInput.Sprint) ? RunSpeed : WalkSpeed;
+        var speed = global::Godot.Input.IsActionPressed(GameInput.Sprint) ? RunSpeed : WalkSpeed;
         var targetHorizontal = direction * speed;
         var horizontal = new Vector3(Velocity.X, 0.0f, Velocity.Z);
         horizontal = MoveTowards(
@@ -95,9 +95,9 @@ public partial class ThirdPersonPlayer : CharacterBody3D
         }
     }
 
-    public override void _UnhandledInput(InputEvent inputEvent)
+    public override void _UnhandledInput(InputEvent @event)
     {
-        if (!_inputEnabled || !GameInput.TryReadPointerLook(inputEvent, out var pointerDelta))
+        if (!_inputEnabled || !GameInput.TryReadPointerLook(@event, out var pointerDelta))
         {
             return;
         }
@@ -118,9 +118,9 @@ public partial class ThirdPersonPlayer : CharacterBody3D
 
         if (!string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
         {
-            Godot.Input.MouseMode = enabled
-                ? Godot.Input.MouseModeEnum.Captured
-                : Godot.Input.MouseModeEnum.Visible;
+            global::Godot.Input.MouseMode = enabled
+                ? global::Godot.Input.MouseModeEnum.Captured
+                : global::Godot.Input.MouseModeEnum.Visible;
         }
     }
 
