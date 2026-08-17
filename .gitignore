@@ -1,6 +1,8 @@
 **/bin/
 **/obj/
 **/.godot/
+**/__pycache__/
+*.py[cod]
 .vs/
 .idea/
 .vscode/

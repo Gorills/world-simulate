@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the sequential playable-prototype phase gate."""
+"""Validate the playable-prototype phase state, audit evidence and Git scope."""
 
 from __future__ import annotations
 
@@ -12,13 +12,15 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-STATE_PATH = ROOT / "MACHINE/playable-prototype.json"
+STATE_FILE = ROOT / "MACHINE/playable-prototype.json"
 STATE_REPO_PATH = "MACHINE/playable-prototype.json"
-ALLOWED_STATUSES = {"LOCKED", "IMPLEMENTING", "AUDIT_REQUIRED", "FAILED", "PASSED"}
-ACTIVE_STATUSES = {"IMPLEMENTING", "AUDIT_REQUIRED", "FAILED"}
-ALLOWED_VERDICTS = {"PASS", "FAIL"}
-ALLOWED_REVIEW_MODES = {"independent-post-commit", "human-owner"}
-ALLOWED_TRANSITIONS = {
+PROGRAM = "playable-prototype-v1"
+
+STATUSES = {"LOCKED", "IMPLEMENTING", "AUDIT_REQUIRED", "FAILED", "PASSED"}
+ACTIVE = {"IMPLEMENTING", "AUDIT_REQUIRED", "FAILED"}
+VERDICTS = {"PASS", "FAIL"}
+REVIEW_MODES = {"independent-post-commit", "human-owner"}
+TRANSITIONS = {
     "LOCKED": {"LOCKED", "IMPLEMENTING"},
     "IMPLEMENTING": {"IMPLEMENTING", "AUDIT_REQUIRED"},
     "AUDIT_REQUIRED": {"AUDIT_REQUIRED", "FAILED", "PASSED"},
@@ -32,12 +34,14 @@ PROTECTED_PREFIXES = (
     "TOOLS/",
     "DESIGN/",
     ".github/workflows/",
+    "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/",
 )
 PROTECTED_FILES = {
     "AGENTS.md",
+    ".editorconfig",
+    ".gitignore",
     "Directory.Build.props",
     "global.json",
-    ".editorconfig",
     "WorldSimulate.sln",
     "WorldSimulate.Core.slnf",
 }
@@ -48,117 +52,144 @@ class GateError(RuntimeError):
     pass
 
 
-def require(condition: bool, message: str) -> None:
+def need(condition: bool, message: str) -> None:
     if not condition:
         raise GateError(message)
 
 
-def load_json(path: Path) -> Any:
+def read_json(path: Path) -> dict[str, Any]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise GateError(f"missing required file: {path}") from exc
     except json.JSONDecodeError as exc:
         raise GateError(f"invalid JSON in {path}: {exc}") from exc
+    need(isinstance(value, dict), f"{path} must contain a JSON object")
+    return value
 
 
-def git_available() -> bool:
+def has_git() -> bool:
     return (ROOT / ".git").exists() and shutil.which("git") is not None
 
 
-def git(args: list[str], *, check: bool = True) -> str | None:
-    if not git_available():
+def git(args: list[str], *, required: bool = True) -> str | None:
+    if not has_git():
         return None
-    completed = subprocess.run(
+    result = subprocess.run(
         ["git", *args],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    if completed.returncode != 0:
-        if check:
-            detail = completed.stderr.strip() or completed.stdout.strip() or "git command failed"
+    if result.returncode != 0:
+        if required:
+            detail = result.stderr.strip() or result.stdout.strip() or "git command failed"
             raise GateError(f"git {' '.join(args)}: {detail}")
         return None
-    return completed.stdout
+    return result.stdout
 
 
-def git_json_at(revision: str, repo_path: str) -> dict[str, Any] | None:
-    content = git(["show", f"{revision}:{repo_path}"], check=False)
+def json_at(revision: str, repo_path: str = STATE_REPO_PATH) -> dict[str, Any] | None:
+    content = git(["show", f"{revision}:{repo_path}"], required=False)
     if content is None:
         return None
     try:
         value = json.loads(content)
     except json.JSONDecodeError as exc:
         raise GateError(f"invalid JSON at {revision}:{repo_path}: {exc}") from exc
-    require(isinstance(value, dict), f"{revision}:{repo_path} must contain a JSON object")
+    need(isinstance(value, dict), f"{revision}:{repo_path} must contain a JSON object")
     return value
 
 
 def phase_map(state: dict[str, Any]) -> tuple[list[str], dict[str, dict[str, Any]]]:
     phases = state.get("phases")
-    require(isinstance(phases, list) and phases, "phases must be a non-empty list")
+    need(isinstance(phases, list) and phases, "phases must be a non-empty list")
     order: list[str] = []
     by_id: dict[str, dict[str, Any]] = {}
     for phase in phases:
-        require(isinstance(phase, dict), "each phase must be an object")
+        need(isinstance(phase, dict), "each phase must be an object")
         phase_id = phase.get("id")
-        require(isinstance(phase_id, str) and phase_id, "phase id is required")
-        require(phase_id not in by_id, f"duplicate phase id: {phase_id}")
-        by_id[phase_id] = phase
+        need(isinstance(phase_id, str) and phase_id, "phase id is required")
+        need(phase_id not in by_id, f"duplicate phase id: {phase_id}")
         order.append(phase_id)
+        by_id[phase_id] = phase
     return order, by_id
 
 
-def active_phase_status(state: dict[str, Any]) -> tuple[str | None, str | None]:
+def active_phase(state: dict[str, Any]) -> tuple[str | None, str | None]:
     order, by_id = phase_map(state)
-    active = [phase_id for phase_id in order if by_id[phase_id].get("status") in ACTIVE_STATUSES]
-    require(len(active) <= 1, f"multiple active phases: {active}")
-    if not active:
+    found = [phase_id for phase_id in order if by_id[phase_id].get("status") in ACTIVE]
+    need(len(found) <= 1, f"multiple active phases: {found}")
+    if not found:
         return None, None
-    phase_id = active[0]
+    phase_id = found[0]
     return phase_id, by_id[phase_id]["status"]
 
 
-def validate_transition(old: dict[str, Any], new: dict[str, Any], label: str) -> None:
+def status_changes(
+    old: dict[str, Any],
+    new: dict[str, Any],
+) -> list[tuple[str, str, str]]:
     old_order, old_by_id = phase_map(old)
     new_order, new_by_id = phase_map(new)
-    require(old_order == new_order, f"{label}: phase ids/order changed; amend the gate deliberately")
-
-    changed: list[str] = []
+    need(old_order == new_order, "phase ids/order changed; amend the gate deliberately")
+    changed: list[tuple[str, str, str]] = []
     for phase_id in old_order:
         old_status = old_by_id[phase_id].get("status")
         new_status = new_by_id[phase_id].get("status")
-        require(old_status in ALLOWED_TRANSITIONS, f"{label}: invalid old status for {phase_id}")
-        require(new_status in ALLOWED_TRANSITIONS[old_status],
-                f"{label}: illegal transition {phase_id} {old_status} -> {new_status}")
         if old_status != new_status:
-            changed.append(phase_id)
+            changed.append((phase_id, old_status, new_status))
+    return changed
 
-    require(len(changed) <= 1,
-            f"{label}: change at most one phase status per transition, got {changed}")
+
+def validate_transition(old: dict[str, Any], new: dict[str, Any], label: str) -> None:
+    changed = status_changes(old, new)
+    old_order, old_by_id = phase_map(old)
+    _, new_by_id = phase_map(new)
+    for phase_id in old_order:
+        old_status = old_by_id[phase_id].get("status")
+        new_status = new_by_id[phase_id].get("status")
+        need(old_status in TRANSITIONS, f"{label}: invalid old status for {phase_id}")
+        need(
+            new_status in TRANSITIONS[old_status],
+            f"{label}: illegal transition {phase_id} {old_status} -> {new_status}",
+        )
+    need(len(changed) <= 1, f"{label}: change at most one phase status, got {changed}")
+
+
+def normalize(path: str) -> str:
+    value = path.replace("\\", "/")
+    while value.startswith("./"):
+        value = value[2:]
+    return value.lstrip("/")
 
 
 def is_protected(path: str) -> bool:
-    normalized = path.replace("\\", "/").lstrip("./")
-    return normalized in PROTECTED_FILES or any(normalized.startswith(prefix) for prefix in PROTECTED_PREFIXES)
+    value = normalize(path)
+    return value in PROTECTED_FILES or any(value.startswith(prefix) for prefix in PROTECTED_PREFIXES)
 
 
-def git_name_set(args: list[str]) -> set[str]:
+def is_audit_json(path: str) -> bool:
+    value = normalize(path)
+    return value.startswith("AUDIT_RESULTS/PLAYABLE_PROTOTYPE/") and value.endswith(".json")
+
+
+def git_names(args: list[str]) -> set[str]:
     output = git(args)
-    if output is None:
-        return set()
-    return {line.strip() for line in output.splitlines() if line.strip()}
+    return set() if output is None else {line.strip() for line in output.splitlines() if line.strip()}
 
 
-def worktree_protected_paths() -> set[str]:
-    if not git_available():
-        return set()
-    paths = set()
-    paths |= git_name_set(["diff", "--name-only"])
-    paths |= git_name_set(["diff", "--cached", "--name-only"])
-    paths |= git_name_set(["ls-files", "--others", "--exclude-standard"])
+def path_exists(revision: str, path: str) -> bool:
+    return git(["cat-file", "-e", f"{revision}:{path}"], required=False) is not None
+
+
+def dirty_protected() -> set[str]:
+    paths = (
+        git_names(["diff", "--name-only"])
+        | git_names(["diff", "--cached", "--name-only"])
+        | git_names(["ls-files", "--others", "--exclude-standard"])
+    )
     return {path for path in paths if is_protected(path)}
 
 
@@ -166,225 +197,199 @@ def head_parents() -> list[str]:
     value = git(["rev-list", "--parents", "-n", "1", "HEAD"])
     if value is None:
         return []
-    parts = value.strip().split()
-    return parts[1:]
+    return value.strip().split()[1:]
 
 
-def select_head_parent(head_state: dict[str, Any] | None) -> str | None:
+def select_parent(head_state: dict[str, Any] | None) -> str | None:
     parents = head_parents()
     if not parents:
         return None
     if head_state is not None:
         for parent in parents:
-            if git_json_at(parent, STATE_REPO_PATH) == head_state:
+            if json_at(parent) == head_state:
                 return parent
     return parents[0]
 
 
-def head_protected_paths(parent: str) -> set[str]:
-    return {
-        path for path in git_name_set(["diff", "--name-only", parent, "HEAD"])
-        if is_protected(path)
-    }
-
-
-def validate_protected_scope(state: dict[str, Any]) -> None:
-    if not git_available():
-        return
-
-    phase_id, status = active_phase_status(state)
-    committed_state = git_json_at("HEAD", STATE_REPO_PATH)
-    dirty = worktree_protected_paths()
-    if dirty and status != "IMPLEMENTING":
-        if status == "AUDIT_REQUIRED" and committed_state is not None:
-            committed_phase_id, committed_status = active_phase_status(committed_state)
-            require(
-                committed_phase_id == phase_id and committed_status == "IMPLEMENTING",
-                "protected working-tree changes in AUDIT_REQUIRED are allowed only while closing "
-                "that same committed IMPLEMENTING phase",
-            )
-        else:
-            raise GateError(
-                "protected working-tree changes require a phase in IMPLEMENTING; "
-                f"active={phase_id or 'none'} status={status or 'none'} paths={sorted(dirty)}"
-            )
-
-    parent = select_head_parent(committed_state)
-    if parent is None:
-        raise GateError("git parent commit is unavailable; the phase gate requires repository history")
-
-    changed = head_protected_paths(parent)
-    if not changed:
-        return
-
-    require(committed_state is not None, "HEAD has protected changes but no committed phase state")
-    head_phase_id, head_status = active_phase_status(committed_state)
-
-    if head_status == "IMPLEMENTING":
-        return
-
-    if head_status == "AUDIT_REQUIRED":
-        parent_state = git_json_at(parent, STATE_REPO_PATH)
-        require(parent_state is not None,
-                "protected completion commit requires a parent playable-prototype state")
-        parent_phase_id, parent_status = active_phase_status(parent_state)
-        require(parent_phase_id == head_phase_id and parent_status == "IMPLEMENTING",
-                "protected changes in an AUDIT_REQUIRED commit are allowed only when that same "
-                "phase was IMPLEMENTING in the parent commit")
-        return
-
-    raise GateError(
-        "protected HEAD changes are not allowed unless a phase is IMPLEMENTING or the commit "
-        f"closes that same phase into AUDIT_REQUIRED; active={head_phase_id or 'none'} "
-        f"status={head_status or 'none'} paths={sorted(changed)}"
+def audit_transition(
+    old: dict[str, Any],
+    new: dict[str, Any],
+) -> bool:
+    changed = status_changes(old, new)
+    return (
+        len(changed) == 1
+        and changed[0][1] == "AUDIT_REQUIRED"
+        and changed[0][2] in {"PASSED", "FAILED"}
     )
 
 
-def validate_audit(path_text: str, phase_id: str, expected_overall: str) -> dict[str, Any]:
-    require(
+def validate_audit(path_text: str, phase_id: str, expected: str) -> None:
+    need(
         path_text.startswith("AUDIT_RESULTS/PLAYABLE_PROTOTYPE/") and path_text.endswith(".json"),
-        f"{phase_id}: audit path must be a JSON record under AUDIT_RESULTS/PLAYABLE_PROTOTYPE/",
+        f"{phase_id}: audit must be JSON under AUDIT_RESULTS/PLAYABLE_PROTOTYPE/",
     )
     path = (ROOT / path_text).resolve()
-    root = ROOT.resolve()
     try:
-        path.relative_to(root)
+        path.relative_to(ROOT.resolve())
     except ValueError as exc:
-        raise GateError(f"{phase_id}: audit path must stay inside repository") from exc
-    require(path.is_file(), f"{phase_id}: audit file does not exist: {path_text}")
-    audit = load_json(path)
+        raise GateError(f"{phase_id}: audit path escapes repository") from exc
 
-    require(audit.get("schema_version") == 1, f"{phase_id}: unsupported audit schema")
-    require(audit.get("program") == "playable-prototype-v1", f"{phase_id}: audit program mismatch")
-    require(audit.get("phase_id") == phase_id, f"{phase_id}: audit phase_id mismatch")
+    audit = read_json(path)
+    need(audit.get("schema_version") == 1, f"{phase_id}: unsupported audit schema")
+    need(audit.get("program") == PROGRAM, f"{phase_id}: audit program mismatch")
+    need(audit.get("phase_id") == phase_id, f"{phase_id}: audit phase mismatch")
 
-    subject_sha = audit.get("subject_sha")
-    require(isinstance(subject_sha, str) and SHA40.fullmatch(subject_sha) is not None,
-            f"{phase_id}: audit subject_sha must be lowercase 40-hex")
+    subject = audit.get("subject_sha")
+    need(isinstance(subject, str) and SHA40.fullmatch(subject) is not None,
+         f"{phase_id}: subject_sha must be lowercase 40-hex")
+    need(isinstance(audit.get("reviewer"), str) and audit["reviewer"].strip(),
+         f"{phase_id}: reviewer is required")
+    need(audit.get("review_mode") in REVIEW_MODES, f"{phase_id}: invalid review_mode")
 
-    reviewer = audit.get("reviewer")
-    require(isinstance(reviewer, str) and reviewer.strip(), f"{phase_id}: audit reviewer is required")
-    require(audit.get("review_mode") in ALLOWED_REVIEW_MODES,
-            f"{phase_id}: audit review_mode must be one of {sorted(ALLOWED_REVIEW_MODES)}")
-
-    code_review = audit.get("code_review")
-    systems_audit = audit.get("systems_audit")
+    code = audit.get("code_review")
+    systems = audit.get("systems_audit")
     overall = audit.get("overall")
-    require(code_review in ALLOWED_VERDICTS, f"{phase_id}: invalid code_review verdict")
-    require(systems_audit in ALLOWED_VERDICTS, f"{phase_id}: invalid systems_audit verdict")
-    require(overall in ALLOWED_VERDICTS, f"{phase_id}: invalid overall verdict")
-    require(overall == ("PASS" if code_review == systems_audit == "PASS" else "FAIL"),
-            f"{phase_id}: overall verdict does not match component verdicts")
-    require(overall == expected_overall,
-            f"{phase_id}: phase state expects audit overall {expected_overall}, got {overall}")
+    need(code in VERDICTS and systems in VERDICTS and overall in VERDICTS,
+         f"{phase_id}: invalid audit verdict")
+    need(overall == ("PASS" if code == systems == "PASS" else "FAIL"),
+         f"{phase_id}: overall verdict does not match component verdicts")
+    need(overall == expected, f"{phase_id}: expected audit {expected}, got {overall}")
 
     for field in ("validation", "systems_examined", "findings", "residual_risks"):
-        require(isinstance(audit.get(field), list), f"{phase_id}: audit {field} must be a list")
-    require(bool(audit["validation"]), f"{phase_id}: audit validation evidence must not be empty")
-    require(bool(audit["systems_examined"]), f"{phase_id}: systems_examined must not be empty")
-
+        need(isinstance(audit.get(field), list), f"{phase_id}: {field} must be a list")
+    need(bool(audit["validation"]), f"{phase_id}: validation evidence must not be empty")
+    need(bool(audit["systems_examined"]), f"{phase_id}: systems_examined must not be empty")
     if overall == "FAIL":
-        require(bool(audit["findings"]), f"{phase_id}: failed audit must record findings")
+        need(bool(audit["findings"]), f"{phase_id}: failed audit must record findings")
 
-    if git_available():
-        exists = git(["cat-file", "-e", f"{subject_sha}^{{commit}}"], check=False)
-        require(exists is not None, f"{phase_id}: audit subject commit does not exist locally")
-        ancestor = subprocess.run(
-            ["git", "merge-base", "--is-ancestor", subject_sha, "HEAD"],
-            cwd=ROOT,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        require(ancestor.returncode == 0, f"{phase_id}: audit subject must be an ancestor of HEAD")
-        subject_state = git_json_at(subject_sha, STATE_REPO_PATH)
-        require(subject_state is not None, f"{phase_id}: audit subject has no playable-prototype state")
-        _, subject_by_id = phase_map(subject_state)
-        require(phase_id in subject_by_id, f"{phase_id}: audit subject does not contain the phase")
-        require(subject_by_id[phase_id].get("status") == "AUDIT_REQUIRED",
-                f"{phase_id}: audit subject must have phase status AUDIT_REQUIRED")
+    if not has_git():
+        return
 
-    return audit
+    need(git(["cat-file", "-e", f"{subject}^{{commit}}"], required=False) is not None,
+         f"{phase_id}: audit subject commit is unavailable")
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", subject, "HEAD"],
+        cwd=ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    need(ancestor.returncode == 0, f"{phase_id}: audit subject must be an ancestor of HEAD")
+
+    subject_state = json_at(subject)
+    need(subject_state is not None, f"{phase_id}: audit subject has no program state")
+    _, subject_by_id = phase_map(subject_state)
+    need(phase_id in subject_by_id, f"{phase_id}: audit subject does not contain phase")
+    need(subject_by_id[phase_id].get("status") == "AUDIT_REQUIRED",
+         f"{phase_id}: audit subject must have status AUDIT_REQUIRED")
 
 
 def validate_state(state: dict[str, Any]) -> None:
-    require(state.get("schema_version") == 1, "unsupported playable-prototype state schema")
-    require(state.get("program") == "playable-prototype-v1", "unexpected playable-prototype program id")
-
+    need(state.get("schema_version") == 1, "unsupported state schema")
+    need(state.get("program") == PROGRAM, "unexpected program id")
     policy = state.get("policy")
-    require(isinstance(policy, str) and (ROOT / policy).is_file(), "program policy file is missing")
+    need(isinstance(policy, str) and (ROOT / policy).is_file(), "program policy file is missing")
 
     order, by_id = phase_map(state)
     for index, phase_id in enumerate(order):
         phase = by_id[phase_id]
-        require(phase.get("status") in ALLOWED_STATUSES,
-                f"{phase_id}: status must be one of {sorted(ALLOWED_STATUSES)}")
-        require(isinstance(phase.get("depends_on"), list), f"{phase_id}: depends_on must be a list")
+        status = phase.get("status")
+        need(status in STATUSES, f"{phase_id}: invalid status")
+        dependencies = phase.get("depends_on")
+        need(isinstance(dependencies, list), f"{phase_id}: depends_on must be a list")
+        for dependency in dependencies:
+            need(dependency in by_id, f"{phase_id}: unknown dependency {dependency}")
+            need(order.index(dependency) < index, f"{phase_id}: dependency must be earlier")
+            if status != "LOCKED":
+                need(by_id[dependency]["status"] == "PASSED",
+                     f"{phase_id}: cannot leave LOCKED before {dependency} PASSED")
 
-        for dependency in phase["depends_on"]:
-            require(dependency in by_id, f"{phase_id}: unknown dependency {dependency}")
-            require(order.index(dependency) < index, f"{phase_id}: dependency {dependency} must be earlier")
+    active_id, _ = active_phase(state)
+    need(state.get("active_phase") == active_id,
+         f"active_phase must be {active_id!r}, got {state.get('active_phase')!r}")
 
-        if phase["status"] != "LOCKED":
-            for dependency in phase["depends_on"]:
-                require(by_id[dependency]["status"] == "PASSED",
-                        f"{phase_id}: cannot leave LOCKED before {dependency} is PASSED")
-
-    phase_id, _ = active_phase_status(state)
-    require(state.get("active_phase") == phase_id,
-            f"active_phase must be {phase_id!r}, got {state.get('active_phase')!r}")
-
-    first_nonpassed_seen = False
+    unfinished = False
     for phase_id in order:
         phase = by_id[phase_id]
         status = phase["status"]
+        audit_path = phase.get("latest_audit")
         if status == "PASSED":
-            require(not first_nonpassed_seen,
-                    f"{phase_id}: PASSED phase appears after an unfinished earlier phase")
-            audit_path = phase.get("latest_audit")
-            require(isinstance(audit_path, str) and audit_path,
-                    f"{phase_id}: PASSED requires latest_audit")
+            need(not unfinished, f"{phase_id}: PASSED after unfinished earlier phase")
+            need(isinstance(audit_path, str) and audit_path, f"{phase_id}: PASSED requires audit")
             validate_audit(audit_path, phase_id, "PASS")
         else:
-            first_nonpassed_seen = True
+            unfinished = True
             if status == "FAILED":
-                audit_path = phase.get("latest_audit")
-                require(isinstance(audit_path, str) and audit_path,
-                        f"{phase_id}: FAILED requires latest_audit")
+                need(isinstance(audit_path, str) and audit_path, f"{phase_id}: FAILED requires audit")
                 validate_audit(audit_path, phase_id, "FAIL")
             elif status in {"LOCKED", "IMPLEMENTING"}:
-                require(phase.get("latest_audit") is None,
-                        f"{phase_id}: {status} must not carry latest_audit")
+                need(audit_path is None, f"{phase_id}: {status} must not carry latest_audit")
             elif status == "AUDIT_REQUIRED":
-                previous = phase.get("latest_audit")
-                if previous is not None:
-                    require(isinstance(previous, str) and previous,
-                            f"{phase_id}: latest_audit must be null or a path")
+                need(audit_path is None or isinstance(audit_path, str),
+                     f"{phase_id}: latest_audit must be null or path")
 
 
-def validate_git_transition(state: dict[str, Any]) -> None:
-    if not git_available():
+def validate_git_scope(state: dict[str, Any]) -> None:
+    if not has_git():
         return
 
-    committed_state = git_json_at("HEAD", STATE_REPO_PATH)
-    if committed_state is not None and committed_state != state:
-        validate_transition(committed_state, state, "working tree")
+    committed = json_at("HEAD")
+    if committed is not None and committed != state:
+        validate_transition(committed, state, "working tree")
 
-    parent = select_head_parent(committed_state)
-    if parent is None:
-        raise GateError("git parent commit is unavailable; the phase gate requires repository history")
-    parent_state = git_json_at(parent, STATE_REPO_PATH)
-    head_state = committed_state
-    if parent_state is not None and head_state is not None:
-        validate_transition(parent_state, head_state, "HEAD")
+    parent = select_parent(committed)
+    need(parent is not None, "Git history unavailable; full repository history is required")
+    parent_state = json_at(parent)
+    if committed is not None and parent_state is not None:
+        validate_transition(parent_state, committed, "HEAD")
+
+    dirty = dirty_protected()
+    if dirty:
+        _, current_status = active_phase(state)
+        allowed = current_status == "IMPLEMENTING"
+
+        if not allowed and current_status == "AUDIT_REQUIRED" and committed is not None:
+            current_id, _ = active_phase(state)
+            committed_id, committed_status = active_phase(committed)
+            allowed = current_id == committed_id and committed_status == "IMPLEMENTING"
+
+        if not allowed and committed is not None and all(is_audit_json(path) for path in dirty):
+            allowed = (
+                audit_transition(committed, state)
+                and all(not path_exists("HEAD", path) for path in dirty)
+            )
+
+        need(allowed, f"protected working-tree changes are outside allowed phase scope: {sorted(dirty)}")
+
+    changed = {path for path in git_names(["diff", "--name-only", parent, "HEAD"]) if is_protected(path)}
+    if not changed:
+        return
+
+    need(committed is not None, "HEAD has protected changes but no committed program state")
+    head_id, head_status = active_phase(committed)
+    if head_status == "IMPLEMENTING":
+        return
+
+    if head_status == "AUDIT_REQUIRED" and parent_state is not None:
+        parent_id, parent_status = active_phase(parent_state)
+        if parent_id == head_id and parent_status == "IMPLEMENTING":
+            return
+
+    if (
+        parent_state is not None
+        and all(is_audit_json(path) for path in changed)
+        and audit_transition(parent_state, committed)
+        and all(not path_exists(parent, path) for path in changed)
+    ):
+        return
+
+    raise GateError(f"protected HEAD changes are outside allowed phase scope: {sorted(changed)}")
 
 
 def main() -> int:
-    state = load_json(STATE_PATH)
-    require(isinstance(state, dict), "playable-prototype state must be a JSON object")
+    state = read_json(STATE_FILE)
     validate_state(state)
-    validate_git_transition(state)
-    validate_protected_scope(state)
-    print(f"MWS_PLAYABLE_GATE_OK program={state['program']} active={state.get('active_phase') or 'none'}")
+    validate_git_scope(state)
+    print(f"MWS_PLAYABLE_GATE_OK program={PROGRAM} active={state.get('active_phase') or 'none'}")
     return 0
 
 

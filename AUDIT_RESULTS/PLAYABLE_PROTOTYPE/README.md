@@ -29,5 +29,6 @@ Rules:
 - `overall` can be `PASS` only when both review verdicts are `PASS`.
 - A blocking finding requires `overall: FAIL`.
 - `subject_sha` is the immutable implementation commit being reviewed, not the later commit that stores this audit record.
+- Audit JSON records are append-only. Never edit an existing result; a new audit round creates a new file.
 - A failed phase is repaired in place and audited again with a new result file.
 - Passing one phase does not automatically start the next phase.

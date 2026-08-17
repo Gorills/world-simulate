@@ -39,16 +39,20 @@ Protected scope includes:
 
 - `src/`, `tests/`, `benchmarks/`;
 - `TOOLS/`, `DESIGN/`, `.github/workflows/`;
-- root `AGENTS.md` and build/solution configuration files.
+- `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`;
+- root `AGENTS.md`, `.gitignore` and build/solution configuration files.
 
 Protected working-tree changes require the relevant phase to be `IMPLEMENTING`. The one exception is the same working tree transition from `IMPLEMENTING` to `AUDIT_REQUIRED`, which may contain the final implementation edits.
 
 A committed protected change is valid only when:
 
 - the phase is `IMPLEMENTING`; or
-- the commit closes that same phase from parent `IMPLEMENTING` to `AUDIT_REQUIRED`.
+- the commit closes that same phase from parent `IMPLEMENTING` to `AUDIT_REQUIRED`; or
+- an audit commit adds new JSON evidence while moving that phase from `AUDIT_REQUIRED` to `PASSED` or `FAILED`.
 
-Protected edits are therefore rejected while a phase is `AUDIT_REQUIRED`, `FAILED`, or after all completed phases are `PASSED`, unless the state is first moved through an allowed transition.
+Audit JSON is append-only. An audit transition may add a new result file but may not rewrite a result that existed in its parent commit.
+
+Protected edits are therefore rejected while a phase is `AUDIT_REQUIRED`, `FAILED`, or after all completed phases are `PASSED`, unless the state is first moved through an allowed transition. Generated Python bytecode is ignored by Git so the validation workflow does not create its own false protected change.
 
 The gate also verifies audit subject commits from repository history and requires an audit subject to show that phase as `AUDIT_REQUIRED`. CI checks out full history so old audit evidence remains verifiable as later phases accumulate.
 
@@ -85,7 +89,7 @@ Green tests are evidence, not a substitute for this review.
 
 | Phase | Goal | Required proof before PASS |
 | --- | --- | --- |
-| P0 `PROCESS_GATE` | Install this sequential audit contract and make it executable in local validation/CI. | Validator rejects invalid phase transitions; local/CI entry points run it; contract is discoverable to agents. |
+| P0 `PROCESS_GATE` | Install this sequential audit contract and make it executable in local validation/CI. | Validator rejects invalid phase transitions and protected edits; audit evidence is append-only; local/CI entry points run the gate; contract is discoverable to agents. |
 | P1 `PLAYABLE_USES_WORLD_RUNTIME` | Make the playable client use `WorldRuntime` as its authoritative composition root. | Time, commands and projection flow through `WorldRuntime`; no client-owned `SettlementSimulation` authority path remains; current village behavior stays equivalent. |
 | P2 `AUTHORITATIVE_PLAYER_ACTOR` | Represent the player as an authoritative simulation actor. | Stable player identity, owned inventory and semantic location survive save/load and deterministic replay; client sends intent only. |
 | P3 `SEMANTIC_LOCATION_AND_TRAVEL` | Add authoritative place/travel semantics for player and residents without persisting render coordinates. | Location-dependent interactions cannot contradict authoritative activity/travel; Godot remains presentation/interpolation. |

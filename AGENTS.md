@@ -35,10 +35,11 @@ Prefer small-to-medium vertical edits that a weaker local agent can understand f
 The active playable-prototype program is defined by `DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md` and `MACHINE/playable-prototype.json`.
 
 - Run `python TOOLS/validate_playable_prototype.py` before changing production scope. With Git available, it checks both phase state and actual protected working-tree/HEAD changes.
-- Work only on the single phase marked `IMPLEMENTING`. Protected scope includes `src/`, tests, benchmarks, tooling, design, workflows and root build/agent contracts.
+- Work only on the single phase marked `IMPLEMENTING`. Protected scope includes `src/`, tests, benchmarks, tooling, design, workflows, audit evidence and root build/agent/git-ignore contracts.
 - A phase in `AUDIT_REQUIRED` is frozen. Review the exact committed implementation; do not keep coding in the audit pass.
 - `FAILED` means repair the same phase: move that phase back to `IMPLEMENTING`, then repair it. Do not start a later phase.
 - A later phase must remain `LOCKED` until all dependencies are `PASSED`.
 - Passing tests is not enough to mark a phase `PASSED`; both independent post-commit code review and systems audit must pass and be recorded under `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`.
+- Audit JSON records are append-only evidence. Never rewrite a previous result; a new review creates a new JSON record.
 - Passing a phase does not automatically authorize or start the next phase. Record `PASS` and start the next phase in separate state transitions.
 - Respect the program scope freeze. Do not add polish or unrelated systems while authority, scaling and gameplay-causality phases are unresolved.
