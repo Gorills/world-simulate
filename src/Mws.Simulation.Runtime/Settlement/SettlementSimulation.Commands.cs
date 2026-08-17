@@ -76,11 +76,8 @@ public sealed partial class SettlementSimulation
         }
 
         var resident = _residents[index];
-        _residents[index] = resident with
-        {
-            Hunger = Math.Max(0, resident.Hunger - 45),
-            Activity = ResidentActivity.Eating,
-        };
+        resident.Hunger = Math.Max(0, resident.Hunger - 45);
+        resident.Activity = ResidentActivity.Eating;
 
         AppendEvent(
             SettlementEventKinds.PlayerFed,
@@ -169,8 +166,8 @@ public sealed partial class SettlementSimulation
         return choice switch
         {
             ResidentInteractionChoice.AskAboutWork => AskAboutWork(resident),
-            ResidentInteractionChoice.Encourage => Encourage(index, resident),
-            ResidentInteractionChoice.ShareRation => ShareRation(index, resident),
+            ResidentInteractionChoice.Encourage => Encourage(resident),
+            ResidentInteractionChoice.ShareRation => ShareRation(resident),
             _ => throw new ArgumentOutOfRangeException(nameof(choice), choice, "Unknown resident interaction."),
         };
     }

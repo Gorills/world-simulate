@@ -27,6 +27,13 @@ public sealed record ResidentProjection(
     int Affinity,
     IReadOnlyList<ItemStackProjection> Inventory);
 
+public sealed record ResidentProjectionPage(
+    SimulationScopeId ScopeId,
+    SimulationTime Time,
+    int Offset,
+    int TotalCount,
+    IReadOnlyList<ResidentProjection> Residents);
+
 public sealed record SettlementProjection(
     SimulationScopeId ScopeId,
     SimulationTime Time,

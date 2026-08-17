@@ -101,6 +101,23 @@ public sealed class SimulationCoreQualityTests
     }
 
     [Fact]
+    public void ProductionSettlementHotLoopDoesNotCloneResidentRecords()
+    {
+        var settlement = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "Mws.Simulation.Runtime",
+            "Settlement");
+        var simulation = File.ReadAllText(Path.Combine(settlement, "SettlementSimulation.cs"));
+        var hourPlan = File.ReadAllText(Path.Combine(settlement, "SettlementSimulation.HourPlan.cs"));
+
+        Assert.Contains("ResidentRuntimeState[] _residents", simulation, StringComparison.Ordinal);
+        Assert.Contains("HourlyPlanWorkspace", hourPlan, StringComparison.Ordinal);
+        Assert.DoesNotContain("resident with", hourPlan, StringComparison.Ordinal);
+        Assert.DoesNotContain("Select(resident => resident with", hourPlan, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ObsoleteToySimulationDoesNotReturn()
     {
         var root = FindRepositoryRoot();

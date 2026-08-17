@@ -121,7 +121,8 @@ public sealed partial class ProofAKernel
         foreach (var group in ordered.GroupBy(intent => intent.DueAt.Milliseconds))
         {
             AdvanceTo(new SimulationTime(group.Key));
-            var reservations = new Dictionary<long, long>();
+            var sourceReservations = new Dictionary<long, long>();
+            var destinationReservations = new Dictionary<long, long>();
             var accepted = new List<ProofATransferIntent>();
 
             foreach (var intent in group)
@@ -132,15 +133,22 @@ public sealed partial class ProofAKernel
                     continue;
                 }
 
-                if (!TryValidateTransfer(intent.OwnerId, intent.FromId, intent.ToId, intent.Amount, out var source, out _, out var failureCode))
+                if (!TryValidateTransfer(
+                    intent.OwnerId,
+                    intent.FromId,
+                    intent.ToId,
+                    intent.Amount,
+                    out var source,
+                    out var destination,
+                    out var failureCode))
                 {
                     Record(intent.CommandId, false, failureCode, null);
                     resolutions.Add(new ProofATransferResolution(intent.CommandId, false, failureCode));
                     continue;
                 }
 
-                reservations.TryGetValue(intent.FromId.Value, out var alreadyReserved);
-                if (source.Resource - alreadyReserved < intent.Amount)
+                sourceReservations.TryGetValue(intent.FromId.Value, out var alreadyReservedFromSource);
+                if (source.Resource - alreadyReservedFromSource < intent.Amount)
                 {
                     const string conflictCode = "RESERVATION_CONFLICT";
                     Record(intent.CommandId, false, conflictCode, null);
@@ -148,7 +156,22 @@ public sealed partial class ProofAKernel
                     continue;
                 }
 
-                reservations[intent.FromId.Value] = checked(alreadyReserved + intent.Amount);
+                destinationReservations.TryGetValue(intent.ToId.Value, out var alreadyReservedForDestination);
+                long destinationAfterReservations;
+                try
+                {
+                    destinationAfterReservations = checked(destination.Resource + alreadyReservedForDestination + intent.Amount);
+                }
+                catch (OverflowException)
+                {
+                    const string overflowCode = "RESOURCE_OVERFLOW";
+                    Record(intent.CommandId, false, overflowCode, null);
+                    resolutions.Add(new ProofATransferResolution(intent.CommandId, false, overflowCode));
+                    continue;
+                }
+
+                sourceReservations[intent.FromId.Value] = checked(alreadyReservedFromSource + intent.Amount);
+                destinationReservations[intent.ToId.Value] = checked(destinationAfterReservations - destination.Resource);
                 accepted.Add(intent);
             }
 
@@ -156,8 +179,10 @@ public sealed partial class ProofAKernel
             {
                 var source = _entities[intent.FromId.Value];
                 var destination = _entities[intent.ToId.Value];
-                _entities[intent.FromId.Value] = source with { Resource = checked(source.Resource - intent.Amount) };
-                _entities[intent.ToId.Value] = destination with { Resource = checked(destination.Resource + intent.Amount) };
+                var nextSourceResource = checked(source.Resource - intent.Amount);
+                var nextDestinationResource = checked(destination.Resource + intent.Amount);
+                _entities[intent.FromId.Value] = source with { Resource = nextSourceResource };
+                _entities[intent.ToId.Value] = destination with { Resource = nextDestinationResource };
                 var traceId = AppendTrace(null, "same-time-transfer", "Deterministic reservation arbitration committed a transfer.");
                 Record(intent.CommandId, true, "TRANSFERRED", traceId);
                 resolutions.Add(new ProofATransferResolution(intent.CommandId, true, "TRANSFERRED"));
@@ -183,6 +208,12 @@ public sealed partial class ProofAKernel
         if (amount <= 0)
         {
             failureCode = "INVALID_AMOUNT";
+            return false;
+        }
+
+        if (fromId == toId)
+        {
+            failureCode = "SAME_ENTITY_TRANSFER";
             return false;
         }
 

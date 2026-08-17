@@ -21,11 +21,11 @@ static void RunWorldSmoke(string[] args)
         ? Math.Min(parsedHours, 87_600)
         : 100;
 
-    var simulation = SettlementSimulation.CreateDefault(new WorldSeed(seed));
-    simulation.AdvanceHours(hours);
-
-    var json = SettlementStateJson.Serialize(simulation.CaptureState());
-    var projection = simulation.Project();
+    var world = WorldRuntime.Create(new WorldSeed(seed));
+    var settlementScope = world.AddDefaultSettlement();
+    world.AdvanceHours(hours);
+    var json = SettlementStateJson.Serialize(world.CaptureSettlementState(settlementScope));
+    var projection = world.ProjectSettlement(settlementScope);
     Console.WriteLine(json);
     Console.WriteLine(
         $"MWS_HEADLESS_OK seed={seed} hours={hours} day={projection.Day} hour={projection.Hour} " +

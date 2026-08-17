@@ -12,11 +12,13 @@ public sealed partial class SettlementSimulation
     private readonly SimulationScopeId _scopeId;
     private readonly ulong _worldSeed;
     private readonly EntityId _settlementOwnerId;
-    private readonly List<ResidentState> _residents;
+    private readonly ResidentRuntimeState[] _residents;
     private readonly List<ItemStackState> _itemStacks;
     private readonly List<WorkplaceState> _workplaces;
     private readonly List<SettlementEvent> _events;
     private readonly List<SettlementCommandReceipt> _commandReceipts;
+    private readonly Dictionary<EntityId, int> _residentIndicesById;
+    private readonly Dictionary<EntityId, WorkplaceState> _workplacesById;
     private long _nextEventId;
     private long _nextStackId;
     private long _nextCommandId;
@@ -42,13 +44,20 @@ public sealed partial class SettlementSimulation
         _nextStackId = nextStackId;
         _nextCommandId = nextCommandId;
         _settlementOwnerId = settlementOwnerId;
-        _residents = residents.OrderBy(resident => resident.Id.Value).ToList();
+        _residents = residents
+            .OrderBy(resident => resident.Id.Value)
+            .Select(resident => new ResidentRuntimeState(resident))
+            .ToArray();
         _itemStacks = itemStacks.OrderBy(stack => stack.StackId).ToList();
         _workplaces = workplaces.OrderBy(workplace => workplace.Id.Value).ToList();
         _events = events.OrderBy(entry => entry.Id).ToList();
         _commandReceipts = commandReceipts.OrderBy(entry => entry.CommandId.Value).ToList();
+        _residentIndicesById = new Dictionary<EntityId, int>(_residents.Length);
+        _workplacesById = new Dictionary<EntityId, WorkplaceState>(_workplaces.Count);
+        _hourlyPlanWorkspace = new HourlyPlanWorkspace(_residents.Length);
 
         ValidateState();
+        RebuildEntityIndexes();
         RebuildInventoryIndexes();
         ValidateInventoryTotals();
         RebuildHistoryIndexes();
@@ -61,11 +70,17 @@ public sealed partial class SettlementSimulation
     public static SettlementSimulation CreateDefault(WorldSeed seed) =>
         CreateDefault(seed, SimulationScopeId.Root);
 
-    public static SettlementSimulation CreateDefault(WorldSeed seed, SimulationScopeId scopeId)
+    public static SettlementSimulation CreateDefault(WorldSeed seed, SimulationScopeId scopeId) =>
+        CreateDefault(seed, scopeId, entityIdOffset: 0);
+
+    internal static SettlementSimulation CreateDefault(
+        WorldSeed seed,
+        SimulationScopeId scopeId,
+        long entityIdOffset)
     {
-        var residents = SettlementPrototypeContent.CreateResidents();
-        var itemStacks = SettlementPrototypeContent.CreateItemStacks();
-        var workplaces = SettlementPrototypeContent.CreateWorkplaces();
+        var residents = SettlementPrototypeContent.CreateResidents(entityIdOffset);
+        var itemStacks = SettlementPrototypeContent.CreateItemStacks(entityIdOffset);
+        var workplaces = SettlementPrototypeContent.CreateWorkplaces(entityIdOffset);
         SettlementPrototypeContent.Validate(residents, itemStacks, workplaces);
 
         return new SettlementSimulation(
@@ -75,7 +90,7 @@ public sealed partial class SettlementSimulation
             nextEventId: 1,
             nextStackId: 3,
             nextCommandId: 1,
-            SettlementPrototypeContent.SettlementOwnerId,
+            SettlementPrototypeContent.GetSettlementOwnerId(entityIdOffset),
             residents,
             itemStacks,
             workplaces,
@@ -122,7 +137,7 @@ public sealed partial class SettlementSimulation
         _nextStackId,
         _nextCommandId,
         _settlementOwnerId,
-        _residents.OrderBy(resident => resident.Id.Value).ToArray(),
+        _residents.Select(resident => resident.Capture()).ToArray(),
         _itemStacks.OrderBy(stack => stack.StackId).ToArray(),
         _workplaces.OrderBy(workplace => workplace.Id.Value).ToArray(),
         _events.OrderBy(entry => entry.Id).ToArray(),
@@ -138,6 +153,21 @@ public sealed partial class SettlementSimulation
         return new CommandId(_nextCommandId);
     }
 
+    private void RebuildEntityIndexes()
+    {
+        _residentIndicesById.Clear();
+        for (var index = 0; index < _residents.Length; index++)
+        {
+            _residentIndicesById.Add(_residents[index].Id, index);
+        }
+
+        _workplacesById.Clear();
+        foreach (var workplace in _workplaces)
+        {
+            _workplacesById.Add(workplace.Id, workplace);
+        }
+    }
+
     private void ValidateState()
     {
         EnsureUnique(_residents.Select(resident => resident.Id.Value), "resident");
@@ -146,9 +176,9 @@ public sealed partial class SettlementSimulation
         EnsureUnique(_events.Select(entry => entry.Id), "event");
         EnsureUnique(_commandReceipts.Select(entry => entry.CommandId.Value), "command receipt");
 
-        if (_scopeId.Value == 0 || Time.Milliseconds < 0)
+        if (_scopeId.Value == 0 || Time.Milliseconds < 0 || Time.Milliseconds % HourMilliseconds != 0)
         {
-            throw new InvalidOperationException("Settlement scope must be non-zero and time cannot be negative.");
+            throw new InvalidOperationException("Settlement scope must be non-zero and time must be a non-negative whole-hour boundary.");
         }
 
         if (_settlementOwnerId.Value <= 0

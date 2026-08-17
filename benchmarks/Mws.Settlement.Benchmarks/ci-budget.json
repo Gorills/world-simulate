@@ -1,0 +1,9 @@
+{
+  "Residents": 512,
+  "Workplaces": 512,
+  "Days": 30,
+  "MaxAdvanceMilliseconds": 1500.0,
+  "MaxAdvanceAllocatedBytes": 200000000,
+  "MaxSnapshotRoundTripMilliseconds": 300.0,
+  "MaxSnapshotBytes": 400000
+}

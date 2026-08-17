@@ -51,11 +51,24 @@ if (residentCount is < 3 or > 5_000 || days is < 1 or > 365)
     return 2;
 }
 
+SettlementScaleBudget budget;
+try
+{
+    budget = LoadBudget();
+}
+catch (Exception exception) when (exception is IOException or JsonException or InvalidDataException)
+{
+    Console.Error.WriteLine($"Settlement scale budget could not be loaded: {exception.Message}");
+    return 1;
+}
+
 var state = CreateVillageState(residentCount);
 var simulation = SettlementSimulation.Restore(state);
+var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
 var elapsed = Stopwatch.StartNew();
 simulation.AdvanceHours(checked((long)days * 24));
 elapsed.Stop();
+var advanceAllocatedBytes = checked(GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore);
 
 var snapshotWatch = Stopwatch.StartNew();
 var snapshot = SettlementStateJson.Serialize(simulation.CaptureState());
@@ -71,18 +84,21 @@ if (!string.Equals(snapshot, roundTrip, StringComparison.Ordinal))
 
 var projection = restored.Project();
 if (projection.Residents.Count != residentCount
+    || projection.Workplaces.Count != residentCount
     || projection.Residents.Any(resident => resident.Hunger is < 0 or > 100 || resident.Energy is < 0 or > 100))
 {
-    Console.Error.WriteLine("Settlement scale run violated resident invariants.");
+    Console.Error.WriteLine("Settlement scale run violated resident or topology invariants.");
     return 1;
 }
 
 var snapshotBytes = Encoding.UTF8.GetByteCount(snapshot);
 var report = new SettlementScaleReport(
     residentCount,
+    projection.Workplaces.Count,
     days,
     checked((long)days * 24),
     elapsed.Elapsed.TotalMilliseconds,
+    advanceAllocatedBytes,
     snapshotWatch.Elapsed.TotalMilliseconds,
     snapshotBytes,
     projection.Stockpile.Count,
@@ -102,41 +118,146 @@ if (outputPath is not null)
 }
 
 Console.WriteLine(json);
+if (BudgetApplies(report, budget))
+{
+    var violations = BudgetViolations(report, budget);
+    if (violations.Count > 0)
+    {
+        foreach (var violation in violations)
+        {
+            Console.Error.WriteLine($"MWS_SETTLEMENT_SCALE_BUDGET_FAIL {violation}");
+        }
+
+        return 1;
+    }
+
+    Console.WriteLine(
+        $"MWS_SETTLEMENT_SCALE_BUDGET_OK residents={report.Residents} days={report.Days} " +
+        $"max_advance_ms={budget.MaxAdvanceMilliseconds:F2} " +
+        $"max_allocated_bytes={budget.MaxAdvanceAllocatedBytes} max_snapshot_bytes={budget.MaxSnapshotBytes}");
+}
+else
+{
+    Console.WriteLine(
+        $"MWS_SETTLEMENT_SCALE_BUDGET_SKIPPED residents={report.Residents} days={report.Days} " +
+        $"budget_residents={budget.Residents} budget_days={budget.Days}");
+}
+
 Console.WriteLine(
-    $"MWS_SETTLEMENT_SCALE_OK residents={residentCount} days={days} " +
-    $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} snapshot_bytes={snapshotBytes}");
+    $"MWS_SETTLEMENT_SCALE_OK residents={residentCount} days={days} workplaces={projection.Workplaces.Count} " +
+    $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} allocated_bytes={advanceAllocatedBytes} snapshot_bytes={snapshotBytes}");
 return 0;
+
+static SettlementScaleBudget LoadBudget()
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "ci-budget.json");
+    if (!File.Exists(path))
+    {
+        throw new FileNotFoundException("Settlement scale CI budget is missing from the benchmark output.", path);
+    }
+
+    var budget = JsonSerializer.Deserialize<SettlementScaleBudget>(File.ReadAllText(path, Encoding.UTF8))
+        ?? throw new InvalidDataException("Settlement scale CI budget is empty.");
+    if (budget.Residents <= 0
+        || budget.Workplaces <= 0
+        || budget.Days <= 0
+        || !double.IsFinite(budget.MaxAdvanceMilliseconds)
+        || budget.MaxAdvanceMilliseconds <= 0
+        || budget.MaxAdvanceAllocatedBytes <= 0
+        || !double.IsFinite(budget.MaxSnapshotRoundTripMilliseconds)
+        || budget.MaxSnapshotRoundTripMilliseconds <= 0
+        || budget.MaxSnapshotBytes <= 0)
+    {
+        throw new InvalidDataException("Settlement scale CI budget contains invalid limits.");
+    }
+
+    return budget;
+}
+
+static bool BudgetApplies(SettlementScaleReport report, SettlementScaleBudget budget) =>
+    report.Residents == budget.Residents
+    && report.Workplaces == budget.Workplaces
+    && report.Days == budget.Days;
+
+static List<string> BudgetViolations(SettlementScaleReport report, SettlementScaleBudget budget)
+{
+    var violations = new List<string>(4);
+    if (!double.IsFinite(report.AdvanceMilliseconds)
+        || report.AdvanceMilliseconds > budget.MaxAdvanceMilliseconds)
+    {
+        violations.Add($"advance_ms={report.AdvanceMilliseconds:F2}>{budget.MaxAdvanceMilliseconds:F2}");
+    }
+
+    if (report.AdvanceAllocatedBytes > budget.MaxAdvanceAllocatedBytes)
+    {
+        violations.Add($"allocated_bytes={report.AdvanceAllocatedBytes}>{budget.MaxAdvanceAllocatedBytes}");
+    }
+
+    if (!double.IsFinite(report.SnapshotRoundTripMilliseconds)
+        || report.SnapshotRoundTripMilliseconds > budget.MaxSnapshotRoundTripMilliseconds)
+    {
+        violations.Add(
+            $"snapshot_roundtrip_ms={report.SnapshotRoundTripMilliseconds:F2}>{budget.MaxSnapshotRoundTripMilliseconds:F2}");
+    }
+
+    if (report.SnapshotBytes > budget.MaxSnapshotBytes)
+    {
+        violations.Add($"snapshot_bytes={report.SnapshotBytes}>{budget.MaxSnapshotBytes}");
+    }
+
+    return violations;
+}
 
 static SettlementState CreateVillageState(int residentCount)
 {
     var state = SettlementSimulation.CreateDefault(new WorldSeed(4242), new SimulationScopeId(4242)).CaptureState();
-    var farm = state.Workplaces.Single(workplace => workplace.Profession == ResidentProfession.Farmer);
-    var kitchen = state.Workplaces.Single(workplace => workplace.Profession == ResidentProfession.Cook);
-    var grove = state.Workplaces.Single(workplace => workplace.Profession == ResidentProfession.Forager);
+    var workplaces = Enumerable.Range(1, residentCount)
+        .Select(index =>
+        {
+            var profession = ProfessionFor(index);
+            var workplaceId = new EntityId(2_000_000L + index);
+            return profession switch
+            {
+                ResidentProfession.Farmer => new WorkplaceState(
+                    workplaceId,
+                    $"Farm {index}",
+                    profession,
+                    null,
+                    0,
+                    SettlementItems.Grain,
+                    2),
+                ResidentProfession.Cook => new WorkplaceState(
+                    workplaceId,
+                    $"Kitchen {index}",
+                    profession,
+                    SettlementItems.Grain,
+                    2,
+                    SettlementItems.Ration,
+                    1),
+                ResidentProfession.Forager => new WorkplaceState(
+                    workplaceId,
+                    $"Grove {index}",
+                    profession,
+                    null,
+                    0,
+                    SettlementItems.Herb,
+                    1),
+                _ => throw new InvalidOperationException("Unexpected profession."),
+            };
+        })
+        .ToArray();
     var residents = Enumerable.Range(1, residentCount)
         .Select(index =>
         {
-            var profession = (index % 3) switch
-            {
-                0 => ResidentProfession.Farmer,
-                1 => ResidentProfession.Cook,
-                _ => ResidentProfession.Forager,
-            };
-            var workplaceId = profession switch
-            {
-                ResidentProfession.Farmer => farm.Id,
-                ResidentProfession.Cook => kitchen.Id,
-                ResidentProfession.Forager => grove.Id,
-                _ => throw new InvalidOperationException("Unexpected profession."),
-            };
+            var profession = ProfessionFor(index);
             return new ResidentState(
-                new EntityId(index),
+                new EntityId(1_000_000L + index),
                 $"Resident {index}",
                 10 + (index % 50),
                 50 + (index % 51),
                 ResidentActivity.Idle,
                 profession,
-                workplaceId,
+                workplaces[index - 1].Id,
                 index % 11);
         })
         .ToArray();
@@ -153,16 +274,35 @@ static SettlementState CreateVillageState(int residentCount)
     {
         Residents = residents,
         ItemStacks = stacks,
+        Workplaces = workplaces,
     };
 }
 
+static ResidentProfession ProfessionFor(int index) => (index % 3) switch
+{
+    0 => ResidentProfession.Farmer,
+    1 => ResidentProfession.Cook,
+    _ => ResidentProfession.Forager,
+};
+
 internal sealed record SettlementScaleReport(
     int Residents,
+    int Workplaces,
     int Days,
     long Hours,
     double AdvanceMilliseconds,
+    long AdvanceAllocatedBytes,
     double SnapshotRoundTripMilliseconds,
     int SnapshotBytes,
     int StockpileStacks,
     int ResidentCountAfter,
     long TimeMilliseconds);
+
+internal sealed record SettlementScaleBudget(
+    int Residents,
+    int Workplaces,
+    int Days,
+    double MaxAdvanceMilliseconds,
+    long MaxAdvanceAllocatedBytes,
+    double MaxSnapshotRoundTripMilliseconds,
+    int MaxSnapshotBytes);
