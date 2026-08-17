@@ -285,6 +285,34 @@ def audit_transition(old: dict[str, Any], new: dict[str, Any]) -> tuple[str, str
     return None
 
 
+def expected_new_audit_path(old: dict[str, Any], new: dict[str, Any]) -> str | None:
+    transition = audit_transition(old, new)
+    if transition is None:
+        return None
+    phase_id, _ = transition
+    _, new_by_id = phase_map(new)
+    path = new_by_id[phase_id].get("latest_audit")
+    return path if isinstance(path, str) and path else None
+
+
+def validate_audit_path_changes(
+    changed_audits: set[str],
+    old: dict[str, Any] | None,
+    new: dict[str, Any] | None,
+    base_revision: str,
+    label: str,
+) -> None:
+    if not changed_audits:
+        return
+    need(old is not None and new is not None,
+         f"{label}: audit evidence changed without comparable program states")
+    expected = expected_new_audit_path(old, new)
+    need(expected is not None and changed_audits == {expected},
+         f"{label}: audit evidence is append-only; only the new latest_audit may be added")
+    need(not path_exists(base_revision, expected),
+         f"{label}: audit evidence already exists and cannot be rewritten: {expected}")
+
+
 def audit_record(path_text: str) -> dict[str, Any]:
     path = (ROOT / path_text).resolve()
     try:
@@ -433,7 +461,11 @@ def validate_git_scope(state: dict[str, Any]) -> None:
         validate_audit_binding(parent_state, committed, parent, "HEAD")
 
     dirty = dirty_protected()
-    if dirty:
+    dirty_audits = {path for path in dirty if is_audit_json(path)}
+    validate_audit_path_changes(dirty_audits, committed, state, "HEAD", "working tree")
+    ordinary_dirty = dirty - dirty_audits
+
+    if ordinary_dirty:
         _, current_status = active_phase(state)
         allowed = current_status == "IMPLEMENTING"
 
@@ -442,20 +474,18 @@ def validate_git_scope(state: dict[str, Any]) -> None:
             committed_id, committed_status = active_phase(committed)
             allowed = current_id == committed_id and committed_status == "IMPLEMENTING"
 
-        if not allowed and committed is not None and all(is_audit_json(path) for path in dirty):
-            allowed = (
-                audit_transition(committed, state) is not None
-                and all(not path_exists("HEAD", path) for path in dirty)
-            )
-
-        need(allowed, f"protected working-tree changes are outside allowed phase scope: {sorted(dirty)}")
+        need(allowed,
+             f"protected working-tree changes are outside allowed phase scope: {sorted(ordinary_dirty)}")
 
     changed = {
         path
         for path in git_names(["diff", "--no-renames", "--name-only", parent, "HEAD"])
         if is_protected(path)
     }
-    if not changed:
+    changed_audits = {path for path in changed if is_audit_json(path)}
+    validate_audit_path_changes(changed_audits, parent_state, committed, parent, "HEAD")
+    ordinary_changed = changed - changed_audits
+    if not ordinary_changed:
         return
 
     need(committed is not None, "HEAD has protected changes but no committed program state")
@@ -468,15 +498,9 @@ def validate_git_scope(state: dict[str, Any]) -> None:
         if parent_id == head_id and parent_status == "IMPLEMENTING":
             return
 
-    if (
-        parent_state is not None
-        and all(is_audit_json(path) for path in changed)
-        and audit_transition(parent_state, committed) is not None
-        and all(not path_exists(parent, path) for path in changed)
-    ):
-        return
-
-    raise GateError(f"protected HEAD changes are outside allowed phase scope: {sorted(changed)}")
+    raise GateError(
+        f"protected HEAD changes are outside allowed phase scope: {sorted(ordinary_changed)}"
+    )
 
 
 def main() -> int:

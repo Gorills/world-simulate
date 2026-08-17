@@ -23,7 +23,7 @@ def base_state() -> dict:
                 "id": "P0_PROCESS_GATE",
                 "status": "FAILED",
                 "depends_on": [],
-                "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R3.json",
+                "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R4.json",
             },
             {
                 "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
@@ -53,7 +53,7 @@ def main() -> int:
     assert gate.normalize(".github/workflows/x.yml") == ".github/workflows/x.yml"
     assert gate.is_protected(".github/workflows/x.yml")
     assert gate.is_protected(".editorconfig")
-    assert gate.is_protected("AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R4.json")
+    assert gate.is_protected("AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R5.json")
 
     old = base_state()
     repair = copy.deepcopy(old)
@@ -75,7 +75,7 @@ def main() -> int:
 
     verdict = copy.deepcopy(close)
     verdict["phases"][0]["status"] = "PASSED"
-    verdict["phases"][0]["latest_audit"] = "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R4.json"
+    verdict["phases"][0]["latest_audit"] = "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R5.json"
     verdict["active_phase"] = None
     gate.validate_transition(close, verdict, "test")
 
@@ -85,7 +85,7 @@ def main() -> int:
 
     two_changes = copy.deepcopy(close)
     two_changes["phases"][0]["status"] = "PASSED"
-    two_changes["phases"][0]["latest_audit"] = "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R4.json"
+    two_changes["phases"][0]["latest_audit"] = "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R5.json"
     two_changes["phases"][1]["status"] = "IMPLEMENTING"
     two_changes["active_phase"] = "P1_PLAYABLE_USES_WORLD_RUNTIME"
     must_fail(lambda: gate.validate_transition(close, two_changes, "test"), "two phase changes")
@@ -94,6 +94,40 @@ def main() -> int:
     wrong_evidence["phases"][0]["status"] = "FAILED"
     wrong_evidence["phases"][0]["latest_audit"] = None
     must_fail(lambda: gate.validate_transition(close, wrong_evidence, "test"), "missing verdict audit")
+
+    original_path_exists = gate.path_exists
+    try:
+        gate.path_exists = lambda revision, path: False
+        gate.validate_audit_path_changes(
+            {"AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R5.json"},
+            close,
+            verdict,
+            "HEAD",
+            "test",
+        )
+        must_fail(
+            lambda: gate.validate_audit_path_changes(
+                {"AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R4.json"},
+                repair,
+                repair,
+                "HEAD",
+                "test",
+            ),
+            "historical audit rewrite during implementation",
+        )
+        gate.path_exists = lambda revision, path: True
+        must_fail(
+            lambda: gate.validate_audit_path_changes(
+                {"AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R5.json"},
+                close,
+                verdict,
+                "HEAD",
+                "test",
+            ),
+            "reuse existing audit path",
+        )
+    finally:
+        gate.path_exists = original_path_exists
 
     print("MWS_PLAYABLE_GATE_SELF_TEST_OK")
     return 0
