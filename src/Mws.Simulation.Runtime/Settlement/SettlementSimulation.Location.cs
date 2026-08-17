@@ -9,6 +9,12 @@ public sealed partial class SettlementSimulation
     private const int WorkStartHour = 8;
     private const int WorkEndHour = 17;
 
+    internal SettlementActorLocationState? TryGetResidentSemanticLocation(EntityId residentId)
+    {
+        var index = FindResidentIndex(residentId);
+        return index < 0 ? null : _residents[index].Location;
+    }
+
     private void RestoreOmittedResidentSemanticLocations()
     {
         var hour = CurrentHour(Time);

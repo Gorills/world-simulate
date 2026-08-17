@@ -12,6 +12,7 @@ public sealed class WorldRuntimeClientBoundaryTests
     {
         var world = WorldRuntime.Create(new WorldSeed(9101));
         var scope = world.AddDefaultSettlement();
+        _ = world.AddPlayerActor(scope);
         world.AdvanceHours(8);
         var before = world.CaptureSettlementState(scope);
         var residentId = before.Residents[0].Id;

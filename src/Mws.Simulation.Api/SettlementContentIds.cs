@@ -44,6 +44,10 @@ public static class SettlementResultCodes
     public const string ItemNotAvailable = "ITEM_NOT_AVAILABLE";
     public const string InventoryCapacityExceeded = "INVENTORY_CAPACITY_EXCEEDED";
     public const string StaleCommand = "STALE_COMMAND";
+    public const string PlayerRequired = "PLAYER_REQUIRED";
+    public const string PlayerScopeMismatch = "PLAYER_SCOPE_MISMATCH";
+    public const string InteractionActorTravelling = "INTERACTION_ACTOR_TRAVELLING";
+    public const string InteractionNotCoLocated = "INTERACTION_NOT_COLOCATED";
 }
 
 public static class SettlementEventKinds
