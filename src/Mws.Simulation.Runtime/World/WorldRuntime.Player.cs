@@ -26,12 +26,14 @@ public sealed partial class WorldRuntime
     {
         var player = _player
             ?? throw new InvalidOperationException("World does not contain an authoritative player actor.");
+        var location = SettlementSemanticLocation.Normalize(player.Location);
         return new WorldPlayerProjection(
             player.Id,
             player.ScopeId,
             player.Inventory
                 .Select(item => new WorldPlayerInventoryItemProjection(item.ItemId, item.Quantity))
-                .ToArray());
+                .ToArray(),
+            SettlementSemanticLocation.Project(location));
     }
 
     private EntityId AddPlayerActorCore(SimulationScopeId scopeId)
@@ -54,7 +56,11 @@ public sealed partial class WorldRuntime
         }
 
         var inventory = CanonicalPlayerInventory(WorldPlayerPrototypeContent.CreateStartingInventory());
-        _player = new WorldPlayerActorState(playerId, scopeId, inventory);
+        _player = new WorldPlayerActorState(
+            playerId,
+            scopeId,
+            inventory,
+            SettlementActorLocationState.At(SettlementPlaceRef.Settlement));
         _entityLocations.Add(playerId.Value, scopeId);
         _nextEntityId = checked(_nextEntityId + 1);
         return playerId;
@@ -73,7 +79,8 @@ public sealed partial class WorldRuntime
         }
 
         var inventory = CanonicalPlayerInventory(state.Inventory);
-        _player = new WorldPlayerActorState(state.Id, state.ScopeId, inventory);
+        var location = SettlementSemanticLocation.Normalize(state.Location);
+        _player = new WorldPlayerActorState(state.Id, state.ScopeId, inventory, location);
         _entityLocations.Add(state.Id.Value, state.ScopeId);
     }
 
@@ -89,7 +96,8 @@ public sealed partial class WorldRuntime
             _player.ScopeId,
             _player.Inventory
                 .Select(item => new WorldPlayerInventoryItemState(item.ItemId, item.Quantity))
-                .ToArray());
+                .ToArray(),
+            SettlementSemanticLocation.Normalize(_player.Location));
     }
 
     private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(

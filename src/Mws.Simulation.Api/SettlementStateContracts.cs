@@ -26,7 +26,8 @@ public sealed record ResidentState(
     ResidentProfession Profession,
     EntityId WorkplaceId,
     int Affinity,
-    EntityId HouseholdId = default);
+    EntityId HouseholdId = default,
+    SettlementActorLocationState? Location = null);
 
 public sealed record HomeState(
     EntityId Id,

@@ -17,6 +17,7 @@ internal sealed class ResidentRuntimeState
         WorkplaceId = state.WorkplaceId;
         HouseholdId = state.HouseholdId;
         Affinity = state.Affinity;
+        Location = SettlementSemanticLocation.Normalize(state.Location);
     }
 
     internal EntityId Id { get; }
@@ -37,6 +38,8 @@ internal sealed class ResidentRuntimeState
 
     internal int Affinity { get; set; }
 
+    internal SettlementActorLocationState Location { get; set; }
+
     internal ResidentState Capture() => new(
         Id,
         Name,
@@ -46,5 +49,6 @@ internal sealed class ResidentRuntimeState
         Profession,
         WorkplaceId,
         Affinity,
-        HouseholdId);
+        HouseholdId,
+        Location);
 }

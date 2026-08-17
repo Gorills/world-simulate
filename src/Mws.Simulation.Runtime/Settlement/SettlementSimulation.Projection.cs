@@ -89,7 +89,8 @@ public sealed partial class SettlementSimulation
                 resident.HouseholdId,
                 household?.Name ?? string.Empty,
                 home?.Id ?? default,
-                home?.Name ?? string.Empty);
+                home?.Name ?? string.Empty,
+                SettlementSemanticLocation.Project(resident.Location));
         }
 
         return result;

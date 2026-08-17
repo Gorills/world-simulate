@@ -9,7 +9,8 @@ public sealed record WorldPlayerInventoryItemState(
 public sealed record WorldPlayerActorState(
     EntityId Id,
     SimulationScopeId ScopeId,
-    IReadOnlyList<WorldPlayerInventoryItemState> Inventory);
+    IReadOnlyList<WorldPlayerInventoryItemState> Inventory,
+    SettlementActorLocationState? Location = null);
 
 public sealed record WorldPlayerInventoryItemProjection(
     string ItemId,
@@ -18,7 +19,8 @@ public sealed record WorldPlayerInventoryItemProjection(
 public sealed record WorldPlayerProjection(
     EntityId Id,
     SimulationScopeId ScopeId,
-    IReadOnlyList<WorldPlayerInventoryItemProjection> Inventory);
+    IReadOnlyList<WorldPlayerInventoryItemProjection> Inventory,
+    SettlementActorLocationProjection? Location = null);
 
 public sealed record WorldAddPlayerActorInput(
     EntityId CreatedPlayerId,
