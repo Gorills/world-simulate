@@ -103,8 +103,9 @@ public sealed partial class WorldRuntime
 
             case WorldInputKind.AddPlayerActor:
             {
-                var actual = AddPlayerActorCore(entry.AddPlayerActor!.ScopeId);
-                if (actual != entry.AddPlayerActor.CreatedPlayerId)
+                var expected = entry.AddPlayerActor!;
+                var actual = AddPlayerActorCore(expected.ScopeId);
+                if (actual != expected.CreatedPlayerId)
                 {
                     throw new InvalidOperationException("Replay player entity allocation diverged.");
                 }

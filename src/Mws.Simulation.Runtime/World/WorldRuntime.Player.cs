@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Mws.Domain;
 using Mws.Simulation.Api;
 
@@ -91,7 +92,7 @@ public sealed partial class WorldRuntime
                 .ToArray());
     }
 
-    private static IReadOnlyList<WorldPlayerInventoryItemState> CanonicalPlayerInventory(
+    private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(
         IEnumerable<WorldPlayerInventoryItemState> inventory)
     {
         ArgumentNullException.ThrowIfNull(inventory);
