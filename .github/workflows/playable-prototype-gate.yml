@@ -27,7 +27,10 @@ jobs:
           fetch-depth: 0
 
       - name: Validate gate tooling syntax
-        run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py
+        run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py TOOLS/test_playable_prototype_gate.py
+
+      - name: Run gate negative self-tests
+        run: python TOOLS/test_playable_prototype_gate.py
 
       - name: Validate playable prototype phase state and scope
         run: python TOOLS/validate_playable_prototype.py

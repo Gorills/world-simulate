@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the playable-prototype phase state, audit evidence and Git scope."""
+"""Validate playable-prototype phase state, audit evidence and Git scope."""
 
 from __future__ import annotations
 
@@ -90,6 +90,13 @@ def git(args: list[str], *, required: bool = True) -> str | None:
     return result.stdout
 
 
+def commit_sha(revision: str) -> str:
+    value = git(["rev-parse", f"{revision}^{{commit}}"])
+    need(value is not None and SHA40.fullmatch(value.strip()) is not None,
+         f"cannot resolve commit revision: {revision}")
+    return value.strip()
+
+
 def json_at(revision: str, repo_path: str = STATE_REPO_PATH) -> dict[str, Any] | None:
     content = git(["show", f"{revision}:{repo_path}"], required=False)
     if content is None:
@@ -127,13 +134,18 @@ def active_phase(state: dict[str, Any]) -> tuple[str | None, str | None]:
     return phase_id, by_id[phase_id]["status"]
 
 
-def status_changes(
-    old: dict[str, Any],
-    new: dict[str, Any],
-) -> list[tuple[str, str, str]]:
+def stable_topology(state: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in state.items() if key not in {"active_phase", "phases"}}
+
+
+def stable_phase_metadata(phase: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in phase.items() if key not in {"status", "latest_audit"}}
+
+
+def status_changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str, str]]:
     old_order, old_by_id = phase_map(old)
     new_order, new_by_id = phase_map(new)
-    need(old_order == new_order, "phase ids/order changed; amend the gate deliberately")
+    need(old_order == new_order, "phase ids/order changed; amend the program version deliberately")
     changed: list[tuple[str, str, str]] = []
     for phase_id in old_order:
         old_status = old_by_id[phase_id].get("status")
@@ -143,18 +155,69 @@ def status_changes(
     return changed
 
 
+def validate_evidence_transition(
+    phase_id: str,
+    old_phase: dict[str, Any],
+    new_phase: dict[str, Any],
+    label: str,
+) -> None:
+    old_status = old_phase.get("status")
+    new_status = new_phase.get("status")
+    old_audit = old_phase.get("latest_audit")
+    new_audit = new_phase.get("latest_audit")
+
+    if old_status == new_status:
+        need(old_audit == new_audit,
+             f"{label}: {phase_id} latest_audit changed without a status transition")
+        return
+
+    if (old_status, new_status) in {
+        ("LOCKED", "IMPLEMENTING"),
+        ("IMPLEMENTING", "AUDIT_REQUIRED"),
+    }:
+        need(old_audit is None and new_audit is None,
+             f"{label}: {phase_id} must not carry audit evidence into {new_status}")
+        return
+
+    if old_status == "AUDIT_REQUIRED" and new_status in {"PASSED", "FAILED"}:
+        need(old_audit is None,
+             f"{label}: {phase_id} AUDIT_REQUIRED checkpoint must not already carry verdict evidence")
+        need(isinstance(new_audit, str) and new_audit,
+             f"{label}: {phase_id} {new_status} requires new audit evidence")
+        return
+
+    if old_status == "FAILED" and new_status == "IMPLEMENTING":
+        need(isinstance(old_audit, str) and old_audit,
+             f"{label}: {phase_id} FAILED must reference the failed audit")
+        need(new_audit is None,
+             f"{label}: {phase_id} repair must clear latest_audit before implementation")
+        return
+
+    need(old_audit == new_audit,
+         f"{label}: unexpected audit evidence change for {phase_id}")
+
+
 def validate_transition(old: dict[str, Any], new: dict[str, Any], label: str) -> None:
+    need(stable_topology(old) == stable_topology(new),
+         f"{label}: program metadata changed; create a new program version instead")
+
     changed = status_changes(old, new)
     old_order, old_by_id = phase_map(old)
     _, new_by_id = phase_map(new)
+
     for phase_id in old_order:
-        old_status = old_by_id[phase_id].get("status")
-        new_status = new_by_id[phase_id].get("status")
+        old_phase = old_by_id[phase_id]
+        new_phase = new_by_id[phase_id]
+        need(stable_phase_metadata(old_phase) == stable_phase_metadata(new_phase),
+             f"{label}: immutable metadata changed for {phase_id}")
+
+        old_status = old_phase.get("status")
+        new_status = new_phase.get("status")
         need(old_status in TRANSITIONS, f"{label}: invalid old status for {phase_id}")
-        need(
-            new_status in TRANSITIONS[old_status],
-            f"{label}: illegal transition {phase_id} {old_status} -> {new_status}",
-        )
+        need(new_status in TRANSITIONS[old_status],
+             f"{label}: illegal transition {phase_id} {old_status} -> {new_status}")
+        validate_evidence_transition(phase_id, old_phase, new_phase, label)
+
     need(len(changed) <= 1, f"{label}: change at most one phase status, got {changed}")
 
 
@@ -186,8 +249,8 @@ def path_exists(revision: str, path: str) -> bool:
 
 def dirty_protected() -> set[str]:
     paths = (
-        git_names(["diff", "--name-only"])
-        | git_names(["diff", "--cached", "--name-only"])
+        git_names(["diff", "--no-renames", "--name-only"])
+        | git_names(["diff", "--cached", "--no-renames", "--name-only"])
         | git_names(["ls-files", "--others", "--exclude-standard"])
     )
     return {path for path in paths if is_protected(path)}
@@ -211,30 +274,32 @@ def select_parent(head_state: dict[str, Any] | None) -> str | None:
     return parents[0]
 
 
-def audit_transition(
-    old: dict[str, Any],
-    new: dict[str, Any],
-) -> bool:
+def audit_transition(old: dict[str, Any], new: dict[str, Any]) -> tuple[str, str] | None:
     changed = status_changes(old, new)
-    return (
+    if (
         len(changed) == 1
         and changed[0][1] == "AUDIT_REQUIRED"
         and changed[0][2] in {"PASSED", "FAILED"}
-    )
+    ):
+        return changed[0][0], changed[0][2]
+    return None
 
 
-def validate_audit(path_text: str, phase_id: str, expected: str) -> None:
-    need(
-        path_text.startswith("AUDIT_RESULTS/PLAYABLE_PROTOTYPE/") and path_text.endswith(".json"),
-        f"{phase_id}: audit must be JSON under AUDIT_RESULTS/PLAYABLE_PROTOTYPE/",
-    )
+def audit_record(path_text: str) -> dict[str, Any]:
     path = (ROOT / path_text).resolve()
     try:
         path.relative_to(ROOT.resolve())
     except ValueError as exc:
-        raise GateError(f"{phase_id}: audit path escapes repository") from exc
+        raise GateError(f"audit path escapes repository: {path_text}") from exc
+    return read_json(path)
 
-    audit = read_json(path)
+
+def validate_audit(path_text: str, phase_id: str, expected: str) -> dict[str, Any]:
+    need(
+        path_text.startswith("AUDIT_RESULTS/PLAYABLE_PROTOTYPE/") and path_text.endswith(".json"),
+        f"{phase_id}: audit must be JSON under AUDIT_RESULTS/PLAYABLE_PROTOTYPE/",
+    )
+    audit = audit_record(path_text)
     need(audit.get("schema_version") == 1, f"{phase_id}: unsupported audit schema")
     need(audit.get("program") == PROGRAM, f"{phase_id}: audit program mismatch")
     need(audit.get("phase_id") == phase_id, f"{phase_id}: audit phase mismatch")
@@ -263,7 +328,7 @@ def validate_audit(path_text: str, phase_id: str, expected: str) -> None:
         need(bool(audit["findings"]), f"{phase_id}: failed audit must record findings")
 
     if not has_git():
-        return
+        return audit
 
     need(git(["cat-file", "-e", f"{subject}^{{commit}}"], required=False) is not None,
          f"{phase_id}: audit subject commit is unavailable")
@@ -281,6 +346,30 @@ def validate_audit(path_text: str, phase_id: str, expected: str) -> None:
     need(phase_id in subject_by_id, f"{phase_id}: audit subject does not contain phase")
     need(subject_by_id[phase_id].get("status") == "AUDIT_REQUIRED",
          f"{phase_id}: audit subject must have status AUDIT_REQUIRED")
+    return audit
+
+
+def validate_audit_binding(
+    old: dict[str, Any],
+    new: dict[str, Any],
+    subject_revision: str,
+    label: str,
+) -> None:
+    transition = audit_transition(old, new)
+    if transition is None:
+        return
+
+    phase_id, verdict_status = transition
+    _, new_by_id = phase_map(new)
+    audit_path = new_by_id[phase_id].get("latest_audit")
+    need(isinstance(audit_path, str) and audit_path,
+         f"{label}: {phase_id} verdict requires latest_audit")
+    expected_subject = commit_sha(subject_revision)
+    audit = audit_record(audit_path)
+    need(audit.get("subject_sha") == expected_subject,
+         f"{label}: {phase_id} audit must review exact checkpoint {expected_subject}")
+    need(audit.get("overall") == ("PASS" if verdict_status == "PASSED" else "FAIL"),
+         f"{label}: {phase_id} audit verdict does not match phase status")
 
 
 def validate_state(state: dict[str, Any]) -> None:
@@ -324,8 +413,7 @@ def validate_state(state: dict[str, Any]) -> None:
             elif status in {"LOCKED", "IMPLEMENTING"}:
                 need(audit_path is None, f"{phase_id}: {status} must not carry latest_audit")
             elif status == "AUDIT_REQUIRED":
-                need(audit_path is None or isinstance(audit_path, str),
-                     f"{phase_id}: latest_audit must be null or path")
+                need(audit_path is None, f"{phase_id}: AUDIT_REQUIRED must not carry verdict evidence")
 
 
 def validate_git_scope(state: dict[str, Any]) -> None:
@@ -335,12 +423,14 @@ def validate_git_scope(state: dict[str, Any]) -> None:
     committed = json_at("HEAD")
     if committed is not None and committed != state:
         validate_transition(committed, state, "working tree")
+        validate_audit_binding(committed, state, "HEAD", "working tree")
 
     parent = select_parent(committed)
     need(parent is not None, "Git history unavailable; full repository history is required")
     parent_state = json_at(parent)
     if committed is not None and parent_state is not None:
         validate_transition(parent_state, committed, "HEAD")
+        validate_audit_binding(parent_state, committed, parent, "HEAD")
 
     dirty = dirty_protected()
     if dirty:
@@ -354,13 +444,17 @@ def validate_git_scope(state: dict[str, Any]) -> None:
 
         if not allowed and committed is not None and all(is_audit_json(path) for path in dirty):
             allowed = (
-                audit_transition(committed, state)
+                audit_transition(committed, state) is not None
                 and all(not path_exists("HEAD", path) for path in dirty)
             )
 
         need(allowed, f"protected working-tree changes are outside allowed phase scope: {sorted(dirty)}")
 
-    changed = {path for path in git_names(["diff", "--name-only", parent, "HEAD"]) if is_protected(path)}
+    changed = {
+        path
+        for path in git_names(["diff", "--no-renames", "--name-only", parent, "HEAD"])
+        if is_protected(path)
+    }
     if not changed:
         return
 
@@ -377,7 +471,7 @@ def validate_git_scope(state: dict[str, Any]) -> None:
     if (
         parent_state is not None
         and all(is_audit_json(path) for path in changed)
-        and audit_transition(parent_state, committed)
+        and audit_transition(parent_state, committed) is not None
         and all(not path_exists(parent, path) for path in changed)
     ):
         return

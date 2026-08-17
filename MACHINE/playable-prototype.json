@@ -6,9 +6,9 @@
   "phases": [
     {
       "id": "P0_PROCESS_GATE",
-      "status": "FAILED",
+      "status": "IMPLEMENTING",
       "depends_on": [],
-      "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R3.json"
+      "latest_audit": null
     },
     {
       "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
