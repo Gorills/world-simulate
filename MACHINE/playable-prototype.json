@@ -12,11 +12,11 @@
     },
     {
       "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
-      "status": "FAILED",
+      "status": "IMPLEMENTING",
       "depends_on": [
         "P0_PROCESS_GATE"
       ],
-      "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P1_R5.json"
+      "latest_audit": null
     },
     {
       "id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
