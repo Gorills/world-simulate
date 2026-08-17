@@ -2,13 +2,13 @@
   "schema_version": 1,
   "program": "playable-prototype-v1",
   "policy": "DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md",
-  "active_phase": "P0_PROCESS_GATE",
+  "active_phase": null,
   "phases": [
     {
       "id": "P0_PROCESS_GATE",
-      "status": "AUDIT_REQUIRED",
+      "status": "PASSED",
       "depends_on": [],
-      "latest_audit": null
+      "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P0_R5.json"
     },
     {
       "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
