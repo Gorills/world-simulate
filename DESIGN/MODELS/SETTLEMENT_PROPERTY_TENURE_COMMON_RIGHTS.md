@@ -1,6 +1,6 @@
 # Settlement Property, Tenure and Common Rights — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the minimum causal structure for possession, recognized claims, tenure, use rights, common rights and associated obligations. It does **not** define a universal medieval English land-law code, exact inheritance algorithms, rent/service quantities, grazing stints or manor-specific customs; those remain context-specific or `MODEL_UNDERDEFINED` until separately calibrated.
 
