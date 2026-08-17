@@ -6,6 +6,19 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
+    internal CommandId NextCommandId
+    {
+        get
+        {
+            if (_nextCommandId <= 0 || _nextCommandId == long.MaxValue)
+            {
+                throw new InvalidOperationException("Settlement command ID space is exhausted or invalid.");
+            }
+
+            return new CommandId(_nextCommandId);
+        }
+    }
+
     public SettlementCommandResult Execute(SettlementCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);

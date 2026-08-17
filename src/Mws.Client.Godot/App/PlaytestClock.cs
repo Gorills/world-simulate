@@ -5,11 +5,11 @@ namespace Mws.Client.Godot.App;
 
 public partial class PlaytestClock : Node
 {
-    private GameSession? _session;
+    private GameWorldSession? _session;
     private double _elapsedSeconds;
     private long _observedTimeMilliseconds;
 
-    internal void Bind(GameSession session)
+    internal void Bind(GameWorldSession session)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _elapsedSeconds = 0.0;

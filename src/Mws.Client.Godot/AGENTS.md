@@ -20,7 +20,9 @@ Godot is a presentation/input client. UI and world views must never directly mut
 
 Flow:
 
-`mouse / keyboard / gamepad -> semantic action/control -> GameSession -> simulation -> projection -> view`
+`mouse / keyboard / gamepad -> semantic action/control -> GameWorldSession -> WorldRuntime -> active settlement partition -> projection -> view`
+
+`GameWorldSession` may orchestrate `WorldRuntime`, select the active settlement scope and expose projections/checkpoint seams. It must not own or construct `SettlementSimulation` directly.
 
 Only `Session/` may reference `Mws.Simulation.Runtime` from client C# code.
 
@@ -90,6 +92,8 @@ Do not run full Proof A benchmarks for normal client changes.
 Before considering a Godot change complete:
 
 - authoritative rules remain outside views;
+- playable authority flows through `GameWorldSession -> WorldRuntime`;
+- no client-owned `SettlementSimulation` path exists;
 - keyboard and gamepad paths both exist for new gameplay actions;
 - controller focus can enter and leave new UI;
 - player-control tuning stays behind the profile/motor/camera seams;

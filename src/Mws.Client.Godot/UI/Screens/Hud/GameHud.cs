@@ -12,7 +12,7 @@ namespace Mws.Client.Godot.UI.Screens.Hud;
 
 public partial class GameHud : Control
 {
-    private GameSession? _session;
+    private GameWorldSession? _session;
     private SettlementView _settlementView = null!;
     private ResidentPanelView _residentPanel = null!;
     private InteractionMenuView _interactionMenu = null!;
@@ -84,7 +84,7 @@ public partial class GameHud : Control
         }
     }
 
-    internal void Bind(GameSession session)
+    internal void Bind(GameWorldSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
         if (_session is not null)

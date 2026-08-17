@@ -1,21 +1,25 @@
-# Godot Client Architecture v0.1
+# Godot Client Architecture v0.2
 
-Godot is a presentation/input client over the authoritative C# simulation. It is not a second game-state owner.
+Godot is a presentation/input client over the authoritative C# world runtime. It is not a second game-state owner.
 
 ## Flow
 
-`mouse / keyboard / gamepad → GameInput → GameSession → authoritative simulation → projection → views`
+`mouse / keyboard / gamepad → GameInput → GameWorldSession → WorldRuntime → active settlement partition → projection → views`
 
 Views send intent (`select resident`, `interact`, `advance time`). They never set Hunger, Affinity, inventory or job state directly.
+
+`GameWorldSession` is the client orchestration boundary. It owns one `WorldRuntime`, remembers the active settlement scope, routes time/commands/projection through the world runtime, and exposes a world-checkpoint seam. It does not own a `SettlementSimulation`.
 
 ## Structure
 
 - `App/` — composition root and process lifecycle only.
-- `Session/` — client-side orchestration around authoritative simulation/projections; no Godot node code.
+- `Session/` — client-side orchestration around `WorldRuntime`, active scope selection, projections and checkpoint/restore seams; no Godot node code.
 - `Input/` — semantic gameplay actions and last-used-device tracking.
 - `World/` — world-facing views such as settlement/resident representations.
 - `UI/Screens/` — screen/panel interaction components.
 - `UI/Theme/` — design tokens and reusable styling helpers.
+
+Only `Session/` may reference `Mws.Simulation.Runtime` from client C# code.
 
 ## File budgets
 
@@ -53,5 +57,5 @@ Do not use deep cross-scene `GetNode()` calls from unrelated features. The paren
 
 ## Headless CI
 
-When `DisplayServer.GetName() == "headless"`, `App/Main.cs` executes a bounded client-boundary smoke and quits.
+When `DisplayServer.GetName() == "headless"`, `App/Main.cs` executes a bounded client-boundary smoke and quits. The smoke proves that the playable session advances and interacts through `WorldRuntime` and that its checkpoint restores the same visible world state.
 Normal desktop execution stays open as a playable client.

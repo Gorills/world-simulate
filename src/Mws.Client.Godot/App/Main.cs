@@ -12,7 +12,7 @@ namespace Mws.Client.Godot.App;
 public partial class Main : Node
 {
     private readonly InputDeviceTracker _inputDevice = new();
-    private GameSession? _session;
+    private GameWorldSession? _session;
     private GameHud? _hud;
     private VillageWorld? _village;
     private PromptView? _prompt;
@@ -30,7 +30,7 @@ public partial class Main : Node
             GameInput.ConfigureDefaults();
             GameInput.ValidateDefaults();
             VillageWorld.ValidateSpatialContract();
-            _session = new GameSession(new WorldSeed(42));
+            _session = new GameWorldSession(new WorldSeed(42));
 
             if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
             {

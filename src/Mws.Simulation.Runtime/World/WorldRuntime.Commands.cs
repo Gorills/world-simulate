@@ -5,6 +5,17 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class WorldRuntime
 {
+    public SettlementCommandResult ExecuteResidentInteraction(
+        SimulationScopeId scopeId,
+        EntityId residentId,
+        ResidentInteractionChoice choice)
+    {
+        var commandId = GetLoadedPartition(scopeId).Simulation.NextCommandId;
+        return ExecuteSettlementCommand(
+            scopeId,
+            new InteractWithResidentCommand(commandId, residentId, choice));
+    }
+
     public SettlementCommandResult ExecuteSettlementCommand(
         SimulationScopeId scopeId,
         SettlementCommand command)

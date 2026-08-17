@@ -7,7 +7,7 @@ namespace Mws.Client.Godot.App;
 
 internal static class HeadlessClientSmoke
 {
-    internal static string Run(GameSession session)
+    internal static string Run(GameWorldSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
         GameLocalization.ValidateCatalogs();
@@ -26,6 +26,11 @@ internal static class HeadlessClientSmoke
         var projection = session.Projection;
         VillageWorld.ValidateLifeProjection(projection);
         var stockpileStack = projection.Stockpile[0];
+        var checkpoint = session.CreateCheckpoint();
+        var restored = GameWorldSession.Restore(checkpoint, session.SettlementScopeId);
+        var restoredProjection = restored.Projection;
+        var restoredResident = restoredProjection.Residents.Single(
+            resident => resident.Id == session.SelectedResidentId);
 
         if (!interaction.Success
             || projection.Day != 1
@@ -33,9 +38,13 @@ internal static class HeadlessClientSmoke
             || projection.Residents.Count != VillageLayout.PlaytestResidentCount
             || projection.Homes?.Count != 10
             || projection.Households?.Count != 6
-            || session.FindStockpileStack(stockpileStack.StackId) is null)
+            || session.FindStockpileStack(stockpileStack.StackId) is null
+            || restored.Time != session.Time
+            || restoredProjection.Day != projection.Day
+            || restoredProjection.Hour != projection.Hour
+            || restoredResident.Affinity != session.SelectedResident.Affinity)
         {
-            throw new InvalidOperationException("Client foundation smoke produced an invalid state.");
+            throw new InvalidOperationException("Client WorldRuntime smoke produced an invalid state.");
         }
 
         var resident = session.SelectedResident;
@@ -44,6 +53,7 @@ internal static class HeadlessClientSmoke
             $"resident={resident.Name} population={projection.Residents.Count} affinity={resident.Affinity} " +
             "clock=continuous-hourly-playtest input=third-person-keyboard-gamepad-validated " +
             "locale=en-ru-validated spatial=village-layout-validated " +
-            "interaction=session-targeting-validated life=authoritative-residence-routing-validated";
+            "interaction=world-runtime-targeting-validated checkpoint=world-runtime-roundtrip-validated " +
+            "life=authoritative-residence-routing-validated";
     }
 }
