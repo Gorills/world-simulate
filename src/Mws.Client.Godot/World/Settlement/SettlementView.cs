@@ -6,7 +6,7 @@ using Mws.Simulation.Api;
 
 namespace Mws.Client.Godot.World.Settlement;
 
-public partial class SettlementView : VBoxContainer
+public partial class SettlementView : PanelContainer
 {
     private Label _heading = null!;
     private Label _timeLabel = null!;
@@ -18,13 +18,18 @@ public partial class SettlementView : VBoxContainer
 
     public override void _Ready()
     {
-        _heading = GetNode<Label>("Heading");
-        _timeLabel = GetNode<Label>("Time");
-        _stockpileLabel = GetNode<Label>("Stockpile");
-        _residentList = GetNode<VBoxContainer>("Residents");
-        DesignSystem.ApplyHeading(_heading);
-        DesignSystem.ApplyLabel(_timeLabel);
-        DesignSystem.ApplyLabel(_stockpileLabel, muted: true);
+        var content = GetNode<VBoxContainer>("Content");
+        _heading = GetNode<Label>("Content/Heading");
+        _timeLabel = GetNode<Label>("Content/Time");
+        _stockpileLabel = GetNode<Label>("Content/Stockpile");
+        _residentList = GetNode<VBoxContainer>("Content/Residents");
+
+        DesignSystem.ApplySurface(this, UiSurface.Window);
+        DesignSystem.ApplyStack(content, UiGap.Medium);
+        DesignSystem.ApplyStack(_residentList, UiGap.Small);
+        DesignSystem.ApplyText(_heading, UiTextRole.Display);
+        DesignSystem.ApplyText(_timeLabel, UiTextRole.Metric);
+        DesignSystem.ApplyText(_stockpileLabel, UiTextRole.Muted);
         RefreshLocalization();
     }
 
@@ -71,10 +76,11 @@ public partial class SettlementView : VBoxContainer
                 Alignment = HorizontalAlignment.Left,
                 AutoTranslateMode = Node.AutoTranslateModeEnum.Disabled,
             };
-            DesignSystem.ApplyButton(button);
+            DesignSystem.ApplyButton(
+                button,
+                selected ? UiButtonRole.SelectedRow : UiButtonRole.Row);
             if (selected)
             {
-                DesignSystem.ApplySelectedButton(button);
                 _selectedButton = button;
             }
 

@@ -64,6 +64,10 @@ public sealed class GodotClientQualityTests
         [
             "AddThemeColorOverride",
             "AddThemeFontSizeOverride",
+            "AddThemeStyleboxOverride",
+            "AddThemeConstantOverride",
+            "new StyleBoxFlat",
+            "new StyleBoxLine",
             "DesignTokens.",
         ];
 
@@ -83,6 +87,55 @@ public sealed class GodotClientQualityTests
                     $"Theme implementation token '{token}' leaked outside UI/Theme/: {relative}");
             }
         }
+    }
+
+    [Fact]
+    public void SceneFilesDoNotOwnThemeOverrides()
+    {
+        var client = FindClientRoot();
+        foreach (var scene in Directory.EnumerateFiles(client, "*.tscn", SearchOption.AllDirectories))
+        {
+            foreach (var line in File.ReadLines(scene))
+            {
+                Assert.False(
+                    line.Contains("theme_override_", StringComparison.Ordinal),
+                    $"Scene styling must use DesignSystem semantics: {Relative(client, scene)} -> {line.Trim()}");
+            }
+        }
+    }
+
+    [Fact]
+    public void DesignSystemDefinesScalableSemanticPrimitives()
+    {
+        var root = FindRepositoryRoot();
+        var client = Path.Combine(root, "src", "Mws.Client.Godot");
+        var semantics = File.ReadAllText(
+            Path.Combine(client, "UI", "Theme", "UiSemantics.cs"));
+        var designSystem = File.ReadAllText(
+            Path.Combine(client, "UI", "Theme", "DesignSystem.cs"));
+        var contract = File.ReadAllText(
+            Path.Combine(root, "DESIGN", "UI_DESIGN_SYSTEM.md"));
+
+        string[] semanticTypes =
+        [
+            "enum UiSurface",
+            "enum UiTextRole",
+            "enum UiButtonRole",
+            "enum UiTone",
+            "enum UiGap",
+            "enum UiDataColor",
+        ];
+        foreach (var semanticType in semanticTypes)
+        {
+            Assert.Contains(semanticType, semantics, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("ApplySurface", designSystem, StringComparison.Ordinal);
+        Assert.Contains("ApplyButton", designSystem, StringComparison.Ordinal);
+        Assert.Contains("ApplyBadge", designSystem, StringComparison.Ordinal);
+        Assert.Contains("DataColor", designSystem, StringComparison.Ordinal);
+        Assert.Contains("Extension workflow", contract, StringComparison.Ordinal);
+        Assert.Contains("Debug tools", contract, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -141,8 +194,10 @@ public sealed class GodotClientQualityTests
     public void LocalizationRefreshUsesSingleRegistryAndLanguageItemsDoNotAutoTranslate()
     {
         var client = FindClientRoot();
-        var localization = File.ReadAllText(Path.Combine(client, "Localization", "GameLocalization.cs"));
-        var hud = File.ReadAllText(Path.Combine(client, "UI", "Screens", "Hud", "GameHud.cs"));
+        var localization = File.ReadAllText(
+            Path.Combine(client, "Localization", "GameLocalization.cs"));
+        var hud = File.ReadAllText(
+            Path.Combine(client, "UI", "Screens", "Hud", "GameHud.cs"));
 
         Assert.Contains("RefreshAllUi()", localization, StringComparison.Ordinal);
         Assert.Contains("RegisterUiRefresh", localization, StringComparison.Ordinal);
@@ -205,10 +260,11 @@ public sealed class GodotClientQualityTests
 
         Assert.Contains("_nameLabel.Text = GameLocalization.Tr(\"UI_NAME\")", code, StringComparison.Ordinal);
         Assert.Contains("_nameValue.Text = resident.Name", code, StringComparison.Ordinal);
+        Assert.Contains("UiSurface.Card", code, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void VillageDebugObserverIsPresentationOnlyAndRemovable()
+    public void VillageDebugObserverIsPresentationOnlyRemovableAndUsesSharedDesignSystem()
     {
         var client = FindClientRoot();
         var debugRoot = Path.Combine(client, "Debug", "VillageMonitor");
@@ -226,9 +282,19 @@ public sealed class GodotClientQualityTests
         var main = File.ReadAllText(Path.Combine(client, "App", "Main.cs"));
         var mainScene = File.ReadAllText(Path.Combine(client, "App", "Main.tscn"));
         var debugInput = File.ReadAllText(Path.Combine(client, "Input", "DebugInput.cs"));
+        var overlay = File.ReadAllText(
+            Path.Combine(debugRoot, "VillageDebugOverlay.cs"));
+        var map = File.ReadAllText(
+            Path.Combine(debugRoot, "VillageDebugMap.cs"));
+
         Assert.DoesNotContain("VillageDebug", main, StringComparison.Ordinal);
         Assert.Contains("res://Debug/VillageMonitor/VillageDebugOverlay.tscn", mainScene, StringComparison.Ordinal);
         Assert.Contains("Key.F3", debugInput, StringComparison.Ordinal);
+        Assert.Contains("UiSurface.Floating", overlay, StringComparison.Ordinal);
+        Assert.Contains("UiSurface.Inset", overlay, StringComparison.Ordinal);
+        Assert.Contains("ApplyBadge", overlay, StringComparison.Ordinal);
+        Assert.Contains("DesignSystem.DataColor", map, StringComparison.Ordinal);
+        Assert.DoesNotContain("new Color(", map, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -310,6 +376,7 @@ public sealed class GodotClientQualityTests
             directory = directory.Parent;
         }
 
-        throw new InvalidOperationException("Repository root containing WorldSimulate.sln was not found.");
+        throw new InvalidOperationException(
+            "Repository root containing WorldSimulate.sln was not found.");
     }
 }

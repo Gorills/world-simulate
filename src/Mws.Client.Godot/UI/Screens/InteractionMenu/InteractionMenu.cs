@@ -5,7 +5,7 @@ using Mws.Simulation.Api;
 
 namespace Mws.Client.Godot.UI.Screens.InteractionMenu;
 
-public partial class InteractionMenu : VBoxContainer
+public partial class InteractionMenu : PanelContainer
 {
     private Label _heading = null!;
     private Button _askAboutWork = null!;
@@ -17,15 +17,18 @@ public partial class InteractionMenu : VBoxContainer
 
     public override void _Ready()
     {
-        _heading = GetNode<Label>("Heading");
-        _askAboutWork = GetNode<Button>("AskAboutWork");
-        _encourage = GetNode<Button>("Encourage");
-        _shareRation = GetNode<Button>("ShareRation");
+        var content = GetNode<VBoxContainer>("Content");
+        _heading = GetNode<Label>("Content/Heading");
+        _askAboutWork = GetNode<Button>("Content/AskAboutWork");
+        _encourage = GetNode<Button>("Content/Encourage");
+        _shareRation = GetNode<Button>("Content/ShareRation");
 
-        DesignSystem.ApplyLabel(_heading, muted: true);
+        DesignSystem.ApplySurface(this, UiSurface.Card);
+        DesignSystem.ApplyStack(content, UiGap.Small);
+        DesignSystem.ApplyText(_heading, UiTextRole.SectionHeading);
         foreach (var button in Buttons())
         {
-            DesignSystem.ApplyButton(button);
+            DesignSystem.ApplyButton(button, UiButtonRole.Secondary);
         }
 
         _askAboutWork.Pressed += () => ChoiceRequested?.Invoke(ResidentInteractionChoice.AskAboutWork);

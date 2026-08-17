@@ -6,7 +6,7 @@ using Mws.Simulation.Api;
 
 namespace Mws.Client.Godot.UI.Screens.ResidentPanel;
 
-public partial class ResidentPanel : VBoxContainer
+public partial class ResidentPanel : PanelContainer
 {
     private Label _title = null!;
     private Label _nameLabel = null!;
@@ -24,29 +24,36 @@ public partial class ResidentPanel : VBoxContainer
 
     public override void _Ready()
     {
-        _title = GetNode<Label>("Title");
-        _nameLabel = GetNode<Label>("Details/NameLabel");
-        _nameValue = GetNode<Label>("Details/NameValue");
-        _professionLabel = GetNode<Label>("Details/ProfessionLabel");
-        _professionValue = GetNode<Label>("Details/ProfessionValue");
-        _homeLabel = GetNode<Label>("Details/HomeLabel");
-        _homeValue = GetNode<Label>("Details/HomeValue");
-        _needsLabel = GetNode<Label>("Details/NeedsLabel");
-        _needsValue = GetNode<Label>("Details/NeedsValue");
-        _affinityLabel = GetNode<Label>("Details/AffinityLabel");
-        _affinityValue = GetNode<Label>("Details/AffinityValue");
-        _inventoryLabel = GetNode<Label>("Details/InventoryLabel");
-        _inventoryValue = GetNode<Label>("Details/InventoryValue");
+        var content = GetNode<VBoxContainer>("Content");
+        var details = GetNode<GridContainer>("Content/Details");
 
-        DesignSystem.ApplyHeading(_title);
+        _title = GetNode<Label>("Content/Title");
+        _nameLabel = GetNode<Label>("Content/Details/NameLabel");
+        _nameValue = GetNode<Label>("Content/Details/NameValue");
+        _professionLabel = GetNode<Label>("Content/Details/ProfessionLabel");
+        _professionValue = GetNode<Label>("Content/Details/ProfessionValue");
+        _homeLabel = GetNode<Label>("Content/Details/HomeLabel");
+        _homeValue = GetNode<Label>("Content/Details/HomeValue");
+        _needsLabel = GetNode<Label>("Content/Details/NeedsLabel");
+        _needsValue = GetNode<Label>("Content/Details/NeedsValue");
+        _affinityLabel = GetNode<Label>("Content/Details/AffinityLabel");
+        _affinityValue = GetNode<Label>("Content/Details/AffinityValue");
+        _inventoryLabel = GetNode<Label>("Content/Details/InventoryLabel");
+        _inventoryValue = GetNode<Label>("Content/Details/InventoryValue");
+
+        DesignSystem.ApplySurface(this, UiSurface.Card);
+        DesignSystem.ApplyStack(content, UiGap.Medium);
+        DesignSystem.ApplyGrid(details, UiGap.Medium, UiGap.Small);
+        DesignSystem.ApplyText(_title, UiTextRole.SectionHeading);
+
         foreach (var label in Labels())
         {
-            DesignSystem.ApplyLabel(label, muted: true);
+            DesignSystem.ApplyText(label, UiTextRole.Caption);
         }
 
         foreach (var value in Values())
         {
-            DesignSystem.ApplyLabel(value);
+            DesignSystem.ApplyText(value, UiTextRole.Body);
         }
 
         RefreshLocalization();

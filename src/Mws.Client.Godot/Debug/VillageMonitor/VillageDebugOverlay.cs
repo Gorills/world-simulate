@@ -16,6 +16,7 @@ public partial class VillageDebugOverlay : Control
     private GameHud? _hud;
     private VillageDebugMap _map = null!;
     private Label _title = null!;
+    private Label _badge = null!;
     private Label _summary = null!;
     private Label _time = null!;
     private Label _details = null!;
@@ -25,18 +26,36 @@ public partial class VillageDebugOverlay : Control
     public override void _Ready()
     {
         DebugInput.ConfigureDefaults();
-        _map = GetNode<VillageDebugMap>("Anchor/Panel/Root/Body/Map");
-        _title = GetNode<Label>("Anchor/Panel/Root/Title");
+
+        var panel = GetNode<PanelContainer>("Anchor/Panel");
+        var root = GetNode<VBoxContainer>("Anchor/Panel/Root");
+        var titleRow = GetNode<HBoxContainer>("Anchor/Panel/Root/TitleRow");
+        var divider = GetNode<HSeparator>("Anchor/Panel/Root/Divider");
+        var body = GetNode<HBoxContainer>("Anchor/Panel/Root/Body");
+        var mapPanel = GetNode<PanelContainer>("Anchor/Panel/Root/Body/MapPanel");
+        var detailsScroll = GetNode<ScrollContainer>("Anchor/Panel/Root/Body/DetailsScroll");
+
+        _map = GetNode<VillageDebugMap>("Anchor/Panel/Root/Body/MapPanel/Map");
+        _title = GetNode<Label>("Anchor/Panel/Root/TitleRow/Title");
+        _badge = GetNode<Label>("Anchor/Panel/Root/TitleRow/Badge");
         _summary = GetNode<Label>("Anchor/Panel/Root/Summary");
         _time = GetNode<Label>("Anchor/Panel/Root/Time");
         _details = GetNode<Label>("Anchor/Panel/Root/Body/DetailsScroll/Details");
         _legend = GetNode<Label>("Anchor/Panel/Root/Legend");
 
-        DesignSystem.ApplyHeading(_title);
-        DesignSystem.ApplyLabel(_summary);
-        DesignSystem.ApplyLabel(_time, muted: true);
-        DesignSystem.ApplyLabel(_details);
-        DesignSystem.ApplyLabel(_legend, muted: true);
+        DesignSystem.ApplySurface(panel, UiSurface.Floating);
+        DesignSystem.ApplyStack(root, UiGap.Small);
+        DesignSystem.ApplyStack(titleRow, UiGap.Small);
+        DesignSystem.ApplyStack(body, UiGap.Small);
+        DesignSystem.ApplySurface(mapPanel, UiSurface.Inset);
+        DesignSystem.ApplyScroll(detailsScroll);
+        DesignSystem.ApplyDivider(divider);
+        DesignSystem.ApplyText(_title, UiTextRole.Heading);
+        DesignSystem.ApplyBadge(_badge, UiTone.Info);
+        DesignSystem.ApplyText(_summary, UiTextRole.Body);
+        DesignSystem.ApplyText(_time, UiTextRole.Caption);
+        DesignSystem.ApplyText(_details, UiTextRole.Caption);
+        DesignSystem.ApplyText(_legend, UiTextRole.Caption);
 
         var parent = GetParent();
         _world = parent?.GetNodeOrNull<VillageWorld>("VillageWorld");
@@ -162,6 +181,7 @@ public partial class VillageDebugOverlay : Control
         }
 
         _title.Text = GameLocalization.Tr("UI_DEBUG_TITLE");
+        _badge.Text = "DEV";
         _legend.Text = GameLocalization.Tr("UI_DEBUG_LEGEND");
     }
 }

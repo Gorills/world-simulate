@@ -20,8 +20,10 @@ public partial class WorldInteractionPrompt : Control
 
     public override void _Ready()
     {
+        var panel = GetNode<PanelContainer>("Anchor/Panel");
         _label = GetNode<Label>("Anchor/Panel/Label");
-        DesignSystem.ApplyLabel(_label);
+        DesignSystem.ApplySurface(panel, UiSurface.Floating);
+        DesignSystem.ApplyText(_label, UiTextRole.Body);
         GameLocalization.RegisterUiRefresh(RefreshAllUi);
         RefreshAllUi();
     }

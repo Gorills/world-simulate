@@ -28,29 +28,25 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = 24.0
-offset_right = -24.0
-offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Root" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 16
 
 [node name="Columns" type="HBoxContainer" parent="Margin/Root"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 24
 
 [node name="SettlementView" parent="Margin/Root/Columns" instance=ExtResource("2")]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
 [node name="Sidebar" type="VBoxContainer" parent="Margin/Root/Columns"]
-custom_minimum_size = Vector2(380, 0)
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
-theme_override_constants/separation = 24
+size_flags_vertical = 3
 
 [node name="ResidentPanel" parent="Margin/Root/Columns/Sidebar" instance=ExtResource("3")]
 layout_mode = 2
@@ -58,22 +54,32 @@ layout_mode = 2
 [node name="InteractionMenu" parent="Margin/Root/Columns/Sidebar" instance=ExtResource("4")]
 layout_mode = 2
 
-[node name="Feedback" type="Label" parent="Margin/Root"]
+[node name="BottomBar" type="PanelContainer" parent="Margin/Root"]
 layout_mode = 2
 
-[node name="AdvanceTime" type="Button" parent="Margin/Root"]
+[node name="Content" type="HBoxContainer" parent="Margin/Root/BottomBar"]
 layout_mode = 2
 
-[node name="LanguageRow" type="HBoxContainer" parent="Margin/Root"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Label" type="Label" parent="Margin/Root/LanguageRow"]
-layout_mode = 2
-
-[node name="Language" type="OptionButton" parent="Margin/Root/LanguageRow"]
+[node name="Feedback" type="Label" parent="Margin/Root/BottomBar/Content"]
 layout_mode = 2
 size_flags_horizontal = 3
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="AdvanceTime" type="Button" parent="Margin/Root/BottomBar/Content"]
+layout_mode = 2
+
+[node name="LanguageRow" type="HBoxContainer" parent="Margin/Root/BottomBar/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Margin/Root/BottomBar/Content/LanguageRow"]
+layout_mode = 2
+vertical_alignment = 1
+
+[node name="Language" type="OptionButton" parent="Margin/Root/BottomBar/Content/LanguageRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
 
 [node name="InputHint" type="Label" parent="Margin/Root"]
 layout_mode = 2
+autowrap_mode = 2

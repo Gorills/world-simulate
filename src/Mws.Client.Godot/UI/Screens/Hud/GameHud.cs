@@ -25,20 +25,35 @@ public partial class GameHud : Control
 
     public override void _Ready()
     {
-        DesignSystem.ApplyBackground(GetNode<ColorRect>("Background"));
+        var margin = GetNode<MarginContainer>("Margin");
+        var root = GetNode<VBoxContainer>("Margin/Root");
+        var columns = GetNode<HBoxContainer>("Margin/Root/Columns");
+        var sidebar = GetNode<VBoxContainer>("Margin/Root/Columns/Sidebar");
+        var bottomBar = GetNode<PanelContainer>("Margin/Root/BottomBar");
+        var bottomContent = GetNode<HBoxContainer>("Margin/Root/BottomBar/Content");
+        var languageRow = GetNode<HBoxContainer>("Margin/Root/BottomBar/Content/LanguageRow");
+
         _settlementView = GetNode<SettlementView>("Margin/Root/Columns/SettlementView");
         _residentPanel = GetNode<ResidentPanelView>("Margin/Root/Columns/Sidebar/ResidentPanel");
         _interactionMenu = GetNode<InteractionMenuView>("Margin/Root/Columns/Sidebar/InteractionMenu");
         _inputHint = GetNode<Label>("Margin/Root/InputHint");
-        _feedback = GetNode<Label>("Margin/Root/Feedback");
-        _languageLabel = GetNode<Label>("Margin/Root/LanguageRow/Label");
-        _advance = GetNode<Button>("Margin/Root/AdvanceTime");
-        _language = GetNode<OptionButton>("Margin/Root/LanguageRow/Language");
+        _feedback = GetNode<Label>("Margin/Root/BottomBar/Content/Feedback");
+        _languageLabel = GetNode<Label>("Margin/Root/BottomBar/Content/LanguageRow/Label");
+        _advance = GetNode<Button>("Margin/Root/BottomBar/Content/AdvanceTime");
+        _language = GetNode<OptionButton>("Margin/Root/BottomBar/Content/LanguageRow/Language");
 
-        DesignSystem.ApplyLabel(_inputHint, muted: true);
-        DesignSystem.ApplyLabel(_feedback);
-        DesignSystem.ApplyLabel(_languageLabel);
-        DesignSystem.ApplyButton(_advance);
+        DesignSystem.ApplyBackdrop(GetNode<ColorRect>("Background"));
+        DesignSystem.ApplyPageMargin(margin);
+        DesignSystem.ApplyStack(root, UiGap.Medium);
+        DesignSystem.ApplyStack(columns, UiGap.Large);
+        DesignSystem.ApplyStack(sidebar, UiGap.Medium);
+        DesignSystem.ApplySurface(bottomBar, UiSurface.Card);
+        DesignSystem.ApplyStack(bottomContent, UiGap.Medium);
+        DesignSystem.ApplyStack(languageRow, UiGap.Small);
+        DesignSystem.ApplyText(_inputHint, UiTextRole.Caption);
+        DesignSystem.ApplyText(_feedback, UiTextRole.Body);
+        DesignSystem.ApplyText(_languageLabel, UiTextRole.Muted);
+        DesignSystem.ApplyButton(_advance, UiButtonRole.Primary);
         DesignSystem.ApplyOptionButton(_language);
 
         _advance.Pressed += () => _session?.AdvanceHours(1);

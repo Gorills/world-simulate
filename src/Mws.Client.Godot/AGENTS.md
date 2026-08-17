@@ -40,7 +40,18 @@ Views emit intent/events. Parents wire sibling components. Avoid deep cross-feat
 
 ## Design system rule
 
-Feature code calls `DesignSystem`; it does not call `AddTheme*Override` or read `DesignTokens` directly. Add reusable visual semantics in `UI/Theme/` first.
+`DESIGN/UI_DESIGN_SYSTEM.md` is the visual contract.
+
+Feature code chooses semantic roles through `DesignSystem`; it does not:
+- call `AddTheme*Override`;
+- construct `StyleBox` resources;
+- read `DesignTokens` directly;
+- hardcode UI/debug palette colors;
+- write `theme_override_*` values into `.tscn` scenes.
+
+Use `UiSurface`, `UiTextRole`, `UiButtonRole`, `UiTone`, `UiGap` and `UiDataColor`. Add reusable semantics in `UI/Theme/` before adding feature-specific styling.
+
+Debug UI uses the same design system. Density may differ, visual rules do not.
 
 ## Scene ownership
 
@@ -69,7 +80,8 @@ Before considering a Godot change complete:
 - authoritative rules remain outside views;
 - keyboard and gamepad paths both exist for new gameplay actions;
 - controller focus can enter and leave new UI;
-- styling is routed through `UI/Theme/`;
+- styling is routed through semantic `UI/Theme/` roles;
+- scenes contain structure/layout, not local theme overrides;
 - owning scene/script are colocated;
 - file budgets remain green;
 - headless smoke still boots the same authoritative state.

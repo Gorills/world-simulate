@@ -17,10 +17,10 @@ script = ExtResource("1_overlay")
 layout_mode = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -674.0
+offset_left = -714.0
 offset_top = 16.0
 offset_right = -16.0
-offset_bottom = 414.0
+offset_bottom = 446.0
 grow_horizontal = 0
 mouse_filter = 2
 
@@ -30,34 +30,48 @@ mouse_filter = 2
 
 [node name="Root" type="VBoxContainer" parent="Anchor/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Anchor/Panel/Root"]
+[node name="TitleRow" type="HBoxContainer" parent="Anchor/Panel/Root"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Anchor/Panel/Root/TitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Badge" type="Label" parent="Anchor/Panel/Root/TitleRow"]
 layout_mode = 2
 
 [node name="Summary" type="Label" parent="Anchor/Panel/Root"]
 layout_mode = 2
+autowrap_mode = 2
 
 [node name="Time" type="Label" parent="Anchor/Panel/Root"]
+layout_mode = 2
+
+[node name="Divider" type="HSeparator" parent="Anchor/Panel/Root"]
 layout_mode = 2
 
 [node name="Body" type="HBoxContainer" parent="Anchor/Panel/Root"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 10
 
-[node name="Map" type="Control" parent="Anchor/Panel/Root/Body"]
-custom_minimum_size = Vector2(370, 270)
+[node name="MapPanel" type="PanelContainer" parent="Anchor/Panel/Root/Body"]
+custom_minimum_size = Vector2(390, 286)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Map" type="Control" parent="Anchor/Panel/Root/Body/MapPanel"]
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("2_map")
 
 [node name="DetailsScroll" type="ScrollContainer" parent="Anchor/Panel/Root/Body"]
-custom_minimum_size = Vector2(260, 270)
+custom_minimum_size = Vector2(270, 286)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
+horizontal_scroll_mode = 0
 
 [node name="Details" type="Label" parent="Anchor/Panel/Root/Body/DetailsScroll"]
 custom_minimum_size = Vector2(250, 0)
