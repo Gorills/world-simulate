@@ -94,11 +94,30 @@ Audit includes GitHub Actions/required checks for the exact commit under review.
 - Do not poll in a loop. Inspect a bounded status snapshot, and re-check on the next owner-directed continuation when necessary.
 - After an audit-status/fix commit, CI must be checked on that final SHA as well.
 
+### 9. Durable audit record
+
+An audit result must survive the chat session. Before a contract is promoted to `ACCEPTED`, write an append-only record under `DESIGN/MODEL_AUDITS/`.
+
+The record must contain at least:
+
+- model contract/path and exact implementation/research SHA reviewed;
+- audit verdict and audit date;
+- load-bearing claims independently re-checked;
+- which underlying sources were reopened and what each re-check established;
+- causal, player/NPC symmetry, ownership/rights, uncertainty/fixture and long-horizon verdicts as applicable;
+- unresolved/deferred `MODEL_UNDERDEFINED` areas that remain outside the accepted scope;
+- CI/check names and outcomes for the reviewed SHA;
+- final acceptance/status-change SHA when one exists.
+
+Audit records are append-only evidence. Do not rewrite an older PASS/FAIL record to reflect later understanding; create a new audit record when a contract is materially revised or re-audited.
+
+A later task may use both the accepted contract's evidence ledger and its latest applicable audit record to avoid repeating already-completed verification. If the new task makes a previously non-critical premise load-bearing, re-check that premise rather than blindly inheriting the old verdict.
+
 ## Status transitions
 
 - `MODEL_UNDERDEFINED`: material research/causal gaps remain. Stop rather than inventing rules.
 - `REVIEW_REQUIRED`: concrete model and evidence exist; independent audit has not yet passed.
-- `ACCEPTED`: load-bearing evidence, causal structure, symmetry, rights/obligations, uncertainty and required validation have passed audit.
+- `ACCEPTED`: load-bearing evidence, causal structure, symmetry, rights/obligations, uncertainty and required validation have passed audit **and an applicable durable audit record exists**.
 
 Only the audit pass should promote a contract from `REVIEW_REQUIRED` to `ACCEPTED`. `ACCEPTED` means the model is an approved baseline in its declared context; it does not make deferred questions universal and does not automatically authorize a later task.
 
@@ -112,6 +131,7 @@ A blocker includes, at minimum:
 - player/NPC symmetry or rights are violated;
 - required long-horizon evidence is missing;
 - required CI fails;
+- a required durable audit record is missing;
 - a material dependency remains `MODEL_UNDERDEFINED`.
 
 When a blocker is found, repair only the blocked task in a bounded pass, commit/push the repair, report and stop. Do not begin the next task until the owner explicitly continues and the repaired task passes audit.
@@ -120,6 +140,6 @@ When a blocker is found, repair only the blocked task in a bounded pass, commit/
 
 The normal rhythm is:
 
-`bounded task -> commit/push -> report/stop -> owner continues -> audit -> fix if blocked OR accept -> report/stop`
+`bounded task -> commit/push -> report/stop -> owner continues -> audit -> fix if blocked OR accept -> durable audit record -> report/stop`
 
 Do not polish the same accepted task indefinitely. New research after audit must be justified by a concrete blocker, contradiction, new dependency or changed reference context. Otherwise preserve the accepted result and move on only when the owner requests it.

@@ -20,6 +20,7 @@ Follow `DESIGN/RESEARCH_MODELING_WORKFLOW.md` for historical/causal model work.
 - On owner-directed continuation, audit the exact previous commit before starting anything new. A blocker keeps work on the same task.
 - Preserve source-to-claim evidence and limits in model contracts so accepted research can be reused instead of repeated from zero.
 - Audit must independently re-check load-bearing historical facts against their underlying sources; do not merely trust the previous research summary.
+- Before promoting a contract to `ACCEPTED`, persist an append-only audit record under `DESIGN/MODEL_AUDITS/` with the exact reviewed SHA, load-bearing fact checks, reopened sources, verdicts, deferred gaps and CI outcomes.
 - Audit includes relevant CI/required checks on the exact SHA. Running CI means pending, failed CI means repair the same task, and a later task must not start while a blocker remains.
 - Do not turn audit into a full literature-search loop: reopen non-load-bearing evidence only for a concrete contradiction, ambiguity, weak citation or changed dependency.
 
@@ -36,7 +37,7 @@ Follow `DESIGN/RESEARCH_MODELING_WORKFLOW.md` for historical/causal model work.
 - Run `python TOOLS/dev.py full` only at a milestone/checkpoint or when explicitly requested.
 - Run `python TOOLS/dev.py bench` only for explicit performance evidence. Never as part of the normal edit loop.
 
-`fast` must remain the default agent loop. Do not substitute the whole solution, Godot, benchmark, export, or release validation for it.
+`fast` must remain the default agent loop. Do not substitute the whole solution, Godot, benchmark, export or release validation for it.
 
 ## CI anti-stall
 - One change batch -> one CI cycle.
