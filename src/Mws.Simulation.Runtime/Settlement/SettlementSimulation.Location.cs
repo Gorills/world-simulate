@@ -86,7 +86,7 @@ public sealed partial class SettlementSimulation
         }
     }
 
-    private SettlementActorLocationState? CaptureResidentSemanticLocation(ResidentRuntimeState resident) =>
+    private static SettlementActorLocationState? CaptureResidentSemanticLocation(ResidentRuntimeState resident) =>
         SettlementSemanticLocation.Capture(resident.Location);
 
     private bool IsResidentAtHome(ResidentRuntimeState resident) =>
