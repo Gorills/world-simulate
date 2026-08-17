@@ -158,6 +158,55 @@ public sealed class P3SemanticLocationFoundationTests
     }
 
     [Fact]
+    public void CurrentEncodingRejectsMissingTravelProgress()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9309)).CaptureState();
+        var resident = state.Residents[0];
+        var household = Assert.Single(state.Households!, entry => entry.Id == resident.HouseholdId);
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
+        var missingProgress = new SettlementActorLocationState(
+            SettlementActorLocationKind.Travelling,
+            home,
+            new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId));
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id ? entry with { Location = missingProgress } : entry)
+            .ToArray();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            SettlementSimulation.Restore(state with { Residents = residents }));
+    }
+
+    [Fact]
+    public void LegacyEncodingHydratesMissingTravelProgressOnlyForCompatibility()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9310)).CaptureState();
+        var resident = state.Residents[0];
+        var household = Assert.Single(state.Households!, entry => entry.Id == resident.HouseholdId);
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var missingProgress = new SettlementActorLocationState(
+            SettlementActorLocationKind.Travelling,
+            home,
+            workplace);
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id ? entry with { Location = missingProgress } : entry)
+            .ToArray();
+        var restored = SettlementSimulation.Restore(state with
+        {
+            Residents = residents,
+            ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion,
+        });
+        var location = RequireLocation(restored, resident.Id);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, location.Kind);
+        Assert.Equal(home, location.CurrentPlace);
+        Assert.Equal(workplace, location.DestinationPlace);
+        Assert.NotNull(location.Travel);
+        Assert.Equal(SettlementSimulation.HourMilliseconds, location.Travel.DurationMilliseconds);
+        Assert.Equal(0, location.Travel.ElapsedMilliseconds);
+    }
+
+    [Fact]
     public void RestoreRejectsContradictoryAtPlaceLocation()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9303)).CaptureState();

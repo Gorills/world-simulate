@@ -7,11 +7,26 @@ internal static class SettlementSemanticLocation
 {
     private const long LegacyPrototypeTravelDurationMilliseconds = 3_600_000;
 
-    internal static SettlementActorLocationState Normalize(SettlementActorLocationState? location)
+    internal static SettlementActorLocationState Normalize(SettlementActorLocationState? location) =>
+        Normalize(location, allowLegacyMissingTravelProgress: true);
+
+    internal static SettlementActorLocationState NormalizeForRestore(
+        SettlementActorLocationState? location,
+        bool allowLegacyMissingTravelProgress) =>
+        Normalize(location, allowLegacyMissingTravelProgress);
+
+    private static SettlementActorLocationState Normalize(
+        SettlementActorLocationState? location,
+        bool allowLegacyMissingTravelProgress)
     {
         var normalized = location ?? SettlementActorLocationState.At(SettlementPlaceRef.Settlement);
         if (normalized.Kind == SettlementActorLocationKind.Travelling && normalized.Travel is null)
         {
+            if (!allowLegacyMissingTravelProgress)
+            {
+                throw new InvalidOperationException("Travelling location is missing travel progress.");
+            }
+
             normalized = normalized with
             {
                 Travel = new SettlementTravelProgressState(

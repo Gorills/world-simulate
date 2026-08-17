@@ -5,7 +5,9 @@ namespace Mws.Simulation.Runtime;
 
 internal sealed class ResidentRuntimeState
 {
-    internal ResidentRuntimeState(ResidentState state)
+    internal ResidentRuntimeState(
+        ResidentState state,
+        bool allowLegacyMissingTravelProgress)
     {
         ArgumentNullException.ThrowIfNull(state);
         Id = state.Id;
@@ -18,7 +20,9 @@ internal sealed class ResidentRuntimeState
         HouseholdId = state.HouseholdId;
         Affinity = state.Affinity;
         LocationWasOmitted = state.Location is null;
-        Location = SettlementSemanticLocation.Normalize(state.Location);
+        Location = SettlementSemanticLocation.NormalizeForRestore(
+            state.Location,
+            allowLegacyMissingTravelProgress);
     }
 
     internal EntityId Id { get; }

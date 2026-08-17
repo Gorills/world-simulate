@@ -47,9 +47,13 @@ public sealed partial class SettlementSimulation
         _nextStackId = nextStackId;
         _nextCommandId = nextCommandId;
         _settlementOwnerId = settlementOwnerId;
+        var allowLegacyMissingTravelProgress = residentLocationEncodingVersion
+            == SettlementVersions.LegacyResidentLocationEncodingVersion;
         _residents = residents
             .OrderBy(resident => resident.Id.Value)
-            .Select(resident => new ResidentRuntimeState(resident))
+            .Select(resident => new ResidentRuntimeState(
+                resident,
+                allowLegacyMissingTravelProgress))
             .ToArray();
         _itemStacks = itemStacks.OrderBy(stack => stack.StackId).ToList();
         _workplaces = workplaces.OrderBy(workplace => workplace.Id.Value).ToList();
