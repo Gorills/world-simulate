@@ -9,7 +9,7 @@ namespace Mws.Core.Tests;
 public sealed class P3RouteAuthorityTests
 {
     [Fact]
-    public void DestinationRequestDerivesKnownOpenRoutePathWithoutStartingTravel()
+    public void DestinationRequestDerivesUniqueKnownOpenRoutePathWithoutStartingTravel()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9330)).CaptureState();
         var resident = state.Residents[0];
@@ -18,7 +18,6 @@ public sealed class P3RouteAuthorityTests
         var task = SelectedTask(10, workplace);
         var routes = new[]
         {
-            Route(3, home, workplace, 1_200),
             Route(2, SettlementPlaceRef.Settlement, workplace, 700),
             Route(1, home, SettlementPlaceRef.Settlement, 300),
         };
@@ -28,7 +27,7 @@ public sealed class P3RouteAuthorityTests
             RouteConnections = routes,
             ResidentRouteKnowledge =
             [
-                new SettlementResidentRouteKnowledgeState(resident.Id, [3, 2, 1]),
+                new SettlementResidentRouteKnowledgeState(resident.Id, [2, 1]),
             ],
         });
 
@@ -48,9 +47,9 @@ public sealed class P3RouteAuthorityTests
         Assert.Equal(1_000, routePath.TotalDistanceMeters);
 
         var captured = simulation.CaptureState();
-        Assert.Equal(new long[] { 1, 2, 3 }, captured.RouteConnections!.Select(route => route.ConnectionId));
+        Assert.Equal(new long[] { 1, 2 }, captured.RouteConnections!.Select(route => route.ConnectionId));
         var capturedKnowledge = Assert.Single(captured.ResidentRouteKnowledge!);
-        Assert.Equal(new long[] { 1, 2, 3 }, capturedKnowledge.KnownConnectionIds);
+        Assert.Equal(new long[] { 1, 2 }, capturedKnowledge.KnownConnectionIds);
 
         var restored = SettlementSimulation.Restore(
             SettlementStateJson.Deserialize(SettlementStateJson.Serialize(captured)));
@@ -63,6 +62,38 @@ public sealed class P3RouteAuthorityTests
         Assert.Equal(routePath.ConnectionIds, restoredPath.ConnectionIds);
         Assert.Equal(routePath.TotalDistanceMeters, restoredPath.TotalDistanceMeters);
         Assert.Equal(projected.Location, restoredResident.Location);
+    }
+
+    [Fact]
+    public void MultipleKnownOpenRoutesRemainUnselectedWithoutRouteChoiceModel()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9336)).CaptureState();
+        var resident = state.Residents[0];
+        var home = ResidentHome(state, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var simulation = SettlementSimulation.Restore(state with
+        {
+            Residents = WithSelectedTask(state, resident.Id, SelectedTask(13, workplace)),
+            RouteConnections =
+            [
+                Route(1, home, SettlementPlaceRef.Settlement, 300),
+                Route(2, SettlementPlaceRef.Settlement, workplace, 700),
+                Route(3, home, workplace, 1_200),
+            ],
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(resident.Id, [1, 2, 3]),
+            ],
+        });
+
+        var projected = Assert.Single(simulation.Project().Residents, entry => entry.Id == resident.Id);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+
+        Assert.NotNull(projected.DestinationRequest);
+        Assert.Null(projected.RoutePath);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+        Assert.Equal(home, location.CurrentPlace);
+        Assert.Null(location.Travel);
     }
 
     [Fact]

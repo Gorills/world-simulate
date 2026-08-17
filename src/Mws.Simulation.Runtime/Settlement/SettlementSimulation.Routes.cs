@@ -10,7 +10,6 @@ public sealed partial class SettlementSimulation
     private readonly Dictionary<long, SettlementRouteConnectionState> _routeConnectionsById;
     private readonly Dictionary<SettlementPlaceRef, List<SettlementRouteConnectionState>> _routeConnectionsByPlace;
     private readonly Dictionary<EntityId, HashSet<long>> _knownRouteConnectionIdsByResident;
-
     private void ValidateRouteConnections()
     {
         var connectionIds = new HashSet<long>();
@@ -54,7 +53,6 @@ public sealed partial class SettlementSimulation
             ValidateSettlementPlaceReference(connection.SecondPlace);
         }
     }
-
     private void RebuildRouteIndexes()
     {
         _routeConnectionsById.Clear();
@@ -79,7 +77,6 @@ public sealed partial class SettlementSimulation
 
         connections.Add(connection);
     }
-
     private void RebuildResidentRouteKnowledgeIndex()
     {
         _knownRouteConnectionIdsByResident.Clear();
@@ -109,12 +106,10 @@ public sealed partial class SettlementSimulation
             _knownRouteConnectionIdsByResident.Add(knowledge.ResidentId, knownIds);
         }
     }
-
     private SettlementRouteConnectionState[] CaptureRouteConnections() =>
         _routeConnections
             .OrderBy(connection => connection.ConnectionId)
             .ToArray();
-
     private SettlementResidentRouteKnowledgeState[] CaptureResidentRouteKnowledge() =>
         _residentRouteKnowledge
             .OrderBy(entry => entry.ResidentId.Value)
@@ -136,7 +131,7 @@ public sealed partial class SettlementSimulation
         }
 
         var origin = resident.Location.CurrentPlace;
-        var path = FindKnownOpenRoutePath(origin, request.Destination, knownConnectionIds);
+        var path = FindUniqueKnownOpenRoutePath(origin, request.Destination, knownConnectionIds);
         return path is null
             ? null
             : new SettlementRoutePathProjection(
@@ -147,34 +142,51 @@ public sealed partial class SettlementSimulation
                 path.TotalDistanceMeters);
     }
 
-    private RoutePathResult? FindKnownOpenRoutePath(
+    private RoutePathResult? FindUniqueKnownOpenRoutePath(
         SettlementPlaceRef origin,
         SettlementPlaceRef destination,
         HashSet<long> knownConnectionIds)
     {
-        var distances = new Dictionary<SettlementPlaceRef, long>
+        var path = FindKnownOpenRoutePath(
+            origin,
+            destination,
+            knownConnectionIds,
+            excludedConnectionId: null);
+        if (path is null)
         {
-            [origin] = 0,
-        };
+            return null;
+        }
+
+        foreach (var connectionId in path.ConnectionIds)
+        {
+            if (FindKnownOpenRoutePath(
+                    origin,
+                    destination,
+                    knownConnectionIds,
+                    connectionId) is not null)
+            {
+                // More than one feasible path exists. Route choice is intentionally
+                // deferred until its causal selection rules are modeled.
+                return null;
+            }
+        }
+
+        return path;
+    }
+
+    private RoutePathResult? FindKnownOpenRoutePath(
+        SettlementPlaceRef origin,
+        SettlementPlaceRef destination,
+        HashSet<long> knownConnectionIds,
+        long? excludedConnectionId)
+    {
         var predecessors = new Dictionary<SettlementPlaceRef, RoutePredecessor>();
-        var frontier = new PriorityQueue<
-            SettlementPlaceRef,
-            (long Distance, int Kind, long EntityId)>();
-        frontier.Enqueue(origin, (0, (int)origin.Kind, origin.EntityId.Value));
+        var visited = new HashSet<SettlementPlaceRef> { origin };
+        var frontier = new Queue<SettlementPlaceRef>();
+        frontier.Enqueue(origin);
 
-        while (frontier.TryDequeue(out var place, out var priority))
+        while (frontier.TryDequeue(out var place))
         {
-            if (!distances.TryGetValue(place, out var currentDistance)
-                || priority.Distance != currentDistance)
-            {
-                continue;
-            }
-
-            if (place == destination)
-            {
-                return ReconstructRoutePath(origin, destination, currentDistance, predecessors);
-            }
-
             if (!_routeConnectionsByPlace.TryGetValue(place, out var connections))
             {
                 continue;
@@ -182,7 +194,8 @@ public sealed partial class SettlementSimulation
 
             foreach (var connection in connections)
             {
-                if (!knownConnectionIds.Contains(connection.ConnectionId)
+                if (connection.ConnectionId == excludedConnectionId
+                    || !knownConnectionIds.Contains(connection.ConnectionId)
                     || connection.PhysicalState != SettlementRoutePhysicalState.Passable
                     || connection.PassageStatus != SettlementRoutePassageStatus.Open)
                 {
@@ -192,45 +205,43 @@ public sealed partial class SettlementSimulation
                 var nextPlace = connection.FirstPlace == place
                     ? connection.SecondPlace
                     : connection.FirstPlace;
-                if (currentDistance > long.MaxValue - connection.DistanceMeters)
+                if (!visited.Add(nextPlace))
                 {
                     continue;
                 }
 
-                var candidateDistance = currentDistance + connection.DistanceMeters;
-                if (distances.TryGetValue(nextPlace, out var existingDistance)
-                    && candidateDistance >= existingDistance)
-                {
-                    continue;
-                }
-
-                distances[nextPlace] = candidateDistance;
                 predecessors[nextPlace] = new RoutePredecessor(place, connection.ConnectionId);
-                frontier.Enqueue(
-                    nextPlace,
-                    (candidateDistance, (int)nextPlace.Kind, nextPlace.EntityId.Value));
+                if (nextPlace == destination)
+                {
+                    return ReconstructRoutePath(origin, destination, predecessors);
+                }
+
+                frontier.Enqueue(nextPlace);
             }
         }
 
         return null;
     }
 
-    private static RoutePathResult ReconstructRoutePath(
+    private RoutePathResult? ReconstructRoutePath(
         SettlementPlaceRef origin,
         SettlementPlaceRef destination,
-        long totalDistanceMeters,
         IReadOnlyDictionary<SettlementPlaceRef, RoutePredecessor> predecessors)
     {
         var connectionIds = new List<long>();
+        var totalDistanceMeters = 0L;
         var current = destination;
         while (current != origin)
         {
-            if (!predecessors.TryGetValue(current, out var predecessor))
+            if (!predecessors.TryGetValue(current, out var predecessor)
+                || !_routeConnectionsById.TryGetValue(predecessor.ConnectionId, out var connection)
+                || totalDistanceMeters > long.MaxValue - connection.DistanceMeters)
             {
-                throw new InvalidOperationException("Route path predecessor chain is incomplete.");
+                return null;
             }
 
             connectionIds.Add(predecessor.ConnectionId);
+            totalDistanceMeters += connection.DistanceMeters;
             current = predecessor.PreviousPlace;
         }
 
