@@ -74,10 +74,10 @@ msgid "UI_INTERACTION"
 msgstr "Interaction"
 
 msgid "UI_HINT_GAMEPAD"
-msgstr "Left stick move · L3 sprint · right stick camera · Start world/menu · LB/RB select · A interact · Y advance"
+msgstr "Left stick move · L3 sprint · B jump / menu cancel · right stick camera · Start world/menu · LB/RB select · A interact · Y advance"
 
 msgid "UI_HINT_KEYBOARD"
-msgstr "WASD move · Shift sprint · mouse camera · Tab world/menu · Q/E select · F interact · Space advance"
+msgstr "WASD move · Shift sprint · Space jump · mouse camera · Tab world/menu · Q/E select · F interact · T advance"
 
 msgid "UI_WORLD_STATE_TIME"
 msgstr "World state: day {0}, {1}:00"

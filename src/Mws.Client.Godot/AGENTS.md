@@ -32,6 +32,18 @@ Only `Session/` may reference `Mws.Simulation.Runtime` from client C# code.
 - Pointer interaction may use normal Godot Control signals; do not map left-click globally just to imitate controller confirm.
 - Built-in `ui_*` actions are for Control focus/navigation, not gameplay rules.
 
+## Player control rule
+
+`DESIGN/PLAYER_CONTROL_SYSTEM.md` is the contract for third-person control feel.
+
+- Raw device bindings and deadzones stay in `Input/`.
+- Locomotion/camera tuning belongs in `World/Player/PlayerControlProfile.cs`; do not scatter speed, gravity, jump, turn or camera-feel constants through scene scripts.
+- `PlayerMotor` owns CharacterBody3D velocity, braking, acceleration, jump forgiveness and locomotion state.
+- `ThirdPersonCameraController` owns orbit response, pitch limits, spring-arm tuning and FOV response.
+- `ThirdPersonPlayer` composes input, motor, camera and interaction targeting; it is not a second tuning store.
+- Animation/audio/FX consume `PlayerMotionState`; they do not re-decide movement rules.
+- A new control mode should normally be a new/reused profile plus explicitly owned motor/camera behaviour, not copied player code.
+
 ## UI and focus rule
 
 Every interactive screen must be usable without a mouse. Provide a deterministic initial focus and a path back to the world/previous control. If automatic focus navigation becomes ambiguous, set explicit focus neighbors.
@@ -80,6 +92,7 @@ Before considering a Godot change complete:
 - authoritative rules remain outside views;
 - keyboard and gamepad paths both exist for new gameplay actions;
 - controller focus can enter and leave new UI;
+- player-control tuning stays behind the profile/motor/camera seams;
 - styling is routed through semantic `UI/Theme/` roles;
 - scenes contain structure/layout, not local theme overrides;
 - owning scene/script are colocated;
