@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
+  "subject_sha": "8745e3c7eddc907d2741de9fed3e8cd86c11d935",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "PASS",
+  "systems_audit": "FAIL",
+  "overall": "FAIL",
+  "validation": [
+    "Re-audited unchanged P1 production implementation at exact checkpoint 8745e3c7eddc907d2741de9fed3e8cd86c11d935.",
+    "Confirmed 65cffe38bc6af8c9923ae8fd4b98f268b9466b13..8745e3c7eddc907d2741de9fed3e8cd86c11d935 changes only append the prior audit evidence; production code is unchanged.",
+    "Repeated authority, command-journal, replay, checkpoint and CI-scope review with no production blocker found.",
+    "Exact-SHA snapshot showed gate and scope successful, proof-a-required still in_progress, and no completed core/Godot integration evidence yet."
+  ],
+  "systems_examined": [
+    "P1 production tree equivalence after R1",
+    "GameWorldSession authority boundary",
+    "WorldRuntime resident interaction command path",
+    "world journal replay",
+    "checkpoint restore seam",
+    "client architecture regression guard",
+    "core boundary regression test",
+    "CI validation state"
+  ],
+  "findings": [
+    {
+      "severity": "BLOCKER",
+      "code": "P1_REQUIRED_VALIDATION_INCOMPLETE_R2",
+      "summary": "Required exact-checkpoint validation was still incomplete at the single R2 snapshot. No production-code defect was identified."
+    }
+  ],
+  "residual_risks": [
+    "WorldRuntime full-state staging remains deliberately deferred to P4.",
+    "Active settlement scope is restored alongside, not inside, WorldCheckpointState.",
+    "Feature branch protection remains process/CI based rather than server-enforced."
+  ]
+}
