@@ -1,6 +1,6 @@
 # P3 Semantic Location and Travel — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the structural model for authoritative semantic presence and travel for ordinary people. It replaces the prototype assumption that clock time directly creates commuting/work/home movement.
 
@@ -541,4 +541,4 @@ Separate bounded work may still be required for:
 - weather/darkness/safety travel decisions;
 - integration with future demographic/economic >=10-year proof.
 
-Until independently audited, this contract remains `REVIEW_REQUIRED` and does not authorize production changes that fill deferred parameters with convenient constants.
+This accepted structural contract does not authorize production changes that fill deferred parameters with convenient constants.
