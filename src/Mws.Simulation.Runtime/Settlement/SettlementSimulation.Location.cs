@@ -47,6 +47,10 @@ public sealed partial class SettlementSimulation
         {
             ValidateResidentPlaceReference(resident.Location.CurrentPlace);
             ValidateResidentPlaceReference(resident.Location.DestinationPlace);
+            if (resident.SelectedTask is not null)
+            {
+                ValidateResidentSelectedTask(resident.SelectedTask);
+            }
         }
     }
 
@@ -75,9 +79,16 @@ public sealed partial class SettlementSimulation
                 continue;
             }
 
-            // Compatibility feeder only. The 07/17 fixture still starts travel while
-            // authoritative Task/Intention runtime state is not yet implemented. The travel
-            // engine below is no longer derived from the clock and persists its own progress.
+            // An authoritative selected task owns the upstream destination requirement.
+            // Until route/travel-plan derivation replaces the prototype duration fixture,
+            // do not let the old clock feeder invent a conflicting commute for that task.
+            if (resident.SelectedTask is not null)
+            {
+                continue;
+            }
+
+            // Compatibility feeder only for residents that do not yet have authoritative
+            // selected-task state. The 07/17 fixture is not a canonical movement cause.
             var target = PrototypeScheduledResidentDestination(resident, hour);
             if (IsAtPlace(resident.Location, target))
             {

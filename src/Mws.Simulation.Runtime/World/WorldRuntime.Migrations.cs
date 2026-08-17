@@ -109,6 +109,14 @@ public sealed partial class WorldRuntime
             return RecordOperation(CreateReceipt(intent, false, "RESIDENT_NOT_FOUND"));
         }
 
+        // Task interruption/cancellation is not yet modeled. Preserve the selected task
+        // instead of silently erasing it during migration, and require an explicit future
+        // transition before this person can migrate.
+        if (resident.SelectedTask is not null)
+        {
+            return RecordOperation(CreateReceipt(intent, false, "ACTIVE_TASK_BLOCKS_MIGRATION"));
+        }
+
         if (destinationState.Residents.Any(entry => entry.Id == intent.ResidentId))
         {
             return RecordOperation(CreateReceipt(intent, false, "DESTINATION_ALREADY_CONTAINS_ENTITY"));

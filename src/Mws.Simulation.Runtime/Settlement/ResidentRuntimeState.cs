@@ -23,6 +23,7 @@ internal sealed class ResidentRuntimeState
         Location = SettlementSemanticLocation.NormalizeForRestore(
             state.Location,
             allowLegacyMissingTravelProgress);
+        SelectedTask = state.SelectedTask;
     }
 
     internal EntityId Id { get; }
@@ -47,6 +48,8 @@ internal sealed class ResidentRuntimeState
 
     internal SettlementActorLocationState Location { get; set; }
 
+    internal SettlementSelectedTaskState? SelectedTask { get; }
+
     internal ResidentState Capture() =>
         Capture(SettlementSemanticLocation.Capture(Location));
 
@@ -60,5 +63,6 @@ internal sealed class ResidentRuntimeState
         WorkplaceId,
         Affinity,
         HouseholdId,
-        location);
+        location,
+        SelectedTask);
 }

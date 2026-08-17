@@ -45,7 +45,9 @@ public sealed record ResidentProjection(
     string HouseholdName = "",
     EntityId HomeId = default,
     string HomeName = "",
-    SettlementActorLocationProjection? Location = null);
+    SettlementActorLocationProjection? Location = null,
+    SettlementSelectedTaskProjection? SelectedTask = null,
+    SettlementDestinationRequestProjection? DestinationRequest = null);
 
 public sealed record ResidentProjectionPage(
     SimulationScopeId ScopeId,

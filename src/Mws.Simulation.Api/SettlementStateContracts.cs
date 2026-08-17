@@ -27,7 +27,8 @@ public sealed record ResidentState(
     EntityId WorkplaceId,
     int Affinity,
     EntityId HouseholdId = default,
-    SettlementActorLocationState? Location = null);
+    SettlementActorLocationState? Location = null,
+    SettlementSelectedTaskState? SelectedTask = null);
 
 public sealed record HomeState(
     EntityId Id,

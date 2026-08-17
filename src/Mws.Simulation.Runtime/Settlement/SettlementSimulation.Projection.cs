@@ -90,7 +90,9 @@ public sealed partial class SettlementSimulation
                 household?.Name ?? string.Empty,
                 home?.Id ?? default,
                 home?.Name ?? string.Empty,
-                SettlementSemanticLocation.Project(resident.Location));
+                SettlementSemanticLocation.Project(resident.Location),
+                ProjectSelectedTask(resident),
+                ProjectDestinationRequest(resident));
         }
 
         return result;
