@@ -117,6 +117,16 @@ public sealed partial class WorldRuntime
             return RecordOperation(CreateReceipt(intent, false, "ACTIVE_TASK_BLOCKS_MIGRATION"));
         }
 
+        var residentRouteKnowledge = sourceState.ResidentRouteKnowledge?
+            .SingleOrDefault(entry => entry.ResidentId == intent.ResidentId);
+        if (residentRouteKnowledge is not null && residentRouteKnowledge.KnownConnectionIds.Count > 0)
+        {
+            // Route connection IDs are settlement-local authority. Until knowledge transfer
+            // across route graphs is modeled, do not silently erase or reinterpret a person's
+            // known routes during migration.
+            return RecordOperation(CreateReceipt(intent, false, "ROUTE_KNOWLEDGE_BLOCKS_MIGRATION"));
+        }
+
         if (destinationState.Residents.Any(entry => entry.Id == intent.ResidentId))
         {
             return RecordOperation(CreateReceipt(intent, false, "DESTINATION_ALREADY_CONTAINS_ENTITY"));
@@ -158,6 +168,9 @@ public sealed partial class WorldRuntime
         {
             Residents = sourceState.Residents.Where(entry => entry.Id != intent.ResidentId).ToArray(),
             ItemStacks = sourceState.ItemStacks.Where(stack => stack.OwnerId != intent.ResidentId).ToArray(),
+            ResidentRouteKnowledge = sourceState.ResidentRouteKnowledge?
+                .Where(entry => entry.ResidentId != intent.ResidentId)
+                .ToArray(),
         };
         var nextDestinationState = destinationState with
         {

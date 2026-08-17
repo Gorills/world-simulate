@@ -178,6 +178,91 @@ public sealed class P3RouteAuthorityTests
         Assert.Null(projected.RoutePath);
     }
 
+    [Fact]
+    public void MigrationSafeFailsInsteadOfDroppingResidentRouteKnowledge()
+    {
+        var world = WorldRuntime.Create(new WorldSeed(9334));
+        var source = world.AddDefaultSettlement();
+        var destination = world.AddDefaultSettlement();
+        var checkpoint = world.CaptureCheckpoint();
+        var sourcePartition = Assert.Single(checkpoint.Partitions, entry => entry.ScopeId == source);
+        var resident = sourcePartition.Settlement.Residents[0];
+        var home = ResidentHome(sourcePartition.Settlement, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var nextSource = sourcePartition with
+        {
+            Settlement = sourcePartition.Settlement with
+            {
+                RouteConnections = [Route(1, home, workplace, 500)],
+                ResidentRouteKnowledge =
+                [
+                    new SettlementResidentRouteKnowledgeState(resident.Id, [1]),
+                ],
+            },
+        };
+        var partitions = checkpoint.Partitions
+            .Select(entry => entry.ScopeId == source ? nextSource : entry)
+            .ToArray();
+        var restored = WorldRuntime.Restore(checkpoint with { Partitions = partitions });
+
+        var result = restored.MigrateResident(
+            restored.AllocateOperationId(),
+            resident.Id,
+            source,
+            destination);
+
+        Assert.False(result.Success);
+        Assert.Equal("ROUTE_KNOWLEDGE_BLOCKS_MIGRATION", result.Code);
+        Assert.True(restored.TryGetEntityLocation(resident.Id, out var actualScope));
+        Assert.Equal(source, actualScope);
+        var sourceAfter = restored.CaptureSettlementState(source);
+        var preserved = Assert.Single(sourceAfter.ResidentRouteKnowledge!);
+        Assert.Equal(resident.Id, preserved.ResidentId);
+        Assert.Equal(new long[] { 1 }, preserved.KnownConnectionIds);
+    }
+
+    [Fact]
+    public void EmptyRouteKnowledgeEntryIsRemovedWhenMigrationSucceeds()
+    {
+        var world = WorldRuntime.Create(new WorldSeed(9335));
+        var source = world.AddDefaultSettlement();
+        var destination = world.AddDefaultSettlement();
+        var checkpoint = world.CaptureCheckpoint();
+        var sourcePartition = Assert.Single(checkpoint.Partitions, entry => entry.ScopeId == source);
+        var resident = sourcePartition.Settlement.Residents[0];
+        var nextSource = sourcePartition with
+        {
+            Settlement = sourcePartition.Settlement with
+            {
+                ResidentRouteKnowledge =
+                [
+                    new SettlementResidentRouteKnowledgeState(resident.Id, []),
+                ],
+            },
+        };
+        var partitions = checkpoint.Partitions
+            .Select(entry => entry.ScopeId == source ? nextSource : entry)
+            .ToArray();
+        var restored = WorldRuntime.Restore(checkpoint with { Partitions = partitions });
+
+        var result = restored.MigrateResident(
+            restored.AllocateOperationId(),
+            resident.Id,
+            source,
+            destination);
+
+        Assert.True(result.Success);
+        Assert.Equal("MIGRATED", result.Code);
+        Assert.True(restored.TryGetEntityLocation(resident.Id, out var actualScope));
+        Assert.Equal(destination, actualScope);
+        Assert.DoesNotContain(
+            restored.CaptureSettlementState(source).ResidentRouteKnowledge!,
+            entry => entry.ResidentId == resident.Id);
+        Assert.DoesNotContain(
+            restored.CaptureSettlementState(destination).ResidentRouteKnowledge!,
+            entry => entry.ResidentId == resident.Id);
+    }
+
     private static SettlementSelectedTaskState SelectedTask(long taskId, SettlementPlaceRef destination) =>
         new(
             taskId,
