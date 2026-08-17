@@ -62,11 +62,11 @@ This is not a universal model of every English region. Upland, strongly pastoral
 
 ### 4. Draft animals are productive capital with continuing maintenance costs
 
-**Christopher Dyer et al./Bruce Campbell context in _English Seigniorial Agriculture, 1250–1450_, chapter “Seigniorial pastoral production.”** The chapter identifies draught animals as required in quantity for cultivation and transport.
+**J. R. S. Phillips, _The Templar Estates in Lincolnshire, 1185–1565_, chapter “Livestock, Excluding Sheep, on the Former Templar Estates, 1308–13” (Boydell & Brewer/Cambridge Core edition).** The account evidence describes draught animals as essential to arable farming: oxen and/or horses prepared land for sowing, while carthorses and oxen hauled crops; livestock also depended heavily on the harvest for provender, and cattle reproduction supplied replacement oxen.
 
-- https://www.cambridge.org/core/books/abs/english-seigniorial-agriculture-12501450/seigniorial-pastoral-production/C27EB04259F42247EB1547ECAB1FCE01
-- Supports: draft capacity is a real production constraint/input rather than decorative livestock.
-- Does not establish peasant household ownership rates or a universal ox/horse mix.
+- https://www.cambridge.org/core/books/abs/templar-estates-in-lincolnshire-11851565/livestock-excluding-sheep-on-the-former-templar-estates-130813/9DBFCFCF9A1985BF298DD8673558C0BF
+- Supports: draft capacity is a real production constraint and animals are linked to feed/harvest continuity rather than decorative inventory.
+- Does **not** establish peasant household ownership rates, a universal ox/horse mix, fixed team size or national feed quantities; this is a particular estate complex.
 
 **Jordan Claridge and Spike Gibbs, “Waifs and Strays: Property Rights in Late Medieval England,” Appendix A.** Their draft-horse maintenance discussion separates food/fodder, shoeing/harnessing/stabling and depreciation.
 
