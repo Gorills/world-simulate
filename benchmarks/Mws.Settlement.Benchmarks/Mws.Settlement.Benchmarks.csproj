@@ -8,4 +8,7 @@
     <ProjectReference Include="../../src/Mws.Simulation.Runtime/Mws.Simulation.Runtime.csproj" />
     <ProjectReference Include="../../src/Mws.Persistence.Json/Mws.Persistence.Json.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="ci-budget.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

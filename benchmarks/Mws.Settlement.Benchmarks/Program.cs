@@ -51,6 +51,17 @@ if (residentCount is < 3 or > 5_000 || days is < 1 or > 365)
     return 2;
 }
 
+SettlementScaleBudget budget;
+try
+{
+    budget = LoadBudget();
+}
+catch (Exception exception) when (exception is IOException or JsonException or InvalidDataException)
+{
+    Console.Error.WriteLine($"Settlement scale budget could not be loaded: {exception.Message}");
+    return 1;
+}
+
 var state = CreateVillageState(residentCount);
 var simulation = SettlementSimulation.Restore(state);
 var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
@@ -107,10 +118,95 @@ if (outputPath is not null)
 }
 
 Console.WriteLine(json);
+if (BudgetApplies(report, budget))
+{
+    var violations = BudgetViolations(report, budget);
+    if (violations.Count > 0)
+    {
+        foreach (var violation in violations)
+        {
+            Console.Error.WriteLine($"MWS_SETTLEMENT_SCALE_BUDGET_FAIL {violation}");
+        }
+
+        return 1;
+    }
+
+    Console.WriteLine(
+        $"MWS_SETTLEMENT_SCALE_BUDGET_OK residents={report.Residents} days={report.Days} " +
+        $"max_advance_ms={budget.MaxAdvanceMilliseconds:F2} " +
+        $"max_allocated_bytes={budget.MaxAdvanceAllocatedBytes} max_snapshot_bytes={budget.MaxSnapshotBytes}");
+}
+else
+{
+    Console.WriteLine(
+        $"MWS_SETTLEMENT_SCALE_BUDGET_SKIPPED residents={report.Residents} days={report.Days} " +
+        $"budget_residents={budget.Residents} budget_days={budget.Days}");
+}
+
 Console.WriteLine(
     $"MWS_SETTLEMENT_SCALE_OK residents={residentCount} days={days} workplaces={projection.Workplaces.Count} " +
     $"advance_ms={elapsed.Elapsed.TotalMilliseconds:F2} allocated_bytes={advanceAllocatedBytes} snapshot_bytes={snapshotBytes}");
 return 0;
+
+static SettlementScaleBudget LoadBudget()
+{
+    var path = Path.Combine(AppContext.BaseDirectory, "ci-budget.json");
+    if (!File.Exists(path))
+    {
+        throw new FileNotFoundException("Settlement scale CI budget is missing from the benchmark output.", path);
+    }
+
+    var budget = JsonSerializer.Deserialize<SettlementScaleBudget>(File.ReadAllText(path, Encoding.UTF8))
+        ?? throw new InvalidDataException("Settlement scale CI budget is empty.");
+    if (budget.Residents <= 0
+        || budget.Workplaces <= 0
+        || budget.Days <= 0
+        || !double.IsFinite(budget.MaxAdvanceMilliseconds)
+        || budget.MaxAdvanceMilliseconds <= 0
+        || budget.MaxAdvanceAllocatedBytes <= 0
+        || !double.IsFinite(budget.MaxSnapshotRoundTripMilliseconds)
+        || budget.MaxSnapshotRoundTripMilliseconds <= 0
+        || budget.MaxSnapshotBytes <= 0)
+    {
+        throw new InvalidDataException("Settlement scale CI budget contains invalid limits.");
+    }
+
+    return budget;
+}
+
+static bool BudgetApplies(SettlementScaleReport report, SettlementScaleBudget budget) =>
+    report.Residents == budget.Residents
+    && report.Workplaces == budget.Workplaces
+    && report.Days == budget.Days;
+
+static List<string> BudgetViolations(SettlementScaleReport report, SettlementScaleBudget budget)
+{
+    var violations = new List<string>(4);
+    if (!double.IsFinite(report.AdvanceMilliseconds)
+        || report.AdvanceMilliseconds > budget.MaxAdvanceMilliseconds)
+    {
+        violations.Add($"advance_ms={report.AdvanceMilliseconds:F2}>{budget.MaxAdvanceMilliseconds:F2}");
+    }
+
+    if (report.AdvanceAllocatedBytes > budget.MaxAdvanceAllocatedBytes)
+    {
+        violations.Add($"allocated_bytes={report.AdvanceAllocatedBytes}>{budget.MaxAdvanceAllocatedBytes}");
+    }
+
+    if (!double.IsFinite(report.SnapshotRoundTripMilliseconds)
+        || report.SnapshotRoundTripMilliseconds > budget.MaxSnapshotRoundTripMilliseconds)
+    {
+        violations.Add(
+            $"snapshot_roundtrip_ms={report.SnapshotRoundTripMilliseconds:F2}>{budget.MaxSnapshotRoundTripMilliseconds:F2}");
+    }
+
+    if (report.SnapshotBytes > budget.MaxSnapshotBytes)
+    {
+        violations.Add($"snapshot_bytes={report.SnapshotBytes}>{budget.MaxSnapshotBytes}");
+    }
+
+    return violations;
+}
 
 static SettlementState CreateVillageState(int residentCount)
 {
@@ -201,3 +297,12 @@ internal sealed record SettlementScaleReport(
     int StockpileStacks,
     int ResidentCountAfter,
     long TimeMilliseconds);
+
+internal sealed record SettlementScaleBudget(
+    int Residents,
+    int Workplaces,
+    int Days,
+    double MaxAdvanceMilliseconds,
+    long MaxAdvanceAllocatedBytes,
+    double MaxSnapshotRoundTripMilliseconds,
+    int MaxSnapshotBytes);

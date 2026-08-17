@@ -43,7 +43,8 @@ public static class WorldManifestJson
         if (state.SchemaVersion != WorldVersions.CurrentSchemaVersion
             || !string.Equals(state.ModelVersion, WorldVersions.CurrentModelVersion, StringComparison.Ordinal)
             || !string.Equals(state.RulesVersion, WorldVersions.CurrentRulesVersion, StringComparison.Ordinal)
-            || !string.Equals(state.ContentVersion, WorldVersions.CurrentContentVersion, StringComparison.Ordinal))
+            || !string.Equals(state.ContentVersion, WorldVersions.CurrentContentVersion, StringComparison.Ordinal)
+            || !WorldSystemVersions.IsCurrent(state.SystemVersions))
         {
             throw new NotSupportedException("World manifest version bundle is unsupported.");
         }

@@ -176,9 +176,9 @@ public sealed partial class SettlementSimulation
         EnsureUnique(_events.Select(entry => entry.Id), "event");
         EnsureUnique(_commandReceipts.Select(entry => entry.CommandId.Value), "command receipt");
 
-        if (_scopeId.Value == 0 || Time.Milliseconds < 0)
+        if (_scopeId.Value == 0 || Time.Milliseconds < 0 || Time.Milliseconds % HourMilliseconds != 0)
         {
-            throw new InvalidOperationException("Settlement scope must be non-zero and time cannot be negative.");
+            throw new InvalidOperationException("Settlement scope must be non-zero and time must be a non-negative whole-hour boundary.");
         }
 
         if (_settlementOwnerId.Value <= 0
