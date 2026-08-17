@@ -9,16 +9,18 @@ namespace Mws.Core.Tests;
 public sealed class P3RouteModeEncodingTests
 {
     [Fact]
-    public void CurrentEncodingRejectsMissingRouteModeSupport()
+    public void FreshCurrentEncodingRejectsMissingRouteModeSupport()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9340)).CaptureState();
         var resident = state.Residents[0];
         var route = Route(state, resident, supportedModes: null);
 
+        Assert.Equal(
+            SettlementVersions.CurrentRouteModeEncodingVersion,
+            state.RouteModeEncodingVersion);
         Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
         {
             RouteConnections = [route],
-            RouteModeEncodingVersion = SettlementVersions.CurrentRouteModeEncodingVersion,
         }));
     }
 

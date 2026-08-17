@@ -48,8 +48,7 @@ public sealed partial class SettlementSimulation
     }
 
     private int CaptureRouteModeEncodingVersion() =>
-        _routeConnections.Count > 0
-        && _routeConnections.All(connection => connection.SupportedModes is not null)
+        _routeConnections.All(connection => connection.SupportedModes is not null)
             ? SettlementVersions.CurrentRouteModeEncodingVersion
             : SettlementVersions.LegacyRouteModeEncodingVersion;
 
