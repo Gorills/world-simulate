@@ -8,7 +8,7 @@ This contract defines the minimum causal structure for arable production, seed c
 
 Represent agriculture as a chain of physical and social processes acting on explicit land, seed, labour, tools/animals, rights and environmental conditions rather than as `profession + clock -> output`.
 
-A harvest must arise from a parcel that was legitimately available for cultivation, prepared and sown with an actual seed resource, tended through the relevant environmental interval, harvested with sufficient labour/capability and converted into stored resource lots subject to losses and competing claims such as food, seed, fodder, rent or sale.
+For a sown arable crop, harvest must arise from a parcel that was legitimately available for cultivation, prepared and sown with an actual seed resource, tended through the relevant environmental interval, harvested with sufficient labour/capability and converted into stored resource lots subject to losses and competing claims such as food, seed, fodder, rent or sale. Other agricultural outputs such as meadow hay require their own causal land/resource process and must not inherit a seed requirement merely because they are harvested.
 
 ## Intended feeling
 
@@ -62,7 +62,7 @@ This is not a universal model of every English region. Upland, strongly pastoral
 
 ### 4. Draft animals are productive capital with continuing maintenance costs
 
-**J. R. S. Phillips, _The Templar Estates in Lincolnshire, 1185–1565_, chapter “Livestock, Excluding Sheep, on the Former Templar Estates, 1308–13” (Boydell & Brewer/Cambridge Core edition).** The account evidence describes draught animals as essential to arable farming: oxen and/or horses prepared land for sowing, while carthorses and oxen hauled crops; livestock also depended heavily on the harvest for provender, and cattle reproduction supplied replacement oxen.
+**J. Michael Jefferson, _The Templar Estates in Lincolnshire, 1185–1565_, chapter “Livestock, Excluding Sheep, on the Former Templar Estates, 1308–13” (Boydell & Brewer/Cambridge Core edition).** The account evidence describes draught animals as essential to arable farming: oxen and/or horses prepared land for sowing, while carthorses and oxen hauled crops; livestock also depended heavily on the harvest for provender, and cattle reproduction supplied replacement oxen.
 
 - https://www.cambridge.org/core/books/abs/templar-estates-in-lincolnshire-11851565/livestock-excluding-sheep-on-the-former-templar-estates-130813/9DBFCFCF9A1985BF298DD8673558C0BF
 - Supports: draft capacity is a real production constraint and animals are linked to feed/harvest continuity rather than decorative inventory.
