@@ -2,7 +2,7 @@
   "schema_version": 1,
   "program": "playable-prototype-v1",
   "policy": "DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md",
-  "active_phase": "P1_PLAYABLE_USES_WORLD_RUNTIME",
+  "active_phase": null,
   "phases": [
     {
       "id": "P0_PROCESS_GATE",
@@ -12,11 +12,11 @@
     },
     {
       "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
-      "status": "AUDIT_REQUIRED",
+      "status": "PASSED",
       "depends_on": [
         "P0_PROCESS_GATE"
       ],
-      "latest_audit": null
+      "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P1_R6.json"
     },
     {
       "id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
