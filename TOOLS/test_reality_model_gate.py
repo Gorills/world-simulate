@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import tempfile
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).with_name("validate_reality_model.py")
@@ -82,8 +83,29 @@ def main() -> int:
 
     p3 = audit_for("P3_SEMANTIC_LOCATION_AND_TRAVEL")
 
-    # The current P3 contract is intentionally MODEL_UNDERDEFINED, so PASS is blocked.
-    must_fail(lambda: gate.validate_model_review(p3, p3["phase_id"]), "underdefined P3 contract cannot pass")
+    # The canonical P3 contract may advance through its lifecycle. An accepted
+    # contract must permit a valid PASS audit, while an explicitly underdefined
+    # fixture must still block PASS regardless of the repository's current P3 status.
+    gate.validate_model_review(p3, p3["phase_id"])
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        suffix=".md",
+        prefix=".reality-gate-underdefined-",
+        dir=gate.MODELS_DIR,
+        delete=False,
+    ) as fixture:
+        fixture.write("# Reality gate underdefined self-test\n\nStatus: **MODEL_UNDERDEFINED**\n")
+        underdefined_path = Path(fixture.name)
+    try:
+        underdefined = copy.deepcopy(p3)
+        underdefined["model_contracts"] = [underdefined_path.relative_to(gate.ROOT).as_posix()]
+        must_fail(
+            lambda: gate.validate_model_review(underdefined, p3["phase_id"]),
+            "underdefined P3 contract cannot pass",
+        )
+    finally:
+        underdefined_path.unlink(missing_ok=True)
 
     missing = copy.deepcopy(p3)
     del missing["model_review"]
