@@ -8,6 +8,9 @@ namespace Mws.Core.Tests;
 
 public sealed class WorldTransportTests
 {
+    private static readonly int[] BlockedDeliveryAttempts = [1, 0];
+    private static readonly int[] RetriedDeliveryAttempts = [2, 1];
+
     [Fact]
     public void ResidentMigrationMovesDurablyThroughOutboxAndInbox()
     {
@@ -107,7 +110,7 @@ public sealed class WorldTransportTests
             new[] { firstMessage, secondMessage },
             blockedState.Manifest.Inbox.Select(message => message.MessageId).ToArray());
         Assert.Equal(
-            new[] { 1, 0 },
+            BlockedDeliveryAttempts,
             blockedState.Manifest.Inbox.Select(message => message.DeliveryAttempts).ToArray());
         Assert.Empty(blockedState.Manifest.TransportReceipts);
         Assert.Single(blockedState.Manifest.OperationReceipts);
@@ -124,7 +127,7 @@ public sealed class WorldTransportTests
             new[] { firstMessage, secondMessage },
             delivered.Receipts.Select(receipt => receipt.MessageId).ToArray());
         Assert.Equal(
-            new[] { 2, 1 },
+            RetriedDeliveryAttempts,
             delivered.Receipts.Select(receipt => receipt.DeliveryAttempts).ToArray());
         Assert.Equal(
             new long[] { 2, 3 },
