@@ -25,7 +25,7 @@ public partial class VillageWorld : Node3D
         _itemsRoot = GetNode<Node3D>("Items");
         _entrancesRoot = GetNode<Node3D>("Entrances");
         _player = GetNode<ThirdPersonPlayer>("Player");
-        VillageLayout.Validate();
+        ValidateSpatialContract();
 
         if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
         {
@@ -33,7 +33,9 @@ public partial class VillageWorld : Node3D
             return;
         }
 
-        VillageGeometryBuilder.Build(GetNode<Node3D>("Geometry"));
+        var geometry = GetNode<Node3D>("Geometry");
+        VillageGeometryBuilder.Build(geometry);
+        VillageLifeGeometryBuilder.Build(geometry);
         BuildEntranceTargets();
         _player.Position = VillageLayout.PlayerSpawn;
     }
@@ -52,7 +54,7 @@ public partial class VillageWorld : Node3D
             return;
         }
 
-        RenderResidents(projection.Residents, selectedResidentId);
+        RenderResidents(projection, selectedResidentId);
         RenderItems(projection.Stockpile);
     }
 
@@ -81,7 +83,14 @@ public partial class VillageWorld : Node3D
         }
     }
 
-    internal static void ValidateSpatialContract() => VillageLayout.Validate();
+    internal static void ValidateSpatialContract()
+    {
+        VillageLayout.Validate();
+        VillageRoutePlanner.Validate();
+    }
+
+    internal static void ValidateLifeProjection(SettlementProjection projection) =>
+        VillageResidentSchedule.ValidateProjection(projection);
 
     private void UpdateInteractionTarget()
     {
@@ -130,8 +139,9 @@ public partial class VillageWorld : Node3D
         }
     }
 
-    private void RenderResidents(IReadOnlyList<ResidentProjection> residents, EntityId selectedResidentId)
+    private void RenderResidents(SettlementProjection projection, EntityId selectedResidentId)
     {
+        var residents = projection.Residents;
         var activeIds = residents.Select(resident => resident.Id.Value).ToHashSet();
         foreach (var staleId in _residentViews.Keys.Where(id => !activeIds.Contains(id)).ToArray())
         {
@@ -147,12 +157,15 @@ public partial class VillageWorld : Node3D
                 view = new VillageResidentView();
                 _residentsRoot.AddChild(view);
                 view.Initialize(resident);
+                var spawn = VillageLayout.ResidentSpawns[index % VillageLayout.ResidentSpawns.Length];
+                var row = index / VillageLayout.ResidentSpawns.Length;
+                view.Position = spawn + new Vector3(row * 1.4f, 0.0f, row * 1.2f);
                 _residentViews.Add(resident.Id.Value, view);
             }
 
-            var spawn = VillageLayout.ResidentSpawns[index % VillageLayout.ResidentSpawns.Length];
-            var row = index / VillageLayout.ResidentSpawns.Length;
-            view.Position = spawn + new Vector3(row * 1.4f, 0.0f, row * 1.2f);
+            var destination = VillageResidentSchedule.Resolve(resident, projection);
+            var route = VillageRoutePlanner.Plan(view.Position, destination);
+            view.SetRoute(route, resident.Activity);
             view.Render(resident, resident.Id == selectedResidentId);
         }
     }

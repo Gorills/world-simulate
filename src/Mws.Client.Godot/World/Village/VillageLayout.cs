@@ -26,9 +26,13 @@ internal static class VillageLayout
     internal const float MainRoadWidthMeters = 7.0f;
     internal const float SideRoadWidthMeters = 5.0f;
     internal const float MinimumBuildingCenterSpacingMeters = 14.0f;
+    internal const string CookWorkBuildingName = "Cook House";
+    internal const string FoodBuildingName = "The Hearth Inn";
 
     internal static readonly Vector3 PlayerSpawn = new(3.0f, 0.2f, 94.0f);
     internal static readonly Vector3 StockpileOrigin = new(54.0f, 0.15f, -22.0f);
+    internal static readonly Vector3 FarmWorkAnchor = new(-91.0f, 0.0f, 54.0f);
+    internal static readonly Vector3 HerbGroveWorkAnchor = new(92.0f, 0.0f, 92.0f);
 
     internal static readonly Vector3[] ResidentSpawns =
     [
@@ -38,6 +42,16 @@ internal static class VillageLayout
         new(18.0f, 0.0f, -70.0f),
         new(-42.0f, 0.0f, 24.0f),
         new(44.0f, 0.0f, -30.0f),
+    ];
+
+    internal static readonly Vector3[] SocialAnchors =
+    [
+        new(2.0f, 0.0f, 22.0f),
+        new(14.0f, 0.0f, 22.0f),
+        new(-2.0f, 0.0f, -6.0f),
+        new(6.0f, 0.0f, -10.0f),
+        new(-28.0f, 0.0f, 27.0f),
+        new(31.0f, 0.0f, -30.0f),
     ];
 
     internal static readonly VillageBuildingPlacement[] Buildings =
@@ -82,6 +96,22 @@ internal static class VillageLayout
             3.2f),
     ];
 
+    internal static readonly VillageBuildingPlacement[] HomeBuildings =
+        Buildings.Where(building => building.Kind == VillageBuildingKind.Home).ToArray();
+
+    internal static Vector3 GetEntranceWorldPosition(VillageBuildingPlacement placement)
+    {
+        var radians = Mathf.DegToRad(placement.YawDegrees);
+        var distance = (placement.Footprint.Y * 0.5f) + 0.65f;
+        return placement.Position + new Vector3(
+            Mathf.Sin(radians) * distance,
+            0.0f,
+            Mathf.Cos(radians) * distance);
+    }
+
+    internal static VillageBuildingPlacement GetBuilding(string name) =>
+        Buildings.Single(building => string.Equals(building.Name, name, StringComparison.Ordinal));
+
     internal static void Validate()
     {
         if (WidthMeters < 200.0f || DepthMeters < 180.0f)
@@ -94,9 +124,9 @@ internal static class VillageLayout
             throw new InvalidOperationException("Village roads are narrower than the playable spatial contract.");
         }
 
-        if (Buildings.Length < 12)
+        if (Buildings.Length < 12 || HomeBuildings.Length < 8)
         {
-            throw new InvalidOperationException("Village greybox must contain a meaningful settlement footprint.");
+            throw new InvalidOperationException("Village greybox must contain a meaningful settlement and housing footprint.");
         }
 
         for (var index = 0; index < Buildings.Length; index++)
@@ -121,6 +151,11 @@ internal static class VillageLayout
                         $"Buildings '{building.Name}' and '{other.Name}' are packed too closely for the village target.");
                 }
             }
+        }
+
+        if (FarmWorkAnchor.DistanceTo(HerbGroveWorkAnchor) < 100.0f)
+        {
+            throw new InvalidOperationException("Village work areas are not spatially separated enough for travel to matter.");
         }
     }
 

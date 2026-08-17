@@ -25,7 +25,8 @@ public sealed record ResidentProjection(
     ResidentProfession Profession,
     string WorkplaceName,
     int Affinity,
-    IReadOnlyList<ItemStackProjection> Inventory);
+    IReadOnlyList<ItemStackProjection> Inventory,
+    EntityId WorkplaceId = default);
 
 public sealed record ResidentProjectionPage(
     SimulationScopeId ScopeId,

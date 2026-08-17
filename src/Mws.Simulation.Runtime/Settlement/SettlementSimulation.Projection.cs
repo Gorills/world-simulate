@@ -74,7 +74,8 @@ public sealed partial class SettlementSimulation
                 resident.Profession,
                 FindWorkplace(resident.WorkplaceId)?.Name ?? "Unassigned",
                 resident.Affinity,
-                ProjectInventory(resident.Id));
+                ProjectInventory(resident.Id),
+                resident.WorkplaceId);
         }
 
         return result;

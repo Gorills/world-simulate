@@ -75,6 +75,13 @@ public partial class Main : Node
             return;
         }
 
+        if (!_hudOpen && @event.IsActionPressed(GameInput.AdvanceTime) && _session is not null)
+        {
+            _session.AdvanceHours(1);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
         if (_hudOpen && _hud?.HandleInput(@event) == true)
         {
             GetViewport().SetInputAsHandled();
@@ -141,6 +148,7 @@ public partial class Main : Node
         _session.AdvanceHours(24);
         var interaction = _session.InteractSelected(ResidentInteractionChoice.Encourage);
         var projection = _session.Projection;
+        VillageWorld.ValidateLifeProjection(projection);
         var stockpileStack = projection.Stockpile[0];
 
         if (!interaction.Success
@@ -153,9 +161,10 @@ public partial class Main : Node
 
         var resident = _session.SelectedResident;
         GD.Print(
-            $"MWS_GODOT_SMOKE_OK client=village-v0.2 day={projection.Day} resident={resident.Name} " +
+            $"MWS_GODOT_SMOKE_OK client=village-v0.3 day={projection.Day} resident={resident.Name} " +
             $"affinity={resident.Affinity} input=third-person-keyboard-gamepad-validated " +
-            "spatial=village-layout-validated interaction=session-targeting-validated");
+            "spatial=village-layout-validated interaction=session-targeting-validated " +
+            "life=activity-routing-validated");
         GetTree().Quit(0);
     }
 }
