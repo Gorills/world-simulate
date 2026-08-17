@@ -117,7 +117,7 @@ internal sealed class PlayerMotor
         }
 
         if (horizontal.LengthSquared() > 0.01f
-            && Vector3.Dot(horizontal.Normalized(), target.Normalized()) < 0.55f)
+            && horizontal.Normalized().Dot(target.Normalized()) < 0.55f)
         {
             return _profile.GroundTurnAcceleration;
         }
