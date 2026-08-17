@@ -1,6 +1,6 @@
 # Settlement Person, Household and Life-Cycle — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the minimum causal structure for ordinary people and households. It does **not** define numerical fertility, mortality, marriage-age, disease or household-size distributions; those remain `MODEL_UNDERDEFINED` and require separate evidence before demographic behavior becomes canonical.
 
