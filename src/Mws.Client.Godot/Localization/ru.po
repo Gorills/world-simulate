@@ -1,0 +1,236 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: World Simulate\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "UI_SETTLEMENT"
+msgstr "Поселение"
+
+msgid "UI_DAY_TIME"
+msgstr "День {0}, {1}:00"
+
+msgid "UI_STOCKPILE"
+msgstr "Запасы: {0}"
+
+msgid "UI_RESIDENT"
+msgstr "Житель"
+
+msgid "UI_PROFESSION"
+msgstr "Профессия"
+
+msgid "UI_NEEDS"
+msgstr "Потребности"
+
+msgid "UI_RELATIONSHIP"
+msgstr "Отношения"
+
+msgid "UI_INVENTORY"
+msgstr "Инвентарь"
+
+msgid "UI_INTERACT"
+msgstr "Взаимодействие"
+
+msgid "UI_ASK_ABOUT_WORK"
+msgstr "Спросить о работе"
+
+msgid "UI_ENCOURAGE"
+msgstr "Подбодрить"
+
+msgid "UI_SHARE_RATION"
+msgstr "Поделиться пайком"
+
+msgid "UI_WORLD_STATE"
+msgstr "Состояние мира"
+
+msgid "UI_ADVANCE_ONE_HOUR"
+msgstr "Пропустить один час"
+
+msgid "UI_INPUT"
+msgstr "Управление"
+
+msgid "UI_LANGUAGE"
+msgstr "Язык"
+
+msgid "UI_INTERACTION"
+msgstr "Взаимодействие"
+
+msgid "UI_HINT_GAMEPAD"
+msgstr "Левый стик — движение · L3 — бег · правый стик — камера · Start — мир/меню · LB/RB — выбор · A — действие · Y — пропустить час"
+
+msgid "UI_HINT_KEYBOARD"
+msgstr "WASD — движение · Shift — бег · мышь — камера · Tab — мир/меню · Q/E — выбор · F — действие · Space — пропустить час"
+
+msgid "UI_WORLD_STATE_TIME"
+msgstr "Состояние мира: день {0}, {1}:00"
+
+msgid "UI_INTERACT_WITH"
+msgstr "Взаимодействие: {0}"
+
+msgid "UI_HOME_UNASSIGNED"
+msgstr "Дом: не назначен"
+
+msgid "UI_HOME_ASSIGNED"
+msgstr "Дом: {0} · {1}"
+
+msgid "UI_NEEDS_VALUE"
+msgstr "Голод {0}/100 · Энергия {1}/100"
+
+msgid "UI_AFFINITY_VALUE"
+msgstr "Отношение {0}"
+
+msgid "UI_INVENTORY_EMPTY"
+msgstr "Инвентарь: пусто"
+
+msgid "UI_INVENTORY_VALUE"
+msgstr "Инвентарь: {0}"
+
+msgid "UI_RESIDENT_ROW"
+msgstr "{0}{1} · {2} · {3}"
+
+msgid "UI_PROMPT_TALK"
+msgstr "{0} Поговорить · {1}"
+
+msgid "UI_PROMPT_INSPECT_ITEM"
+msgstr "{0} Осмотреть · {1} × {2}"
+
+msgid "UI_PROMPT_INSPECT_BUILDING"
+msgstr "{0} Осмотреть · {1}"
+
+msgid "UI_PROMPT_ITEM_STOCKPILE"
+msgstr "{0} × {1} · запасы деревни"
+
+msgid "UI_PROMPT_ENTRANCE_OPEN"
+msgstr "{0} · проход открыт — можно войти"
+
+msgid "CONTENT_PROFESSION_FARMER"
+msgstr "Фермер"
+
+msgid "CONTENT_PROFESSION_COOK"
+msgstr "Повар"
+
+msgid "CONTENT_PROFESSION_FORAGER"
+msgstr "Собиратель"
+
+msgid "CONTENT_ACTIVITY_IDLE"
+msgstr "Без дела"
+
+msgid "CONTENT_ACTIVITY_WORKING"
+msgstr "Работает"
+
+msgid "CONTENT_ACTIVITY_EATING"
+msgstr "Ест"
+
+msgid "CONTENT_ACTIVITY_RESTING"
+msgstr "Отдыхает"
+
+msgid "CONTENT_ITEM_GRAIN"
+msgstr "Зерно"
+
+msgid "CONTENT_ITEM_RATION"
+msgstr "Пайки"
+
+msgid "CONTENT_ITEM_HERB"
+msgstr "Травы"
+
+msgid "CONTENT_WORKPLACE_NORTH_FIELD"
+msgstr "Северное поле"
+
+msgid "CONTENT_WORKPLACE_COMMON_KITCHEN"
+msgstr "Общая кухня"
+
+msgid "CONTENT_WORKPLACE_HERB_GROVE"
+msgstr "Травяная роща"
+
+msgid "CONTENT_HOUSEHOLD_NORTH"
+msgstr "Северное домохозяйство"
+
+msgid "CONTENT_HOUSEHOLD_EAST"
+msgstr "Восточное домохозяйство"
+
+msgid "CONTENT_HOME_UNKNOWN"
+msgstr "Неизвестный дом"
+
+msgid "CONTENT_BUILDING_NORTH_HOUSE_WEST"
+msgstr "Северный дом, запад"
+
+msgid "CONTENT_BUILDING_NORTH_HOUSE_EAST"
+msgstr "Северный дом, восток"
+
+msgid "CONTENT_BUILDING_MILLER_HOUSE"
+msgstr "Дом мельника"
+
+msgid "CONTENT_BUILDING_COOK_HOUSE"
+msgstr "Дом повара"
+
+msgid "CONTENT_BUILDING_RIVER_HOUSE"
+msgstr "Дом у реки"
+
+msgid "CONTENT_BUILDING_GROVE_HOUSE"
+msgstr "Дом у рощи"
+
+msgid "CONTENT_BUILDING_SOUTH_HOUSE_WEST"
+msgstr "Южный дом, запад"
+
+msgid "CONTENT_BUILDING_SOUTH_HOUSE_EAST"
+msgstr "Южный дом, восток"
+
+msgid "CONTENT_BUILDING_FAR_SOUTH_HOUSE_WEST"
+msgstr "Дальний южный дом, запад"
+
+msgid "CONTENT_BUILDING_FAR_SOUTH_HOUSE_EAST"
+msgstr "Дальний южный дом, восток"
+
+msgid "CONTENT_BUILDING_HEARTH_INN"
+msgstr "Таверна «Очаг»"
+
+msgid "CONTENT_BUILDING_CARPENTER_WORKSHOP"
+msgstr "Плотницкая мастерская"
+
+msgid "CONTENT_BUILDING_COMMON_STOREHOUSE"
+msgstr "Общий склад"
+
+msgid "CONTENT_BUILDING_SOUTH_BARN"
+msgstr "Южный амбар"
+
+msgid "FEEDBACK_FED_RESIDENT"
+msgstr "{0}: использован один паёк."
+
+msgid "FEEDBACK_ITEM_GIVEN"
+msgstr "{0}: получено {1} × {2}."
+
+msgid "FEEDBACK_WORK_INFO"
+msgstr "{0}: {1}, место работы — {2}."
+
+msgid "FEEDBACK_ENCOURAGED"
+msgstr "Уверенность {0} выросла."
+
+msgid "FEEDBACK_RATION_SHARED"
+msgstr "{0} ценит то, что вы поделились пайком."
+
+msgid "FEEDBACK_RESIDENT_NOT_FOUND"
+msgstr "Житель больше недоступен."
+
+msgid "FEEDBACK_NO_RATIONS"
+msgstr "В запасах поселения нет пайков."
+
+msgid "FEEDBACK_INVALID_QUANTITY"
+msgstr "Количество должно быть положительным."
+
+msgid "FEEDBACK_ITEM_NOT_AVAILABLE"
+msgstr "В запасах не хватает {0} × {1}."
+
+msgid "FEEDBACK_INVENTORY_CAPACITY_EXCEEDED"
+msgstr "В инвентаре недостаточно места."
+
+msgid "FEEDBACK_STALE_COMMAND"
+msgstr "Это действие уже устарело."
+
+msgid "FEEDBACK_ACTION_COMPLETED"
+msgstr "Действие выполнено."
+
+msgid "FEEDBACK_ACTION_FAILED"
+msgstr "Действие не выполнено: {0}"

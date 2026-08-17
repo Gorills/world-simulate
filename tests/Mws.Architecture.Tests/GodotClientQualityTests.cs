@@ -86,6 +86,77 @@ public sealed class GodotClientQualityTests
     }
 
     [Fact]
+    public void LocaleMutationStaysInsideLocalizationModule()
+    {
+        var client = FindClientRoot();
+        string[] forbiddenTokens =
+        [
+            "TranslationServer.SetLocale",
+            "TranslationServer.Translate",
+            "OS.GetLocaleLanguage",
+            "new ConfigFile(",
+        ];
+
+        foreach (var file in ClientSourceFiles(client))
+        {
+            var relative = Relative(client, file);
+            if (relative.StartsWith("Localization/", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var text = File.ReadAllText(file);
+            foreach (var token in forbiddenTokens)
+            {
+                Assert.False(
+                    text.Contains(token, StringComparison.Ordinal),
+                    $"Localization implementation token '{token}' leaked outside Localization/: {relative}");
+            }
+        }
+    }
+
+    [Fact]
+    public void LocalizationCatalogsCoverEnglishAndRussianWithTheSameKeys()
+    {
+        var client = FindClientRoot();
+        var english = PoKeys(Path.Combine(client, "Localization", "en.po"));
+        var russian = PoKeys(Path.Combine(client, "Localization", "ru.po"));
+        var project = File.ReadAllText(Path.Combine(client, "project.godot"));
+
+        Assert.Equal(english, russian);
+        Assert.Contains("UI_SETTLEMENT", english);
+        Assert.Contains("CONTENT_ITEM_RATION", english);
+        Assert.Contains("FEEDBACK_ACTION_FAILED", english);
+        Assert.Contains("locale/fallback=\"en\"", project, StringComparison.Ordinal);
+        Assert.Contains("res://Localization/en.po", project, StringComparison.Ordinal);
+        Assert.Contains("res://Localization/ru.po", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PlayerFacingSceneTextUsesLocalizationKeys()
+    {
+        var client = FindClientRoot();
+        const string prefix = "text = \"";
+
+        foreach (var scene in Directory.EnumerateFiles(client, "*.tscn", SearchOption.AllDirectories))
+        {
+            foreach (var line in File.ReadLines(scene))
+            {
+                var trimmed = line.Trim();
+                if (!trimmed.StartsWith(prefix, StringComparison.Ordinal) || !trimmed.EndsWith('"'))
+                {
+                    continue;
+                }
+
+                var value = trimmed[prefix.Length..^1];
+                Assert.True(
+                    value.StartsWith("UI_", StringComparison.Ordinal),
+                    $"Player-facing scene text must use a localization key: {Relative(client, scene)} -> '{value}'");
+            }
+        }
+    }
+
+    [Fact]
     public void SceneScriptsStayNextToTheirOwningScenes()
     {
         var client = FindClientRoot();
@@ -125,6 +196,13 @@ public sealed class GodotClientQualityTests
         Assert.Contains("run/main_scene=\"res://App/Main.tscn\"", project, StringComparison.Ordinal);
         Assert.Contains("window/stretch/mode=\"canvas_items\"", project, StringComparison.Ordinal);
     }
+
+    private static string[] PoKeys(string path) => File.ReadLines(path)
+        .Where(line => line.StartsWith("msgid \"", StringComparison.Ordinal) && line.Length > 8)
+        .Select(line => line[7..^1])
+        .Where(key => !string.IsNullOrEmpty(key))
+        .OrderBy(key => key, StringComparer.Ordinal)
+        .ToArray();
 
     private static IEnumerable<string> ClientSourceFiles(string client) =>
         Directory.EnumerateFiles(client, "*.cs", SearchOption.AllDirectories)

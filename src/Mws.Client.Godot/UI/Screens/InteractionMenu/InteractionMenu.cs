@@ -1,6 +1,7 @@
 using Godot;
-using Mws.Simulation.Api;
+using Mws.Client.Godot.Localization;
 using Mws.Client.Godot.UI.Theme;
+using Mws.Simulation.Api;
 
 namespace Mws.Client.Godot.UI.Screens.InteractionMenu;
 
@@ -32,13 +33,10 @@ public partial class InteractionMenu : VBoxContainer
     public void SetResident(ResidentProjection resident)
     {
         ArgumentNullException.ThrowIfNull(resident);
-        GetNode<Label>("Heading").Text = $"Interact with {resident.Name}";
+        GetNode<Label>("Heading").Text = GameLocalization.Format("UI_INTERACT_WITH", resident.Name);
     }
 
-    public void FocusFirst()
-    {
-        _askAboutWork.GrabFocus();
-    }
+    public void FocusFirst() => _askAboutWork.GrabFocus();
 
     public bool HasMenuFocus() => Buttons().Any(button => button.HasFocus());
 

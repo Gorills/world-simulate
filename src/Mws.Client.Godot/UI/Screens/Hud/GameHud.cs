@@ -1,5 +1,6 @@
 using Godot;
 using Mws.Client.Godot.Input;
+using Mws.Client.Godot.Localization;
 using Mws.Client.Godot.Session;
 using Mws.Client.Godot.UI.Feedback;
 using Mws.Client.Godot.UI.Theme;
@@ -17,6 +18,8 @@ public partial class GameHud : Control
     private InteractionMenuView _interactionMenu = null!;
     private Label _inputHint = null!;
     private Label _feedback = null!;
+    private OptionButton _language = null!;
+    private InputDeviceFamily _inputDevice = InputDeviceFamily.KeyboardMouse;
 
     public override void _Ready()
     {
@@ -26,13 +29,18 @@ public partial class GameHud : Control
         _interactionMenu = GetNode<InteractionMenuView>("Margin/Root/Columns/Sidebar/InteractionMenu");
         _inputHint = GetNode<Label>("Margin/Root/InputHint");
         _feedback = GetNode<Label>("Margin/Root/Feedback");
+        _language = GetNode<OptionButton>("Margin/Root/LanguageRow/Language");
         DesignSystem.ApplyLabel(_inputHint, muted: true);
         DesignSystem.ApplyLabel(_feedback);
+        DesignSystem.ApplyLabel(GetNode<Label>("Margin/Root/LanguageRow/Label"));
+        DesignSystem.ApplyButton(_language);
 
         var advance = GetNode<Button>("Margin/Root/AdvanceTime");
         DesignSystem.ApplyButton(advance);
         advance.Pressed += () => _session?.AdvanceHours(1);
 
+        ConfigureLanguagePicker();
+        GameLocalization.Changed += HandleLocaleChanged;
         _settlementView.ResidentSelected += residentId => _session?.SelectResident(residentId);
         _interactionMenu.ChoiceRequested += choice =>
         {
@@ -46,6 +54,11 @@ public partial class GameHud : Control
         };
     }
 
+    public override void _ExitTree()
+    {
+        GameLocalization.Changed -= HandleLocaleChanged;
+    }
+
     internal void Bind(GameSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -57,9 +70,9 @@ public partial class GameHud : Control
 
     internal void SetInputDevice(InputDeviceFamily device)
     {
-        _inputHint.Text = device == InputDeviceFamily.Gamepad
-            ? "Left stick move · L3 sprint · right stick camera · Start world/menu · LB/RB select · A interact · Y advance"
-            : "WASD move · Shift sprint · mouse camera · Tab world/menu · Q/E select · F interact · Space advance";
+        _inputDevice = device;
+        _inputHint.Text = GameLocalization.Tr(
+            device == InputDeviceFamily.Gamepad ? "UI_HINT_GAMEPAD" : "UI_HINT_KEYBOARD");
     }
 
     internal void FocusInteraction() => _interactionMenu.FocusFirst();
@@ -106,6 +119,25 @@ public partial class GameHud : Control
         return false;
     }
 
+    private void ConfigureLanguagePicker()
+    {
+        _language.AddItem(GameLocalization.LanguageSelfName(GameLocalization.English));
+        _language.AddItem(GameLocalization.LanguageSelfName(GameLocalization.Russian));
+        _language.ItemSelected += index => GameLocalization.SetLocale(
+            index == 1 ? GameLocalization.Russian : GameLocalization.English);
+        SyncLanguagePicker();
+    }
+
+    private void HandleLocaleChanged()
+    {
+        SyncLanguagePicker();
+        SetInputDevice(_inputDevice);
+        Refresh();
+    }
+
+    private void SyncLanguagePicker() =>
+        _language.Select(GameLocalization.CurrentLocale == GameLocalization.Russian ? 1 : 0);
+
     private void Refresh()
     {
         if (_session is null)
@@ -116,8 +148,11 @@ public partial class GameHud : Control
         var projection = _session.Projection;
         var resident = _session.SelectedResident;
         _settlementView.Render(projection, _session.SelectedResidentId);
-        _residentPanel.Render(resident);
+        _residentPanel.Render(resident, projection);
         _interactionMenu.SetResident(resident);
-        _feedback.Text = $"World state: day {projection.Day}, {projection.Hour:00}:00";
+        _feedback.Text = GameLocalization.Format(
+            "UI_WORLD_STATE_TIME",
+            projection.Day,
+            projection.Hour.ToString("00", System.Globalization.CultureInfo.InvariantCulture));
     }
 }

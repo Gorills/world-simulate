@@ -1,10 +1,11 @@
 using Godot;
-using Mws.Domain;
-using Mws.Simulation.Api;
 using Mws.Client.Godot.Input;
+using Mws.Client.Godot.Localization;
 using Mws.Client.Godot.Session;
 using Mws.Client.Godot.UI.Screens.Hud;
 using Mws.Client.Godot.World.Village;
+using Mws.Domain;
+using Mws.Simulation.Api;
 using PromptView = Mws.Client.Godot.UI.Screens.WorldInteractionPrompt.WorldInteractionPrompt;
 
 namespace Mws.Client.Godot.App;
@@ -17,6 +18,11 @@ public partial class Main : Node
     private VillageWorld? _village;
     private PromptView? _prompt;
     private bool _hudOpen;
+
+    public override void _EnterTree()
+    {
+        GameLocalization.Initialize();
+    }
 
     public override void _Ready()
     {
@@ -145,6 +151,7 @@ public partial class Main : Node
             throw new InvalidOperationException("Game session was not created.");
         }
 
+        GameLocalization.ValidateCatalogs();
         _session.AdvanceHours(24);
         var interaction = _session.InteractSelected(ResidentInteractionChoice.Encourage);
         var projection = _session.Projection;
@@ -163,10 +170,10 @@ public partial class Main : Node
 
         var resident = _session.SelectedResident;
         GD.Print(
-            $"MWS_GODOT_SMOKE_OK client=village-v0.4 day={projection.Day} resident={resident.Name} " +
+            $"MWS_GODOT_SMOKE_OK client=village-v0.5 day={projection.Day} resident={resident.Name} " +
             $"affinity={resident.Affinity} input=third-person-keyboard-gamepad-validated " +
-            "spatial=village-layout-validated interaction=session-targeting-validated " +
-            "life=authoritative-residence-routing-validated");
+            "locale=en-ru-validated spatial=village-layout-validated " +
+            "interaction=session-targeting-validated life=authoritative-residence-routing-validated");
         GetTree().Quit(0);
     }
 }

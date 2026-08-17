@@ -1,6 +1,7 @@
 using Godot;
-using Mws.Simulation.Api;
+using Mws.Client.Godot.Localization;
 using Mws.Client.Godot.UI.Theme;
+using Mws.Simulation.Api;
 
 namespace Mws.Client.Godot.UI.Screens.ResidentPanel;
 
@@ -27,19 +28,28 @@ public partial class ResidentPanel : VBoxContainer
         DesignSystem.ApplyLabel(_inventory, muted: true);
     }
 
-    public void Render(ResidentProjection resident)
+    public void Render(ResidentProjection resident, SettlementProjection settlement)
     {
         ArgumentNullException.ThrowIfNull(resident);
+        ArgumentNullException.ThrowIfNull(settlement);
 
         var residence = resident.HomeId == default
-            ? "Home: unassigned"
-            : $"Home: {resident.HomeName} · {resident.HouseholdName}";
+            ? GameLocalization.Tr("UI_HOME_UNASSIGNED")
+            : GameLocalization.Format(
+                "UI_HOME_ASSIGNED",
+                LocalizedContent.Home(settlement, resident.HomeId),
+                LocalizedContent.Household(resident.HouseholdName));
         _name.Text = resident.Name;
-        _profession.Text = $"{resident.Profession} · {resident.WorkplaceName}\n{residence}";
-        _needs.Text = $"Hunger {resident.Hunger}/100 · Energy {resident.Energy}/100";
-        _relationship.Text = $"Affinity {resident.Affinity}";
+        _profession.Text =
+            $"{LocalizedContent.Profession(resident.Profession)} · {LocalizedContent.Workplace(resident.WorkplaceName)}\n{residence}";
+        _needs.Text = GameLocalization.Format("UI_NEEDS_VALUE", resident.Hunger, resident.Energy);
+        _relationship.Text = GameLocalization.Format("UI_AFFINITY_VALUE", resident.Affinity);
         _inventory.Text = resident.Inventory.Count == 0
-            ? "Inventory: empty"
-            : $"Inventory: {string.Join(" · ", resident.Inventory.Select(stack => $"{stack.ItemId} {stack.Quantity}"))}";
+            ? GameLocalization.Tr("UI_INVENTORY_EMPTY")
+            : GameLocalization.Format(
+                "UI_INVENTORY_VALUE",
+                string.Join(
+                    " · ",
+                    resident.Inventory.Select(stack => $"{LocalizedContent.Item(stack.ItemId)} {stack.Quantity}")));
     }
 }

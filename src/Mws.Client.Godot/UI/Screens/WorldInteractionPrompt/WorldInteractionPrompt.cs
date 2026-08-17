@@ -1,5 +1,6 @@
 using Godot;
 using Mws.Client.Godot.Input;
+using Mws.Client.Godot.Localization;
 using Mws.Client.Godot.UI.Theme;
 using Mws.Client.Godot.World.Village;
 using Mws.Simulation.Api;
@@ -13,7 +14,7 @@ public partial class WorldInteractionPrompt : Control
     private Label _label = null!;
     private VillageInteractionTarget? _target;
     private InputDeviceFamily _device = InputDeviceFamily.KeyboardMouse;
-    private string? _feedback;
+    private Func<string>? _feedbackText;
     private double _feedbackRemaining;
     private bool _worldEnabled = true;
 
@@ -21,7 +22,13 @@ public partial class WorldInteractionPrompt : Control
     {
         _label = GetNode<Label>("Anchor/Panel/Label");
         DesignSystem.ApplyLabel(_label);
+        GameLocalization.Changed += Render;
         Render();
+    }
+
+    public override void _ExitTree()
+    {
+        GameLocalization.Changed -= Render;
     }
 
     public override void _Process(double delta)
@@ -34,7 +41,7 @@ public partial class WorldInteractionPrompt : Control
         _feedbackRemaining = Math.Max(0.0, _feedbackRemaining - delta);
         if (_feedbackRemaining <= 0.0)
         {
-            _feedback = null;
+            _feedbackText = null;
             Render();
         }
     }
@@ -42,7 +49,7 @@ public partial class WorldInteractionPrompt : Control
     internal void SetTarget(VillageInteractionTarget? target)
     {
         _target = target;
-        _feedback = null;
+        _feedbackText = null;
         _feedbackRemaining = 0.0;
         Render();
     }
@@ -62,18 +69,23 @@ public partial class WorldInteractionPrompt : Control
     internal void ShowItem(ItemStackProjection stack)
     {
         ArgumentNullException.ThrowIfNull(stack);
-        ShowFeedback($"{FriendlyItemName(stack.ItemId)} × {stack.Quantity} · village stockpile");
+        ShowFeedback(() => GameLocalization.Format(
+            "UI_PROMPT_ITEM_STOCKPILE",
+            LocalizedContent.Item(stack.ItemId),
+            stack.Quantity));
     }
 
     internal void ShowEntrance(string buildingName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(buildingName);
-        ShowFeedback($"{buildingName} · doorway is open — walk inside");
+        ShowFeedback(() => GameLocalization.Format(
+            "UI_PROMPT_ENTRANCE_OPEN",
+            LocalizedContent.Building(buildingName)));
     }
 
-    private void ShowFeedback(string text)
+    private void ShowFeedback(Func<string> text)
     {
-        _feedback = text;
+        _feedbackText = text;
         _feedbackRemaining = FeedbackDurationSeconds;
         Render();
     }
@@ -91,10 +103,10 @@ public partial class WorldInteractionPrompt : Control
             return;
         }
 
-        if (_feedback is not null)
+        if (_feedbackText is not null)
         {
             Visible = true;
-            _label.Text = _feedback;
+            _label.Text = _feedbackText();
             return;
         }
 
@@ -109,19 +121,20 @@ public partial class WorldInteractionPrompt : Control
         var key = _device == InputDeviceFamily.Gamepad ? "A" : "F";
         _label.Text = _target.Kind switch
         {
-            VillageInteractionKind.Resident => $"{key} Talk · {_target.DisplayName}",
+            VillageInteractionKind.Resident =>
+                GameLocalization.Format("UI_PROMPT_TALK", key, _target.DisplayName),
             VillageInteractionKind.ItemStack =>
-                $"{key} Inspect · {FriendlyItemName(_target.ItemId ?? _target.DisplayName)} × {_target.Quantity}",
-            VillageInteractionKind.BuildingEntrance => $"{key} Inspect · {_target.DisplayName}",
+                GameLocalization.Format(
+                    "UI_PROMPT_INSPECT_ITEM",
+                    key,
+                    LocalizedContent.Item(_target.ItemId ?? _target.DisplayName),
+                    _target.Quantity),
+            VillageInteractionKind.BuildingEntrance =>
+                GameLocalization.Format(
+                    "UI_PROMPT_INSPECT_BUILDING",
+                    key,
+                    LocalizedContent.Building(_target.DisplayName)),
             _ => string.Empty,
         };
     }
-
-    private static string FriendlyItemName(string itemId) => itemId switch
-    {
-        SettlementItems.Grain => "Grain",
-        SettlementItems.Ration => "Rations",
-        SettlementItems.Herb => "Herbs",
-        _ => itemId,
-    };
 }
