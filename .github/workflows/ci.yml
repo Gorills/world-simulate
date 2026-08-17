@@ -123,7 +123,7 @@ jobs:
         run: |
           set -euo pipefail
           dotnet run --project src/Mws.Headless/Mws.Headless.csproj --configuration Release --no-build --no-restore -- 42 100 | tee headless-smoke.log
-          grep -q "MWS_HEADLESS_OK seed=42 hours=100 day=4 hour=4 residents=3" headless-smoke.log
+          grep -q "MWS_HEADLESS_OK seed=42 hours=100 day=4 hour=4 residents=12" headless-smoke.log
 
       - name: Production settlement scale smoke
         shell: bash
