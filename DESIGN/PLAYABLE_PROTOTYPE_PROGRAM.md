@@ -49,7 +49,7 @@ Protected working-tree changes require the relevant phase to be `IMPLEMENTING`. 
 A committed protected change is valid only when:
 
 - the phase is `IMPLEMENTING`; or
-- the commit closes that same phase from parent `IMPLEMEMENTING  to `AUDIT_REQUIRED` ; or
+- the commit closes that same phase from parent `IMPLEMENTING` to `AUDIT_REQUIRED`; or
 - an audit commit adds new JSON evidence while moving that phase from `AUDIT_REQUIRED` to `PASSED` or `FAILED`.
 
 Audit JSON is append-only. An audit transition may add a new result file but may not rewrite a result that existed in its parent commit.
