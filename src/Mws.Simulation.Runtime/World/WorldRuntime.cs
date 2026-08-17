@@ -98,7 +98,14 @@ public sealed partial class WorldRuntime
                 throw new InvalidOperationException("World checkpoint partition metadata does not match its settlement state.");
             }
 
-            world.AddPartition(SettlementSimulation.Restore(partitionState.Settlement), partitionState.Revision);
+            if (descriptor.IsLoaded)
+            {
+                world.AddPartition(SettlementSimulation.Restore(partitionState.Settlement), partitionState.Revision);
+            }
+            else
+            {
+                world.AddDormantPartition(partitionState.Settlement, partitionState.Revision);
+            }
         }
 
         var expectedLocations = manifest.EntityLocations
@@ -109,7 +116,7 @@ public sealed partial class WorldRuntime
             .ToArray();
         if (!expectedLocations.SequenceEqual(actualLocations))
         {
-            throw new InvalidOperationException("World entity directory does not match loaded partition contents.");
+            throw new InvalidOperationException("World entity directory does not match partition contents.");
         }
 
         foreach (var receipt in manifest.OperationReceipts.OrderBy(entry => entry.OperationId.Value))
@@ -132,13 +139,13 @@ public sealed partial class WorldRuntime
     }
 
     public SettlementState CaptureSettlementState(SimulationScopeId scopeId) =>
-        GetPartition(scopeId).Simulation.CaptureState();
+        CapturePartitionStateAtCurrentTime(GetPartition(scopeId));
 
     public SettlementProjection ProjectSettlement(SimulationScopeId scopeId) =>
-        GetPartition(scopeId).Simulation.Project();
+        GetLoadedPartition(scopeId).Simulation.Project();
 
     public ResidentProjectionPage ProjectResidents(SimulationScopeId scopeId, int offset, int limit) =>
-        GetPartition(scopeId).Simulation.ProjectResidents(offset, limit);
+        GetLoadedPartition(scopeId).Simulation.ProjectResidents(offset, limit);
 
     public bool TryGetEntityLocation(EntityId entityId, out SimulationScopeId scopeId) =>
         _entityLocations.TryGetValue(entityId.Value, out scopeId);
@@ -156,11 +163,17 @@ public sealed partial class WorldRuntime
 
     public WorldCheckpointState CaptureCheckpoint()
     {
-        var partitionStates = _partitions.Values
-            .Select(partition => new WorldPartitionState(
-                partition.Simulation.ScopeId,
-                partition.Revision,
-                partition.Simulation.CaptureState()))
+        var materialized = _partitions.Values
+            .Select(partition => (
+                Partition: partition,
+                State: CapturePartitionStateAtCurrentTime(partition),
+                Revision: EffectiveRevision(partition)))
+            .ToArray();
+        var partitionStates = materialized
+            .Select(entry => new WorldPartitionState(
+                entry.Partition.ScopeId,
+                entry.Revision,
+                entry.State))
             .ToArray();
         var manifest = new WorldManifestState(
             WorldVersions.CurrentSchemaVersion,
@@ -174,11 +187,12 @@ public sealed partial class WorldRuntime
             _nextEntityId,
             _nextOperationId,
             _operationReceiptFloor,
-            _partitions.Values
-                .Select(partition => new WorldPartitionDescriptor(
-                    partition.Simulation.ScopeId,
+            materialized
+                .Select(entry => new WorldPartitionDescriptor(
+                    entry.Partition.ScopeId,
                     WorldPartitionKinds.Settlement,
-                    partition.Revision))
+                    entry.Revision,
+                    entry.Partition.IsLoaded))
                 .ToArray(),
             _entityLocations
                 .Select(entry => new WorldEntityLocation(new EntityId(entry.Key), entry.Value))
@@ -195,43 +209,6 @@ public sealed partial class WorldRuntime
             TransportReceipts = _transportReceipts.ToArray(),
         };
         return new WorldCheckpointState(manifest, partitionStates);
-    }
-
-    private WorldPartitionRuntime GetPartition(SimulationScopeId scopeId)
-    {
-        if (!_partitions.TryGetValue(scopeId.Value, out var partition))
-        {
-            throw new KeyNotFoundException($"Settlement scope {scopeId.Value} is not loaded in this world.");
-        }
-
-        return partition;
-    }
-
-    private void AddPartition(SettlementSimulation simulation, long revision)
-    {
-        ArgumentNullException.ThrowIfNull(simulation);
-        var state = simulation.CaptureState();
-        if (revision < 0
-            || simulation.Time != Time
-            || state.WorldSeed != _worldSeed
-            || _partitions.ContainsKey(simulation.ScopeId.Value))
-        {
-            throw new InvalidOperationException("Settlement partition metadata is incompatible with the world runtime.");
-        }
-
-        var entityIds = EnumerateEntityIds(state).OrderBy(id => id.Value).ToArray();
-        if (entityIds.Any(id => id.Value <= 0)
-            || entityIds.Select(id => id.Value).Distinct().Count() != entityIds.Length
-            || entityIds.Any(id => _entityLocations.ContainsKey(id.Value)))
-        {
-            throw new InvalidOperationException("Settlement partition contains entity IDs that are invalid or collide globally.");
-        }
-
-        _partitions.Add(simulation.ScopeId.Value, new WorldPartitionRuntime(simulation, revision));
-        foreach (var entityId in entityIds)
-        {
-            _entityLocations.Add(entityId.Value, simulation.ScopeId);
-        }
     }
 
     private void ValidateCounters()
@@ -253,20 +230,6 @@ public sealed partial class WorldRuntime
         }
     }
 
-    private static IEnumerable<EntityId> EnumerateEntityIds(SettlementState state)
-    {
-        yield return state.SettlementOwnerId;
-        foreach (var resident in state.Residents)
-        {
-            yield return resident.Id;
-        }
-
-        foreach (var workplace in state.Workplaces)
-        {
-            yield return workplace.Id;
-        }
-    }
-
     private static void ValidateManifestVersion(WorldManifestState manifest)
     {
         if (manifest.SchemaVersion != WorldVersions.CurrentSchemaVersion
@@ -277,12 +240,5 @@ public sealed partial class WorldRuntime
         {
             throw new NotSupportedException("World checkpoint version bundle is unsupported.");
         }
-    }
-
-    private sealed class WorldPartitionRuntime(SettlementSimulation simulation, long revision)
-    {
-        public SettlementSimulation Simulation { get; set; } = simulation;
-
-        public long Revision { get; set; } = revision;
     }
 }

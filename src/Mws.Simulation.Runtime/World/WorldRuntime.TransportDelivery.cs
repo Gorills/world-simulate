@@ -19,14 +19,14 @@ public sealed partial class WorldRuntime
             var message = node.Value;
             var attempts = checked(message.DeliveryAttempts + 1);
 
-            if (!_partitions.ContainsKey(message.SourceScopeId.Value))
+            if (!IsPartitionLoaded(message.SourceScopeId))
             {
                 node.Value = message with { DeliveryAttempts = attempts };
                 blockedCode = WorldTransportCodes.SourcePartitionUnavailable;
                 break;
             }
 
-            if (!_partitions.ContainsKey(message.DestinationScopeId.Value))
+            if (!IsPartitionLoaded(message.DestinationScopeId))
             {
                 node.Value = message with { DeliveryAttempts = attempts };
                 blockedCode = WorldTransportCodes.DestinationPartitionUnavailable;
@@ -98,8 +98,8 @@ public sealed partial class WorldRuntime
             }
 
             inspected++;
-            if (!_partitions.ContainsKey(message.SourceScopeId.Value)
-                || !_partitions.ContainsKey(message.DestinationScopeId.Value))
+            if (!IsPartitionLoaded(message.SourceScopeId)
+                || !IsPartitionLoaded(message.DestinationScopeId))
             {
                 break;
             }
@@ -115,8 +115,8 @@ public sealed partial class WorldRuntime
         while (node is not null && count < maxMessages)
         {
             var message = node.Value;
-            if (!_partitions.ContainsKey(message.SourceScopeId.Value)
-                || !_partitions.ContainsKey(message.DestinationScopeId.Value))
+            if (!IsPartitionLoaded(message.SourceScopeId)
+                || !IsPartitionLoaded(message.DestinationScopeId))
             {
                 break;
             }

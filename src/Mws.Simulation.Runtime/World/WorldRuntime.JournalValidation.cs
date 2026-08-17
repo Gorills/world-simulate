@@ -21,7 +21,9 @@ public sealed partial class WorldRuntime
             + (entry.ResidentMigration is null ? 0 : 1)
             + (entry.EnqueueResidentMigration is null ? 0 : 1)
             + (entry.DispatchOutbox is null ? 0 : 1)
-            + (entry.DeliverInbox is null ? 0 : 1);
+            + (entry.DeliverInbox is null ? 0 : 1)
+            + (entry.UnloadSettlement is null ? 0 : 1)
+            + (entry.LoadSettlement is null ? 0 : 1);
         if (payloadCount != 1)
         {
             throw new InvalidOperationException("World input journal entry must contain exactly one payload.");
@@ -52,6 +54,8 @@ public sealed partial class WorldRuntime
             WorldInputKind.DeliverInbox =>
                 entry.DeliverInbox is not null
                 && TransportBatchShapeIsValid(entry.DeliverInbox, allowBlocked: true),
+            WorldInputKind.UnloadSettlement => ResidencyShapeIsValid(entry.UnloadSettlement),
+            WorldInputKind.LoadSettlement => ResidencyShapeIsValid(entry.LoadSettlement),
             _ => false,
         };
 
@@ -115,6 +119,9 @@ public sealed partial class WorldRuntime
                 WorldTransportCodes.DestinationPartitionUnavailable,
                 StringComparison.Ordinal);
     }
+
+    private static bool ResidencyShapeIsValid(WorldPartitionResidencyInput? input) =>
+        input is not null && input.ScopeId.Value > 0;
 
     private static SettlementCommand ToSettlementCommand(WorldSettlementCommandInput input) =>
         input.CommandKind switch

@@ -43,9 +43,14 @@ public sealed partial class WorldRuntime
         var staged = new List<(WorldPartitionRuntime Partition, SettlementSimulation Simulation)>(_partitions.Count);
         foreach (var partition in _partitions.Values)
         {
-            if (partition.Revision == long.MaxValue)
+            if (EffectiveRevision(partition) == long.MaxValue)
             {
                 throw new InvalidOperationException("World partition revision space is exhausted.");
+            }
+
+            if (!partition.IsLoaded)
+            {
+                continue;
             }
 
             var simulation = SettlementSimulation.Restore(partition.Simulation.CaptureState());
@@ -57,6 +62,11 @@ public sealed partial class WorldRuntime
         {
             entry.Partition.Simulation = entry.Simulation;
             entry.Partition.Revision = checked(entry.Partition.Revision + 1);
+        }
+
+        foreach (var partition in _partitions.Values.Where(entry => !entry.IsLoaded))
+        {
+            partition.DeferredAdvanceCount = checked(partition.DeferredAdvanceCount + 1);
         }
 
         Time = target;

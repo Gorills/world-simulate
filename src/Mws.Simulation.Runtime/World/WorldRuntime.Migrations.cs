@@ -81,6 +81,11 @@ public sealed partial class WorldRuntime
             return RecordOperation(CreateReceipt(intent, false, "PARTITION_NOT_FOUND"));
         }
 
+        if (!source.IsLoaded || !destination.IsLoaded)
+        {
+            return RecordOperation(CreateReceipt(intent, false, "PARTITION_UNAVAILABLE"));
+        }
+
         if (!_entityLocations.TryGetValue(intent.ResidentId.Value, out var actualScope))
         {
             return RecordOperation(CreateReceipt(intent, false, "ENTITY_NOT_FOUND"));

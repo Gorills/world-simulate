@@ -5,7 +5,7 @@ namespace Mws.Simulation.Api;
 
 public static class WorldVersions
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
     public const string CurrentModelVersion = "world-model-v1";
     public const string CurrentRulesVersion = "world-rules-v1";
     public const string CurrentContentVersion = "world-content-v1";
@@ -15,6 +15,7 @@ public static class WorldSystemIds
 {
     public const string SettlementHourly = "settlement-hourly";
     public const string InputJournal = "world-input-journal";
+    public const string PartitionResidency = "world-partition-residency";
     public const string ResidentMigration = "world-resident-migration";
     public const string Scheduler = "world-scheduler";
     public const string Transport = "world-transport";
@@ -24,6 +25,7 @@ public static class WorldSystemVersions
 {
     public const string SettlementHourly = "1.0.0";
     public const string InputJournal = "1.0.0";
+    public const string PartitionResidency = "1.0.0";
     public const string ResidentMigration = "1.0.0";
     public const string Scheduler = "1.0.0";
     public const string Transport = "1.0.0";
@@ -33,6 +35,7 @@ public static class WorldSystemVersions
         {
             new WorldSystemVersion(WorldSystemIds.SettlementHourly, SettlementHourly),
             new WorldSystemVersion(WorldSystemIds.InputJournal, InputJournal),
+            new WorldSystemVersion(WorldSystemIds.PartitionResidency, PartitionResidency),
             new WorldSystemVersion(WorldSystemIds.ResidentMigration, ResidentMigration),
             new WorldSystemVersion(WorldSystemIds.Scheduler, Scheduler),
             new WorldSystemVersion(WorldSystemIds.Transport, Transport),
@@ -97,6 +100,8 @@ public enum WorldInputKind
     EnqueueResidentMigration,
     DispatchOutbox,
     DeliverInbox,
+    UnloadSettlement,
+    LoadSettlement,
 }
 
 public enum WorldSettlementCommandKind
@@ -118,7 +123,8 @@ public sealed record WorldSystemVersion(
 public sealed record WorldPartitionDescriptor(
     SimulationScopeId ScopeId,
     string Kind,
-    long Revision);
+    long Revision,
+    bool IsLoaded = true);
 
 public sealed record WorldEntityLocation(
     EntityId EntityId,
@@ -192,6 +198,9 @@ public sealed record WorldTransportBatchInput(
     int ExpectedProcessedCount,
     string? ExpectedBlockedCode);
 
+public sealed record WorldPartitionResidencyInput(
+    SimulationScopeId ScopeId);
+
 public sealed record WorldInputJournalEntry(
     long Sequence,
     SimulationTime RecordedAt,
@@ -203,7 +212,9 @@ public sealed record WorldInputJournalEntry(
     ResidentMigrationIntent? ResidentMigration,
     WorldQueuedResidentMigration? EnqueueResidentMigration,
     WorldTransportBatchInput? DispatchOutbox,
-    WorldTransportBatchInput? DeliverInbox);
+    WorldTransportBatchInput? DeliverInbox,
+    WorldPartitionResidencyInput? UnloadSettlement = null,
+    WorldPartitionResidencyInput? LoadSettlement = null);
 
 public sealed record WorldManifestState(
     int SchemaVersion,

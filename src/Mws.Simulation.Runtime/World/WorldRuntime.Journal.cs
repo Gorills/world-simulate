@@ -164,6 +164,14 @@ public sealed partial class WorldRuntime
                 break;
             }
 
+            case WorldInputKind.UnloadSettlement:
+                UnloadSettlementCore(entry.UnloadSettlement!.ScopeId);
+                break;
+
+            case WorldInputKind.LoadSettlement:
+                LoadSettlementCore(entry.LoadSettlement!.ScopeId);
+                break;
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(entry), entry.Kind, "Unknown world input kind.");
         }
@@ -211,7 +219,9 @@ public sealed partial class WorldRuntime
         ResidentMigrationIntent? residentMigration = null,
         WorldQueuedResidentMigration? enqueueResidentMigration = null,
         WorldTransportBatchInput? dispatchOutbox = null,
-        WorldTransportBatchInput? deliverInbox = null) =>
+        WorldTransportBatchInput? deliverInbox = null,
+        WorldPartitionResidencyInput? unloadSettlement = null,
+        WorldPartitionResidencyInput? loadSettlement = null) =>
         new(
             _nextInputSequence,
             recordedAt,
@@ -223,5 +233,7 @@ public sealed partial class WorldRuntime
             residentMigration,
             enqueueResidentMigration,
             dispatchOutbox,
-            deliverInbox);
+            deliverInbox,
+            unloadSettlement,
+            loadSettlement);
 }

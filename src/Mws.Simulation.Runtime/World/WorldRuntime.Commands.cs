@@ -27,7 +27,7 @@ public sealed partial class WorldRuntime
         SettlementCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var partition = GetPartition(scopeId);
+        var partition = GetLoadedPartition(scopeId);
         var state = partition.Simulation.CaptureState();
         var staged = SettlementSimulation.Restore(state);
         var result = staged.Execute(command);
