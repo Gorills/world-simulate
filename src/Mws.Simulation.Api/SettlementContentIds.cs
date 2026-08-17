@@ -7,6 +7,8 @@ public static class SettlementVersions
     public const int LegacySchemaVersion = 3;
     public const int LegacyResidentLocationEncodingVersion = 0;
     public const int CurrentResidentLocationEncodingVersion = 1;
+    public const int LegacyRouteModeEncodingVersion = 0;
+    public const int CurrentRouteModeEncodingVersion = 1;
     public const string CurrentModelVersion = "settlement-model-v1";
     public const string CurrentRulesVersion = "settlement-rules-v1";
     public const string CurrentContentVersion = "settlement-content-v1";

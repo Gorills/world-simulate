@@ -93,4 +93,5 @@ public sealed record SettlementState(
     IReadOnlyList<HouseholdState>? Households = null,
     int ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion,
     IReadOnlyList<SettlementRouteConnectionState>? RouteConnections = null,
-    IReadOnlyList<SettlementResidentRouteKnowledgeState>? ResidentRouteKnowledge = null);
+    IReadOnlyList<SettlementResidentRouteKnowledgeState>? ResidentRouteKnowledge = null,
+    int RouteModeEncodingVersion = SettlementVersions.LegacyRouteModeEncodingVersion);

@@ -40,7 +40,8 @@ public sealed partial class SettlementSimulation
         IEnumerable<HouseholdState> households,
         int residentLocationEncodingVersion,
         IEnumerable<SettlementRouteConnectionState> routeConnections,
-        IEnumerable<SettlementResidentRouteKnowledgeState> residentRouteKnowledge)
+        IEnumerable<SettlementResidentRouteKnowledgeState> residentRouteKnowledge,
+        int routeModeEncodingVersion)
     {
         _scopeId = scopeId;
         _worldSeed = worldSeed;
@@ -51,6 +52,8 @@ public sealed partial class SettlementSimulation
         _settlementOwnerId = settlementOwnerId;
         var allowLegacyMissingTravelProgress = residentLocationEncodingVersion
             == SettlementVersions.LegacyResidentLocationEncodingVersion;
+        _allowLegacyMissingRouteModeSupport = routeModeEncodingVersion
+            == SettlementVersions.LegacyRouteModeEncodingVersion;
         _residents = residents
             .OrderBy(resident => resident.Id.Value)
             .Select(resident => new ResidentRuntimeState(
@@ -131,7 +134,8 @@ public sealed partial class SettlementSimulation
             households,
             SettlementVersions.CurrentResidentLocationEncodingVersion,
             [],
-            []);
+            [],
+            SettlementVersions.CurrentRouteModeEncodingVersion);
     }
 
     public static SettlementSimulation Restore(SettlementState state)
@@ -153,6 +157,14 @@ public sealed partial class SettlementSimulation
                 $"Resident location encoding {state.ResidentLocationEncodingVersion} is unsupported.");
         }
 
+        if (state.RouteModeEncodingVersion is not (
+            SettlementVersions.LegacyRouteModeEncodingVersion
+            or SettlementVersions.CurrentRouteModeEncodingVersion))
+        {
+            throw new NotSupportedException(
+                $"Route mode encoding {state.RouteModeEncodingVersion} is unsupported.");
+        }
+
         return new SettlementSimulation(
             state.ScopeId,
             state.WorldSeed,
@@ -170,7 +182,8 @@ public sealed partial class SettlementSimulation
             state.Households ?? [],
             state.ResidentLocationEncodingVersion,
             state.RouteConnections ?? [],
-            state.ResidentRouteKnowledge ?? []);
+            state.ResidentRouteKnowledge ?? [],
+            state.RouteModeEncodingVersion);
     }
 
     public SettlementState CaptureState() => new(
@@ -196,7 +209,8 @@ public sealed partial class SettlementSimulation
         _households.OrderBy(household => household.Id.Value).ToArray(),
         SettlementVersions.CurrentResidentLocationEncodingVersion,
         CaptureRouteConnections(),
-        CaptureResidentRouteKnowledge());
+        CaptureResidentRouteKnowledge(),
+        CaptureRouteModeEncodingVersion());
 
     private CommandId AllocateCommandId()
     {

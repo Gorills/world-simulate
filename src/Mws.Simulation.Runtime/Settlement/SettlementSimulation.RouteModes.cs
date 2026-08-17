@@ -4,14 +4,20 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
-    private static void ValidateRouteModeSupport(SettlementRouteConnectionState connection)
+    private readonly bool _allowLegacyMissingRouteModeSupport;
+
+    private void ValidateRouteModeSupport(SettlementRouteConnectionState connection)
     {
         var supportedModes = connection.SupportedModes;
         if (supportedModes is null)
         {
-            // Backward-compatible unresolved route content remains loadable but is
-            // not traversable until a mode is declared explicitly.
-            return;
+            if (_allowLegacyMissingRouteModeSupport)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                "Current route mode encoding requires explicit supported travel modes.");
         }
 
         if (supportedModes.Count == 0)
@@ -40,6 +46,12 @@ public sealed partial class SettlementSimulation
             }
         }
     }
+
+    private int CaptureRouteModeEncodingVersion() =>
+        _routeConnections.Count > 0
+        && _routeConnections.All(connection => connection.SupportedModes is not null)
+            ? SettlementVersions.CurrentRouteModeEncodingVersion
+            : SettlementVersions.LegacyRouteModeEncodingVersion;
 
     private static bool IsKnownOpenOnFootConnection(
         SettlementRouteConnectionState connection,
