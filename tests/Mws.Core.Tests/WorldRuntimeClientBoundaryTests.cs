@@ -22,11 +22,12 @@ public sealed class WorldRuntimeClientBoundaryTests
             ResidentInteractionChoice.Encourage);
         var after = world.CaptureSettlementState(scope);
         var checkpoint = world.CreateCheckpoint();
+        var journal = checkpoint.Manifest.InputJournal;
 
         Assert.True(result.Success);
         Assert.Equal(before.NextCommandId + 1, after.NextCommandId);
         Assert.Equal(before.CommandReceipts.Count + 1, after.CommandReceipts.Count);
-        Assert.Equal(WorldInputKind.SettlementCommand, checkpoint.Manifest.InputJournal.Last().Kind);
+        Assert.Equal(WorldInputKind.SettlementCommand, journal[journal.Count - 1].Kind);
 
         var restored = WorldRuntime.Restore(checkpoint);
         var restoredState = restored.CaptureSettlementState(scope);
