@@ -46,10 +46,8 @@ public sealed partial class WorldRuntime
                     message.ResidentMigration.ResidentId,
                     message.SourceScopeId,
                     message.DestinationScopeId)),
-                _ => throw new ArgumentOutOfRangeException(
-                    nameof(message),
-                    message.Kind,
-                    "Unknown world transport message kind."),
+                _ => throw new InvalidOperationException(
+                    $"Unknown world transport message kind: {message.Kind}."),
             };
 
             var receipt = new WorldTransportDeliveryReceipt(

@@ -77,7 +77,7 @@ public sealed partial class WorldRuntime
     private void ValidatePersistedTransportMessage(
         WorldTransportMessage message,
         bool isOutbox,
-        IReadOnlyDictionary<long, WorldInputJournalEntry> retainedInputs)
+        Dictionary<long, WorldInputJournalEntry> retainedInputs)
     {
         if (message.MessageId is null
             || message.ResidentMigration is null
