@@ -2,7 +2,7 @@
   "schema_version": 1,
   "program": "playable-prototype-v1",
   "policy": "DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md",
-  "active_phase": null,
+  "active_phase": "P2_AUTHORITATIVE_PLAYER_ACTOR",
   "phases": [
     {
       "id": "P0_PROCESS_GATE",
@@ -20,7 +20,7 @@
     },
     {
       "id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
-      "status": "LOCKED",
+      "status": "IMPLEMENTING",
       "depends_on": [
         "P1_PLAYABLE_USES_WORLD_RUNTIME"
       ],
