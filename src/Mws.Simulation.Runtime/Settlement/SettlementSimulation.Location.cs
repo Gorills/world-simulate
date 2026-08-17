@@ -16,9 +16,12 @@ public sealed partial class SettlementSimulation
         return index < 0 ? null : _residents[index].Location;
     }
 
-    private void RestoreOmittedResidentSemanticLocations()
+    private void RestoreOmittedResidentSemanticLocations(int residentLocationEncodingVersion)
     {
-        var hour = CurrentHour(Time);
+        var usesCurrentEncoding = residentLocationEncodingVersion
+            == SettlementVersions.CurrentResidentLocationEncodingVersion;
+        var legacyHour = usesCurrentEncoding ? 0 : CurrentHour(Time);
+
         foreach (var resident in _residents)
         {
             if (!resident.LocationWasOmitted)
@@ -26,13 +29,15 @@ public sealed partial class SettlementSimulation
                 continue;
             }
 
-            // New runtime starts at the resident's residence fixture.
-            // The time-based branch exists only to hydrate snapshots written by
-            // the old schedule-compacted format; it is not a canonical location rule.
-            resident.Location = SettlementActorLocationState.At(
-                Time.Milliseconds == 0
+            // Current snapshots use null only as a compact encoding for the resident's
+            // persisted residence-default place. Clock-based hydration is retained solely
+            // for older schema-5 snapshots that predate the location-encoding marker.
+            var place = usesCurrentEncoding
+                ? ResidentHomePlace(resident)
+                : Time.Milliseconds == 0
                     ? ResidentHomePlace(resident)
-                    : LegacyScheduledResidentStablePlace(resident, hour));
+                    : LegacyScheduledResidentStablePlace(resident, legacyHour);
+            resident.Location = SettlementActorLocationState.At(place);
         }
     }
 
@@ -86,8 +91,13 @@ public sealed partial class SettlementSimulation
         }
     }
 
-    private static SettlementActorLocationState CaptureResidentSemanticLocation(ResidentRuntimeState resident) =>
-        SettlementSemanticLocation.Normalize(resident.Location);
+    private SettlementActorLocationState? CaptureResidentSemanticLocation(ResidentRuntimeState resident)
+    {
+        var location = SettlementSemanticLocation.Normalize(resident.Location);
+        return IsAtPlace(location, ResidentHomePlace(resident))
+            ? null
+            : location;
+    }
 
     private bool IsResidentAtHome(ResidentRuntimeState resident) =>
         IsAtPlace(resident.Location, ResidentHomePlace(resident));

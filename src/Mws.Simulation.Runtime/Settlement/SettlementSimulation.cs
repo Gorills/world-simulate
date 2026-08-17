@@ -37,7 +37,8 @@ public sealed partial class SettlementSimulation
         IEnumerable<SettlementEvent> events,
         IEnumerable<SettlementCommandReceipt> commandReceipts,
         IEnumerable<HomeState> homes,
-        IEnumerable<HouseholdState> households)
+        IEnumerable<HouseholdState> households,
+        int residentLocationEncodingVersion)
     {
         _scopeId = scopeId;
         _worldSeed = worldSeed;
@@ -64,7 +65,7 @@ public sealed partial class SettlementSimulation
         ValidateResidenceState();
         RebuildEntityIndexes();
         RebuildResidenceIndexes();
-        RestoreOmittedResidentSemanticLocations();
+        RestoreOmittedResidentSemanticLocations(residentLocationEncodingVersion);
         ValidateResidentSemanticLocationReferences();
         RebuildInventoryIndexes();
         ValidateInventoryTotals();
@@ -107,7 +108,8 @@ public sealed partial class SettlementSimulation
             [],
             [],
             homes,
-            households);
+            households,
+            SettlementVersions.CurrentResidentLocationEncodingVersion);
     }
 
     public static SettlementSimulation Restore(SettlementState state)
@@ -121,6 +123,13 @@ public sealed partial class SettlementSimulation
         EnsureVersion(state.ModelVersion, SettlementVersions.CurrentModelVersion, "model");
         EnsureVersion(state.RulesVersion, SettlementVersions.CurrentRulesVersion, "rules");
         EnsureVersion(state.ContentVersion, SettlementVersions.CurrentContentVersion, "content");
+        if (state.ResidentLocationEncodingVersion is not (
+            SettlementVersions.LegacyResidentLocationEncodingVersion
+            or SettlementVersions.CurrentResidentLocationEncodingVersion))
+        {
+            throw new NotSupportedException(
+                $"Resident location encoding {state.ResidentLocationEncodingVersion} is unsupported.");
+        }
 
         return new SettlementSimulation(
             state.ScopeId,
@@ -136,7 +145,8 @@ public sealed partial class SettlementSimulation
             state.Events,
             state.CommandReceipts,
             state.Homes ?? [],
-            state.Households ?? []);
+            state.Households ?? [],
+            state.ResidentLocationEncodingVersion);
     }
 
     public SettlementState CaptureState() => new(
@@ -159,7 +169,8 @@ public sealed partial class SettlementSimulation
         _events.OrderBy(entry => entry.Id).ToArray(),
         _commandReceipts.OrderBy(entry => entry.CommandId.Value).ToArray(),
         _homes.OrderBy(home => home.Id.Value).ToArray(),
-        _households.OrderBy(household => household.Id.Value).ToArray());
+        _households.OrderBy(household => household.Id.Value).ToArray(),
+        SettlementVersions.CurrentResidentLocationEncodingVersion);
 
     private CommandId AllocateCommandId()
     {

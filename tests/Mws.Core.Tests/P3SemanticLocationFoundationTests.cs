@@ -73,6 +73,49 @@ public sealed class P3SemanticLocationFoundationTests
     }
 
     [Fact]
+    public void CurrentCompactResidenceEncodingIsIndependentOfClock()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9307)).CaptureState();
+
+        Assert.Equal(
+            SettlementVersions.CurrentResidentLocationEncodingVersion,
+            state.ResidentLocationEncodingVersion);
+        Assert.All(state.Residents, resident => Assert.Null(resident.Location));
+
+        var restored = SettlementSimulation.Restore(state with
+        {
+            Time = new SimulationTime(8 * SettlementSimulation.HourMilliseconds),
+        });
+
+        Assert.All(restored.Project().Residents, resident =>
+        {
+            var location = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
+            Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+            Assert.Equal(SettlementPlaceKind.Home, location.CurrentPlace.Kind);
+            Assert.Equal(resident.HomeId, location.CurrentPlace.EntityId);
+        });
+    }
+
+    [Fact]
+    public void LegacyCompactResidenceEncodingKeepsOldClockHydrationIsolated()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9308)).CaptureState();
+        var restored = SettlementSimulation.Restore(state with
+        {
+            Time = new SimulationTime(8 * SettlementSimulation.HourMilliseconds),
+            ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion,
+        });
+
+        Assert.All(restored.Project().Residents, resident =>
+        {
+            var location = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
+            Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+            Assert.Equal(SettlementPlaceKind.Workplace, location.CurrentPlace.Kind);
+            Assert.Equal(resident.WorkplaceId, location.CurrentPlace.EntityId);
+        });
+    }
+
+    [Fact]
     public void ActiveTravelProgressPersistsAcrossHoursAndSaveLoad()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9304)).CaptureState();

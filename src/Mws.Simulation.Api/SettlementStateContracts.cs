@@ -89,4 +89,5 @@ public sealed record SettlementState(
     IReadOnlyList<SettlementEvent> Events,
     IReadOnlyList<SettlementCommandReceipt> CommandReceipts,
     IReadOnlyList<HomeState>? Homes = null,
-    IReadOnlyList<HouseholdState>? Households = null);
+    IReadOnlyList<HouseholdState>? Households = null,
+    int ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion);
