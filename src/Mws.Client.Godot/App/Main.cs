@@ -4,6 +4,7 @@ using Mws.Simulation.Api;
 using Mws.Client.Godot.Input;
 using Mws.Client.Godot.Session;
 using Mws.Client.Godot.UI.Screens.Hud;
+using Mws.Client.Godot.World.Village;
 
 namespace Mws.Client.Godot.App;
 
@@ -12,6 +13,8 @@ public partial class Main : Node
     private readonly InputDeviceTracker _inputDevice = new();
     private GameSession? _session;
     private GameHud? _hud;
+    private VillageWorld? _village;
+    private bool _hudOpen;
 
     public override void _Ready()
     {
@@ -19,6 +22,7 @@ public partial class Main : Node
         {
             GameInput.ConfigureDefaults();
             GameInput.ValidateDefaults();
+            VillageWorld.ValidateSpatialContract();
             _session = new GameSession(new WorldSeed(42));
 
             if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
@@ -27,9 +31,13 @@ public partial class Main : Node
                 return;
             }
 
+            _village = GetNode<VillageWorld>("VillageWorld");
             _hud = GetNode<GameHud>("GameHud");
             _hud.Bind(_session);
             _hud.SetInputDevice(_inputDevice.Current);
+            _session.Changed += RefreshVillage;
+            RefreshVillage();
+            SetHudOpen(open: false);
         }
         catch (Exception exception)
         {
@@ -38,17 +46,45 @@ public partial class Main : Node
         }
     }
 
-    public override void _Input(InputEvent @event)
+    public override void _Input(InputEvent inputEvent)
     {
-        if (_inputDevice.Observe(@event))
+        if (_inputDevice.Observe(inputEvent))
         {
             _hud?.SetInputDevice(_inputDevice.Current);
         }
 
-        if (_hud?.HandleInput(@event) == true)
+        if (inputEvent.IsActionPressed(GameInput.Menu) && _hud is not null && _village is not null)
+        {
+            SetHudOpen(!_hudOpen);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (_hudOpen && _hud?.HandleInput(inputEvent) == true)
         {
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    private void SetHudOpen(bool open)
+    {
+        _hudOpen = open;
+        if (_hud is not null)
+        {
+            _hud.Visible = open;
+        }
+
+        _village?.SetPlayerInputEnabled(!open);
+    }
+
+    private void RefreshVillage()
+    {
+        if (_session is null || _village is null)
+        {
+            return;
+        }
+
+        _village.Render(_session.Projection, _session.SelectedResidentId);
     }
 
     private void RunHeadlessSmoke()
@@ -71,8 +107,8 @@ public partial class Main : Node
 
         var resident = _session.SelectedResident;
         GD.Print(
-            $"MWS_GODOT_SMOKE_OK client=v0.1 day={projection.Day} resident={resident.Name} " +
-            $"affinity={resident.Affinity} input=keyboard-gamepad-validated");
+            $"MWS_GODOT_SMOKE_OK client=village-v0.1 day={projection.Day} resident={resident.Name} " +
+            $"affinity={resident.Affinity} input=third-person-keyboard-gamepad-validated spatial=village-layout-validated");
         GetTree().Quit(0);
     }
 }

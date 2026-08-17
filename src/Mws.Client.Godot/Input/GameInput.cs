@@ -8,6 +8,11 @@ internal static class GameInput
     public static readonly StringName MoveRight = "game_move_right";
     public static readonly StringName MoveUp = "game_move_up";
     public static readonly StringName MoveDown = "game_move_down";
+    public static readonly StringName Sprint = "game_sprint";
+    public static readonly StringName LookLeft = "game_look_left";
+    public static readonly StringName LookRight = "game_look_right";
+    public static readonly StringName LookUp = "game_look_up";
+    public static readonly StringName LookDown = "game_look_down";
     public static readonly StringName PreviousTarget = "game_previous_target";
     public static readonly StringName NextTarget = "game_next_target";
     public static readonly StringName Interact = "game_interact";
@@ -25,6 +30,17 @@ internal static class GameInput
         BindAxis(MoveRight, JoyAxis.LeftX, 1.0f);
         BindAxis(MoveUp, JoyAxis.LeftY, -1.0f);
         BindAxis(MoveDown, JoyAxis.LeftY, 1.0f);
+        BindKey(Sprint, Key.Shift);
+        BindButton(Sprint, JoyButton.LeftStick);
+
+        BindKey(LookLeft, Key.Left);
+        BindKey(LookRight, Key.Right);
+        BindKey(LookUp, Key.Up);
+        BindKey(LookDown, Key.Down);
+        BindAxis(LookLeft, JoyAxis.RightX, -1.0f);
+        BindAxis(LookRight, JoyAxis.RightX, 1.0f);
+        BindAxis(LookUp, JoyAxis.RightY, -1.0f);
+        BindAxis(LookDown, JoyAxis.RightY, 1.0f);
 
         BindKey(PreviousTarget, Key.Q);
         BindButton(PreviousTarget, JoyButton.LeftShoulder);
@@ -49,6 +65,11 @@ internal static class GameInput
             MoveRight,
             MoveUp,
             MoveDown,
+            Sprint,
+            LookLeft,
+            LookRight,
+            LookUp,
+            LookDown,
             PreviousTarget,
             NextTarget,
             Interact,
@@ -78,6 +99,27 @@ internal static class GameInput
                     $"Input action {action} must have keyboard and gamepad bindings; keyboard={hasKeyboard} gamepad={hasGamepad}.");
             }
         }
+    }
+
+    internal static Vector2 ReadMovement()
+    {
+        var raw = Godot.Input.GetVector(MoveLeft, MoveRight, MoveUp, MoveDown);
+        return new Vector2(raw.X, -raw.Y);
+    }
+
+    internal static Vector2 ReadCameraLook() =>
+        Godot.Input.GetVector(LookLeft, LookRight, LookUp, LookDown);
+
+    internal static bool TryReadPointerLook(InputEvent inputEvent, out Vector2 delta)
+    {
+        if (inputEvent is InputEventMouseMotion mouseMotion)
+        {
+            delta = mouseMotion.Relative;
+            return true;
+        }
+
+        delta = Vector2.Zero;
+        return false;
     }
 
     private static void BindKey(StringName action, Key key)

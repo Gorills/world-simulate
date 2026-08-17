@@ -58,8 +58,8 @@ public partial class GameHud : Control
     internal void SetInputDevice(InputDeviceFamily device)
     {
         _inputHint.Text = device == InputDeviceFamily.Gamepad
-            ? "LB/RB select · A interact/confirm · Y advance time · B back"
-            : "Mouse or Q/E select · F interact · Space advance · Enter confirm · Esc back";
+            ? "Left stick move · L3 sprint · right stick camera · Start world/menu · LB/RB select · A interact · Y advance"
+            : "WASD move · Shift sprint · mouse camera · Tab world/menu · Q/E select · F interact · Space advance";
     }
 
     public bool HandleInput(InputEvent inputEvent)

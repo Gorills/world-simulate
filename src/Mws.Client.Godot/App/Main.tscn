@@ -1,9 +1,13 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://App/Main.cs" id="1"]
-[ext_resource type="PackedScene" path="res://UI/Screens/Hud/GameHud.tscn" id="2"]
+[ext_resource type="Script" path="res://App/Main.cs" id="1_main"]
+[ext_resource type="PackedScene" path="res://World/Village/VillageWorld.tscn" id="2_village"]
+[ext_resource type="PackedScene" path="res://UI/Screens/Hud/GameHud.tscn" id="3_hud"]
 
 [node name="Main" type="Node"]
-script = ExtResource("1")
+script = ExtResource("1_main")
 
-[node name="GameHud" parent="." instance=ExtResource("2")]
+[node name="VillageWorld" parent="." instance=ExtResource("2_village")]
+
+[node name="GameHud" parent="." instance=ExtResource("3_hud")]
+visible = false
