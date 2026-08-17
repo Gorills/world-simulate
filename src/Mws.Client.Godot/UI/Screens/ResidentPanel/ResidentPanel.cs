@@ -31,8 +31,11 @@ public partial class ResidentPanel : VBoxContainer
     {
         ArgumentNullException.ThrowIfNull(resident);
 
+        var residence = resident.HomeId == default
+            ? "Home: unassigned"
+            : $"Home: {resident.HomeName} · {resident.HouseholdName}";
         _name.Text = resident.Name;
-        _profession.Text = $"{resident.Profession} · {resident.WorkplaceName}";
+        _profession.Text = $"{resident.Profession} · {resident.WorkplaceName}\n{residence}";
         _needs.Text = $"Hunger {resident.Hunger}/100 · Energy {resident.Energy}/100";
         _relationship.Text = $"Affinity {resident.Affinity}";
         _inventory.Text = resident.Inventory.Count == 0

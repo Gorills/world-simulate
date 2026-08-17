@@ -25,7 +25,19 @@ public sealed record ResidentState(
     ResidentActivity Activity,
     ResidentProfession Profession,
     EntityId WorkplaceId,
-    int Affinity);
+    int Affinity,
+    EntityId HouseholdId = default);
+
+public sealed record HomeState(
+    EntityId Id,
+    string Name,
+    string SpatialKey,
+    int Capacity);
+
+public sealed record HouseholdState(
+    EntityId Id,
+    string Name,
+    EntityId HomeId);
 
 public sealed record ItemStackState(
     long StackId,
@@ -74,4 +86,6 @@ public sealed record SettlementState(
     IReadOnlyList<ItemStackState> ItemStacks,
     IReadOnlyList<WorkplaceState> Workplaces,
     IReadOnlyList<SettlementEvent> Events,
-    IReadOnlyList<SettlementCommandReceipt> CommandReceipts);
+    IReadOnlyList<SettlementCommandReceipt> CommandReceipts,
+    IReadOnlyList<HomeState>? Homes = null,
+    IReadOnlyList<HouseholdState>? Households = null);

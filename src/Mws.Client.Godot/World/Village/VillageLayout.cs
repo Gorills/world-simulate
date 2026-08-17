@@ -1,4 +1,5 @@
 using Godot;
+using Mws.Simulation.Api;
 
 namespace Mws.Client.Godot.World.Village;
 
@@ -112,21 +113,41 @@ internal static class VillageLayout
     internal static VillageBuildingPlacement GetBuilding(string name) =>
         Buildings.Single(building => string.Equals(building.Name, name, StringComparison.Ordinal));
 
+    internal static VillageBuildingPlacement GetHomeBuilding(string spatialKey) =>
+        spatialKey switch
+        {
+            SettlementHomeSpatialKeys.NorthWest => GetBuilding("North House West"),
+            SettlementHomeSpatialKeys.NorthEast => GetBuilding("North House East"),
+            SettlementHomeSpatialKeys.Miller => GetBuilding("Miller House"),
+            SettlementHomeSpatialKeys.Cook => GetBuilding("Cook House"),
+            SettlementHomeSpatialKeys.River => GetBuilding("River House"),
+            SettlementHomeSpatialKeys.Grove => GetBuilding("Grove House"),
+            SettlementHomeSpatialKeys.SouthWest => GetBuilding("South House West"),
+            SettlementHomeSpatialKeys.SouthEast => GetBuilding("South House East"),
+            SettlementHomeSpatialKeys.FarSouthWest => GetBuilding("Far South House West"),
+            SettlementHomeSpatialKeys.FarSouthEast => GetBuilding("Far South House East"),
+            _ => throw new InvalidOperationException(
+                $"Unknown authoritative home spatial key '{spatialKey}'."),
+        };
+
     internal static void Validate()
     {
         if (WidthMeters < 200.0f || DepthMeters < 180.0f)
         {
-            throw new InvalidOperationException("Village playable footprint is too compact for the spatial target.");
+            throw new InvalidOperationException(
+                "Village playable footprint is too compact for the spatial target.");
         }
 
         if (MainRoadWidthMeters < 6.0f || SideRoadWidthMeters < 4.0f)
         {
-            throw new InvalidOperationException("Village roads are narrower than the playable spatial contract.");
+            throw new InvalidOperationException(
+                "Village roads are narrower than the playable spatial contract.");
         }
 
         if (Buildings.Length < 12 || HomeBuildings.Length < 8)
         {
-            throw new InvalidOperationException("Village greybox must contain a meaningful settlement and housing footprint.");
+            throw new InvalidOperationException(
+                "Village greybox must contain a meaningful settlement and housing footprint.");
         }
 
         for (var index = 0; index < Buildings.Length; index++)
@@ -136,7 +157,8 @@ internal static class VillageLayout
                 || building.Footprint.Y < 8.0f
                 || building.DoorWidth < 1.4f)
             {
-                throw new InvalidOperationException($"Building '{building.Name}' violates playable size or doorway bounds.");
+                throw new InvalidOperationException(
+                    $"Building '{building.Name}' violates playable size or doorway bounds.");
             }
 
             for (var otherIndex = index + 1; otherIndex < Buildings.Length; otherIndex++)
@@ -155,11 +177,38 @@ internal static class VillageLayout
 
         if (FarmWorkAnchor.DistanceTo(HerbGroveWorkAnchor) < 100.0f)
         {
-            throw new InvalidOperationException("Village work areas are not spatially separated enough for travel to matter.");
+            throw new InvalidOperationException(
+                "Village work areas are not spatially separated enough for travel to matter.");
+        }
+
+        string[] homeSpatialKeys =
+        [
+            SettlementHomeSpatialKeys.NorthWest,
+            SettlementHomeSpatialKeys.NorthEast,
+            SettlementHomeSpatialKeys.Miller,
+            SettlementHomeSpatialKeys.Cook,
+            SettlementHomeSpatialKeys.River,
+            SettlementHomeSpatialKeys.Grove,
+            SettlementHomeSpatialKeys.SouthWest,
+            SettlementHomeSpatialKeys.SouthEast,
+            SettlementHomeSpatialKeys.FarSouthWest,
+            SettlementHomeSpatialKeys.FarSouthEast,
+        ];
+        foreach (var spatialKey in homeSpatialKeys)
+        {
+            if (GetHomeBuilding(spatialKey).Kind != VillageBuildingKind.Home)
+            {
+                throw new InvalidOperationException(
+                    $"Home spatial key '{spatialKey}' does not resolve to a home building.");
+            }
         }
     }
 
-    private static VillageBuildingPlacement Home(string name, float x, float z, float yawDegrees) =>
+    private static VillageBuildingPlacement Home(
+        string name,
+        float x,
+        float z,
+        float yawDegrees) =>
         new(
             name,
             VillageBuildingKind.Home,

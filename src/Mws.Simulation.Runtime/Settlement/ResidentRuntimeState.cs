@@ -15,6 +15,7 @@ internal sealed class ResidentRuntimeState
         Activity = state.Activity;
         Profession = state.Profession;
         WorkplaceId = state.WorkplaceId;
+        HouseholdId = state.HouseholdId;
         Affinity = state.Affinity;
     }
 
@@ -32,6 +33,8 @@ internal sealed class ResidentRuntimeState
 
     internal EntityId WorkplaceId { get; }
 
+    internal EntityId HouseholdId { get; }
+
     internal int Affinity { get; set; }
 
     internal ResidentState Capture() => new(
@@ -42,5 +45,6 @@ internal sealed class ResidentRuntimeState
         Activity,
         Profession,
         WorkplaceId,
-        Affinity);
+        Affinity,
+        HouseholdId);
 }

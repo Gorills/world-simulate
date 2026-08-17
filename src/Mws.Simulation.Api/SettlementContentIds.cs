@@ -2,7 +2,8 @@ namespace Mws.Simulation.Api;
 
 public static class SettlementVersions
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
+    public const int PreviousSchemaVersion = 4;
     public const int LegacySchemaVersion = 3;
     public const string CurrentModelVersion = "settlement-model-v1";
     public const string CurrentRulesVersion = "settlement-rules-v1";
@@ -14,6 +15,20 @@ public static class SettlementItems
     public const string Ration = "ration";
     public const string Grain = "grain";
     public const string Herb = "herb";
+}
+
+public static class SettlementHomeSpatialKeys
+{
+    public const string NorthWest = "home.north-west";
+    public const string NorthEast = "home.north-east";
+    public const string Miller = "home.miller";
+    public const string Cook = "home.cook";
+    public const string River = "home.river";
+    public const string Grove = "home.grove";
+    public const string SouthWest = "home.south-west";
+    public const string SouthEast = "home.south-east";
+    public const string FarSouthWest = "home.far-south-west";
+    public const string FarSouthEast = "home.far-south-east";
 }
 
 public static class SettlementResultCodes

@@ -137,6 +137,7 @@ public sealed partial class WorldRuntime
         {
             Activity = ResidentActivity.Idle,
             WorkplaceId = new EntityId(0),
+            HouseholdId = new EntityId(0),
         };
         var migratedStacks = movingStacks
             .Select((stack, index) => stack with

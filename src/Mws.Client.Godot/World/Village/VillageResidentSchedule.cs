@@ -28,7 +28,7 @@ internal static class VillageResidentSchedule
         return resident.Activity switch
         {
             ResidentActivity.Working => ResolveWork(resident, settlement),
-            ResidentActivity.Resting => ResolveHome(resident),
+            ResidentActivity.Resting => ResolveHome(resident, settlement),
             ResidentActivity.Eating => ResolveFood(),
             _ => ResolveSocial(resident, settlement.Day, settlement.Hour),
         };
@@ -38,31 +38,65 @@ internal static class VillageResidentSchedule
     {
         ArgumentNullException.ThrowIfNull(settlement);
         var workplaceIds = settlement.Workplaces.Select(workplace => workplace.Id).ToHashSet();
+        var homes = settlement.Homes ?? [];
+        var households = settlement.Households ?? [];
+        var homeIds = homes.Select(home => home.Id).ToHashSet();
+        var householdIds = households.Select(household => household.Id).ToHashSet();
+
         foreach (var resident in settlement.Residents)
         {
-            if (resident.WorkplaceId == default || !workplaceIds.Contains(resident.WorkplaceId))
+            if (resident.WorkplaceId != default && !workplaceIds.Contains(resident.WorkplaceId))
             {
                 throw new InvalidOperationException(
-                    $"Resident {resident.Id.Value} has no projected authoritative workplace assignment.");
+                    $"Resident {resident.Id.Value} has an unknown projected workplace assignment.");
+            }
+
+            if (resident.HouseholdId != default && !householdIds.Contains(resident.HouseholdId))
+            {
+                throw new InvalidOperationException(
+                    $"Resident {resident.Id.Value} has an unknown projected household assignment.");
+            }
+
+            if (resident.HomeId != default && !homeIds.Contains(resident.HomeId))
+            {
+                throw new InvalidOperationException(
+                    $"Resident {resident.Id.Value} has an unknown projected home assignment.");
+            }
+
+            if (resident.HouseholdId != default)
+            {
+                var household = households.Single(entry => entry.Id == resident.HouseholdId);
+                if (resident.HomeId == default || household.HomeId != resident.HomeId)
+                {
+                    throw new InvalidOperationException(
+                        $"Resident {resident.Id.Value} household and home projection disagree.");
+                }
             }
 
             _ = Resolve(resident, settlement);
         }
     }
 
-    private static VillageResidentDestination ResolveHome(ResidentProjection resident)
+    private static VillageResidentDestination ResolveHome(
+        ResidentProjection resident,
+        SettlementProjection settlement)
     {
-        var homeIndex = (int)((resident.Id.Value - 1) % VillageLayout.HomeBuildings.Length);
-        if (homeIndex < 0)
+        if (resident.HomeId == default)
         {
-            homeIndex += VillageLayout.HomeBuildings.Length;
+            return ResolveSocial(resident, settlement.Day, settlement.Hour);
         }
 
-        var home = VillageLayout.HomeBuildings[homeIndex];
+        var home = (settlement.Homes ?? []).FirstOrDefault(entry => entry.Id == resident.HomeId);
+        if (home is null)
+        {
+            return ResolveSocial(resident, settlement.Day, settlement.Hour);
+        }
+
+        var building = VillageLayout.GetHomeBuilding(home.SpatialKey);
         return new VillageResidentDestination(
             VillageResidentDestinationKind.Home,
-            home.Position,
-            VillageLayout.GetEntranceWorldPosition(home));
+            building.Position,
+            VillageLayout.GetEntranceWorldPosition(building));
     }
 
     private static VillageResidentDestination ResolveWork(

@@ -1,70 +1,78 @@
-# Village Vertical Slice v0.3
+# Village Vertical Slice v0.4
 
-This milestone turns the existing authoritative settlement simulation into a physically playable village. It is deliberately a greybox milestone: dimensions, ownership and interaction seams are intended to survive art replacement even though meshes/materials are temporary.
+This milestone turns the authoritative settlement simulation into a physically playable village. Greybox dimensions, simulation identity, residence ownership and interaction seams are intended to survive later art replacement.
 
 ## Spatial contract
 
-- One Godot world unit is treated as one meter.
-- Playable village footprint: roughly 260 x 220 meters.
-- Main road: 7 meters wide; side lanes: 5 meters wide.
-- Buildings are placed with meaningful yards/setbacks rather than packed into a compact city block.
-- Greybox contains 14 buildings with physical wall collision and open, traversable doorways.
-- Work areas and fields sit outside the residential spine so travel time has real spatial meaning.
-- Farm and herb-grove work areas now have visible connecting tracks and distinct work anchors.
+- One Godot world unit is one meter.
+- Playable footprint is roughly 260 x 220 meters.
+- Main road is 7 meters wide; side lanes are 5 meters wide.
+- The greybox contains 14 buildings, including 10 residential homes.
+- Homes have playable footprints and open doorways; the player enters interiors without a loading transition.
+- Work areas and fields sit outside the residential spine so travel distance matters.
 
-The spatial layout is source-controlled data (`VillageLayout`) and validates its minimum scale/spacing in the Godot headless smoke. Final art assets must conform to these anchors instead of silently shrinking the village around the models.
+`VillageLayout` is source-controlled and validated by the Godot headless smoke. Final assets must fit these anchors rather than shrinking the world around the art.
 
-## Player feel target
+## Third-person player contract
 
-The target is an authored third-person exploration feel in the same broad family as The Witcher 3: character embodiment, camera-relative locomotion, a trailing collision-aware camera, walk/run speed distinction and smooth facing changes. This is an interaction/feel reference only; assets, animations, UI and content remain original.
+The feel target is authored third-person exploration in the broad family of The Witcher 3: character embodiment, camera-relative locomotion, trailing collision-aware camera, walk/run distinction and smooth facing. This is a feel reference only; assets, animation, UI and gameplay content remain original.
 
-The current slice includes WASD/left-stick movement, Shift/L3 sprint, mouse/right-stick camera control, independent character facing, `SpringArm3D` camera collision and Tab/Start world/menu switching.
+Current controls include WASD / left stick movement, Shift / L3 sprint, mouse / right-stick look, `SpringArm3D` camera collision and Tab / Start for the simulation HUD.
 
 ## Physical interaction contract
 
-World interaction is camera-directed but proximity bounded.
+- NPCs, projected item stacks and building entrances expose `Area3D` hit zones.
+- The camera interaction ray sees both world collision and interaction areas, so walls occlude targets.
+- World targets are accepted only inside the 3.6 meter player interaction bound.
+- `F` / gamepad `A` requests interaction with the physical target.
+- Resident targets carry authoritative `EntityId`; item inspection re-resolves the authoritative stack through `GameSession`.
+- Building entrances remain physical/contextual until door state becomes authoritative gameplay.
 
-- NPC, projected item stacks and building entrances expose `Area3D` hit zones on a dedicated interaction collision layer.
-- The player camera ray collides with world geometry and interaction areas, so walls can occlude targets.
-- A ray hit is accepted only when the target is within 3.6 meters of the player.
-- `F` / gamepad `A` requests interaction with the current physical target.
-- Resident targets carry authoritative `EntityId`; item targets carry authoritative stack/item identity.
-- Resident interaction goes through `GameSession` and the existing settlement command pipeline.
-- Item inspection re-resolves the stack through `GameSession` instead of trusting stale presentation state.
-- Building entrances are spatial context only; this slice does not invent lock/open gameplay before buildings exist in authoritative settlement state.
+Godot emits intent and presents facts; it does not mutate needs, inventory, jobs, affinity or authoritative time directly.
 
-## Resident movement contract
+## Simulation-driven resident movement
 
-Resident movement is driven by authoritative simulation state without making render coordinates authoritative.
+Authoritative hourly `ResidentActivity` drives presentation destinations:
 
-- `ResidentProjection` now exposes the already-persisted authoritative `WorkplaceId`; this is projection-only and does not change save schema.
-- `ResidentActivity.Working` routes the view toward the resident's projected workplace destination.
-- `Resting` routes to a stable home placeholder, `Eating` to the inn/food area, and `Idle` to deterministic social anchors.
-- Home placeholders are stable by `EntityId`, but they are explicitly **not** household ownership. Authoritative household/home assignment is the next domain slice.
-- Building destinations include a doorway access point, so routes enter homes/food/work interiors through their physical opening rather than crossing a wall.
-- A source-controlled village route graph follows the main road and work tracks. This avoids a runtime navmesh bake in the greybox while preserving intentional travel corridors.
-- Views walk at human-scale presentation speed and rotate toward their current path segment. Interaction hit zones move with the NPC.
-- Re-rendering after an interaction no longer resets residents to spawn positions.
-- `Space` / gamepad `Y` can advance one simulation hour while the world is visible, making activity changes and resulting travel observable directly in the village.
+- `Working` -> assigned `WorkplaceId`;
+- `Resting` -> authoritative residence;
+- `Eating` -> food/common area;
+- `Idle` -> deterministic social anchors.
 
-The simulation owns activity, needs, work assignment and inventory. Godot owns only visual interpolation along the route. View coordinates are not serialized or replay-authoritative, so save/replay results do not depend on frame rate or whether a mesh finished walking before the next simulation command.
+A source-controlled route graph moves resident views along roads and work tracks. Building destinations route through the actual doorway before the interior. Render coordinates are presentation-only and are never persisted or replay-authoritative.
 
-Current movement limitations are intentional: NPC bodies do not yet perform crowd avoidance, dynamic obstacle avoidance or animation-state matching. Those belong after authoritative home assignment and the first real character asset pipeline.
+## Authoritative residence contract
 
-## NPC visual identity
+Settlement schema v5 introduces persisted housing without duplicating membership truth.
 
-Authoritative identity remains `EntityId`. The greybox renderer derives stable body/height, skin, profession-biased clothing, profession marker and selected marker variants from projected resident data. These are replacement seams for modular character assets, not final art.
+- `HomeState` owns stable identity, display name, `SpatialKey` and capacity.
+- `HouseholdState` owns stable identity and exactly one `HomeId`.
+- `ResidentState` stores exactly one optional `HouseholdId`; resident membership is not duplicated as a household member list.
+- A home cannot be assigned to multiple households.
+- Assigned residents must reference an existing household and household occupancy cannot exceed home capacity.
+- `HomeId` is derived through the household and exposed in read-only projections.
+- `SpatialKey` maps authoritative homes to source-controlled physical buildings; display-name changes do not break routing.
+- All 10 visible residential buildings have authoritative `HomeState`, including currently vacant homes.
+- The default village has two occupied households: Mira and Tor share one home; Ena occupies another.
 
-## Item visual identity
+World-global entity identity includes homes and households. Their IDs live inside the existing settlement entity-ID block.
 
-Authoritative item identity remains the stable simulation `ItemId`. The world renderer maps projected stockpile stacks to distinct temporary forms: grain sacks, ration crates, herb bundles and a neutral fallback for future item IDs.
+Resident migration deliberately clears `WorkplaceId` and `HouseholdId`. The source household/home remains in the source settlement; the migrant arrives unassigned and can be allocated housing by a future gameplay rule.
+
+### Persistence compatibility
+
+Settlement schema advances from v4 to v5. `SettlementStateJson` explicitly migrates both v4 and v3 snapshots. Legacy residents load with `HouseholdId = 0` and no homes/households are fabricated. This preserves old state honestly instead of guessing historical residence assignments.
+
+## NPC and item identity
+
+NPC presentation remains derived from authoritative resident identity/profession and currently uses modular greybox variation. Stockpile presentation remains keyed by authoritative item IDs (`grain`, `ration`, `herb`, fallback). These are replacement seams for real art, not alternate gameplay identity.
 
 ## Immediate follow-up slices
 
-1. Authoritative households, home ownership and resident residence assignment.
-2. Real building/NPC/item asset archetype pipeline with stable visual archetype IDs.
-3. Idle/walk/run/work/interact animation state machine.
-4. Continuous/time-scale village clock and time-of-day lighting.
-5. NPC collision, crowd avoidance and richer route destinations once the population grows beyond the prototype residents.
+1. household gameplay: housing allocation, household consumption and relationship/family semantics;
+2. real building/NPC/item asset archetype pipeline;
+3. idle/walk/run/work/interact animation state machine;
+4. continuous/time-scale village clock and time-of-day lighting;
+5. NPC collision/crowd avoidance as population grows.
 
-The slice is not considered an art milestone. Its purpose is to make spatial scale, player embodiment, physical interaction and simulation-driven village life observable before deeper household and social rules are added.
+This is still a greybox gameplay milestone, not an art-complete milestone.
