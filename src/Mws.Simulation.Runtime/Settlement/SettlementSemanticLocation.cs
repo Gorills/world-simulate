@@ -8,7 +8,7 @@ internal static class SettlementSemanticLocation
     private const long LegacyPrototypeTravelDurationMilliseconds = 3_600_000;
 
     internal static SettlementActorLocationState Normalize(SettlementActorLocationState? location) =>
-        Normalize(location, allowLegacyMissingTravelProgress: true);
+        Normalize(location, allowLegacyMissingTravelProgress: false);
 
     internal static SettlementActorLocationState NormalizeForRestore(
         SettlementActorLocationState? location,

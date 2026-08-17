@@ -2,6 +2,12 @@ using Mws.Domain;
 
 namespace Mws.Simulation.Api;
 
+public static class WorldPlayerLocationVersions
+{
+    public const int LegacyEncodingVersion = 0;
+    public const int CurrentEncodingVersion = 1;
+}
+
 public sealed record WorldPlayerInventoryItemState(
     string ItemId,
     int Quantity);
@@ -10,7 +16,8 @@ public sealed record WorldPlayerActorState(
     EntityId Id,
     SimulationScopeId ScopeId,
     IReadOnlyList<WorldPlayerInventoryItemState> Inventory,
-    SettlementActorLocationState? Location = null);
+    SettlementActorLocationState? Location = null,
+    int LocationEncodingVersion = WorldPlayerLocationVersions.LegacyEncodingVersion);
 
 public sealed record WorldPlayerInventoryItemProjection(
     string ItemId,

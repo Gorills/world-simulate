@@ -60,7 +60,8 @@ public sealed partial class WorldRuntime
             playerId,
             scopeId,
             inventory,
-            SettlementActorLocationState.At(SettlementPlaceRef.Settlement));
+            SettlementActorLocationState.At(SettlementPlaceRef.Settlement),
+            WorldPlayerLocationVersions.CurrentEncodingVersion);
         _entityLocations.Add(playerId.Value, scopeId);
         _nextEntityId = checked(_nextEntityId + 1);
         return playerId;
@@ -78,9 +79,24 @@ public sealed partial class WorldRuntime
             throw new InvalidOperationException("World player actor metadata is invalid or collides globally.");
         }
 
+        if (state.LocationEncodingVersion is not (
+            WorldPlayerLocationVersions.LegacyEncodingVersion
+            or WorldPlayerLocationVersions.CurrentEncodingVersion))
+        {
+            throw new NotSupportedException(
+                $"World player location encoding {state.LocationEncodingVersion} is unsupported.");
+        }
+
         var inventory = CanonicalPlayerInventory(state.Inventory);
-        var location = SettlementSemanticLocation.Normalize(state.Location);
-        _player = new WorldPlayerActorState(state.Id, state.ScopeId, inventory, location);
+        var location = SettlementSemanticLocation.NormalizeForRestore(
+            state.Location,
+            state.LocationEncodingVersion == WorldPlayerLocationVersions.LegacyEncodingVersion);
+        _player = new WorldPlayerActorState(
+            state.Id,
+            state.ScopeId,
+            inventory,
+            location,
+            WorldPlayerLocationVersions.CurrentEncodingVersion);
         _entityLocations.Add(state.Id.Value, state.ScopeId);
     }
 
@@ -98,7 +114,8 @@ public sealed partial class WorldRuntime
                 .Select(item => new WorldPlayerInventoryItemState(item.ItemId, item.Quantity))
                 .ToArray(),
             SettlementSemanticLocation.Capture(
-                SettlementSemanticLocation.Normalize(_player.Location)));
+                SettlementSemanticLocation.Normalize(_player.Location)),
+            WorldPlayerLocationVersions.CurrentEncodingVersion);
     }
 
     private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(
