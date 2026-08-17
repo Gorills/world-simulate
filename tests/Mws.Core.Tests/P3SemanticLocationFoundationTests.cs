@@ -44,6 +44,35 @@ public sealed class P3SemanticLocationFoundationTests
     }
 
     [Fact]
+    public void ExplicitSettlementLocationDoesNotBecomeClockDerivedAfterSaveLoad()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9306)).CaptureState();
+        var resident = state.Residents[0];
+        var explicitSettlement = SettlementActorLocationState.At(SettlementPlaceRef.Settlement);
+        var residents = state.Residents
+            .Select(entry => entry.Id == resident.Id ? entry with { Location = explicitSettlement } : entry)
+            .ToArray();
+        var simulation = SettlementSimulation.Restore(state with
+        {
+            Time = new SimulationTime(8 * SettlementSimulation.HourMilliseconds),
+            Residents = residents,
+        });
+
+        var captured = simulation.CaptureState();
+        var capturedResident = Assert.Single(captured.Residents, entry => entry.Id == resident.Id);
+        Assert.Equal(explicitSettlement, capturedResident.Location);
+
+        var json = SettlementStateJson.Serialize(captured);
+        var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(json));
+        var location = RequireLocation(restored, resident.Id);
+
+        Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+        Assert.Equal(SettlementPlaceRef.Settlement, location.CurrentPlace);
+        Assert.Equal(location.CurrentPlace, location.DestinationPlace);
+        Assert.Null(location.Travel);
+    }
+
+    [Fact]
     public void ActiveTravelProgressPersistsAcrossHoursAndSaveLoad()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9304)).CaptureState();
