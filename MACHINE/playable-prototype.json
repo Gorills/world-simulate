@@ -20,11 +20,11 @@
     },
     {
       "id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
-      "status": "AUDIT_REQUIRED",
+      "status": "FAILED",
       "depends_on": [
         "P1_PLAYABLE_USES_WORLD_RUNTIME"
       ],
-      "latest_audit": null
+      "latest_audit": "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/P2_R1.json"
     },
     {
       "id": "P3_SEMANTIC_LOCATION_AND_TRAVEL",

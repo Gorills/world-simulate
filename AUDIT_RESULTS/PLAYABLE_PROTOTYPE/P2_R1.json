@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
+  "subject_sha": "5449784ecff669914a68ed0e283e30db76ef5849",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "FAIL",
+  "systems_audit": "FAIL",
+  "overall": "FAIL",
+  "validation": [
+    "Reviewed the complete P2 range 02b136ea8be82fe487b89360d788378a44ee0b7e..5449784ecff669914a68ed0e283e30db76ef5849 against the authoritative-player acceptance boundary.",
+    "Confirmed player identity is allocated from the world-global entity sequence, registered in the entity directory, persisted in the world manifest and restored before entity-directory verification.",
+    "Confirmed player inventory is authoritative world state and coarse semantic location is SimulationScopeId; no render coordinates or P3 place/travel semantics entered P2.",
+    "Confirmed AddPlayerActor is journaled as a world input and replay allocates/validates the same player identity.",
+    "Confirmed the Godot player presentation does not own WorldPlayer state or inventory and GameWorldSession reads the player projection from WorldRuntime.",
+    "Confirmed resident migration safely rejects the player as RESIDENT_NOT_FOUND without moving player state.",
+    "Exact-SHA CI snapshot showed scope success, core failure, Godot skipped and ci-required failure.",
+    "Inspected only failed core job 95329404226. Build failed with CA1859 in WorldRuntime.Player.cs because CanonicalPlayerInventory returns IReadOnlyList although Array.AsReadOnly provides a concrete ReadOnlyCollection.",
+    "Static review also identified a nullable-flow risk in the AddPlayerActor replay case because entry.AddPlayerActor is dereferenced again after a separate null-forgiving access under Nullable=enable and TreatWarningsAsErrors=true."
+  ],
+  "systems_examined": [
+    "world-global player identity allocation",
+    "entity directory and next-entity invariants",
+    "authoritative player inventory",
+    "coarse settlement-scope location",
+    "world manifest capture/restore",
+    "world input journal and replay",
+    "resident migration interaction with player entity IDs",
+    "GameWorldSession player projection boundary",
+    "Godot player presentation ownership",
+    "P2/P3 scope boundary",
+    "core and Godot CI dependency chain"
+  ],
+  "findings": [
+    {
+      "severity": "BLOCKER",
+      "code": "P2_CORE_BUILD_CA1859",
+      "summary": "WorldRuntime.Player.CanonicalPlayerInventory returns IReadOnlyList<WorldPlayerInventoryItemState>; latest-recommended analyzer CA1859 is promoted to an error. Return the concrete ReadOnlyCollection produced by Array.AsReadOnly."
+    },
+    {
+      "severity": "BLOCKER",
+      "code": "P2_REPLAY_NULLABILITY_RISK",
+      "summary": "The AddPlayerActor replay branch uses entry.AddPlayerActor! for ScopeId but dereferences entry.AddPlayerActor again for CreatedPlayerId. Bind the validated payload to a local non-null variable so nullable-flow analysis cannot fail after the CA1859 repair."
+    }
+  ],
+  "residual_risks": [
+    "WorldRuntime ordinary tick/command full-state staging remains intentionally deferred to P4.",
+    "Player semantic location is deliberately coarse SimulationScopeId only; finer AtPlace/Travelling semantics belong to P3.",
+    "World manifest Player is additive/optional without a world version bump; current persistence/replay compatibility is covered, while formal cross-version migration policy remains future work if the world schema must support older binaries reading new saves.",
+    "The feature branch remains unprotected server-side; enforcement is repository/CI/agent based."
+  ]
+}
