@@ -1,6 +1,6 @@
 # Settlement Intention and Task Selection — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the minimum causal bridge between an ordinary person's current world state and the task/intention that a controller chooses next. It does **not** define one universal medieval preference function, one fixed daily schedule, exact numerical utility weights, personality psychology, household command authority, travel duration/routing, demographic rates or economic calibration.
 
