@@ -1,6 +1,8 @@
 # P3 Semantic Location and Travel — Model Contract
 
-Status: **MODEL_UNDERDEFINED**. This contract blocks P3 PASS until the causal/historical model is repaired and independently reviewed.
+Status: **MODEL_UNDERDEFINED**
+
+This contract blocks P3 PASS until the causal/historical model is repaired and independently reviewed.
 
 ## Mechanic
 Represent where an ordinary person is, where they intend/need to go, and travel between meaningful places without persisting render coordinates.
