@@ -20,7 +20,7 @@
     },
     {
       "id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
-      "status": "IMPLEMENTING",
+      "status": "AUDIT_REQUIRED",
       "depends_on": [
         "P1_PLAYABLE_USES_WORLD_RUNTIME"
       ],
