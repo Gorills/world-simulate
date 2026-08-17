@@ -6,7 +6,7 @@
   "phases": [
     {
       "id": "P0_PROCESS_GATE",
-      "status": "IMPLEMENTING",
+      "status": "AUDIT_REQUIRED",
       "depends_on": [],
       "latest_audit": null
     },

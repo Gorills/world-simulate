@@ -18,8 +18,39 @@ At most one phase may be in `IMPLEMENTING`, `AUDIT_REQUIRED`, or `FAILED`.
 
 A later phase may leave `LOCKED` only when every dependency is `PASSED`.
 
+Allowed status transitions are deliberately narrow:
+
+- `LOCKED -> IMPLEMENTING`;
+- `IMPLEMENTING -> AUDIT_REQUIRED`;
+- `AUDIT_REQUIRED -> PASSED | FAILED`;
+- `FAILED -> IMPLEMENTING`;
+- `PASSED` is terminal for that program version.
+
+Only one phase status may change in a single transition. In particular, the commit that records an audit `PASS` must not also start the next phase.
+
 The authoritative machine-readable state is `MACHINE/playable-prototype.json`.
 Run `python TOOLS/validate_playable_prototype.py` before normal validation.
+
+## Enforced implementation scope
+
+When Git metadata is available, the validator checks both declared state and actual changes.
+
+Protected scope includes:
+
+- `src/`, `tests/`, `benchmarks/`;
+- `TOOLS/`, `DESIGN/`, `.github/workflows/`;
+- root `AGENTS.md` and build/solution configuration files.
+
+Protected working-tree changes require the relevant phase to be `IMPLEMENTING`. The one exception is the same working tree transition from `IMPLEMENTING` to `AUDIT_REQUIRED`, which may contain the final implementation edits.
+
+A committed protected change is valid only when:
+
+- the phase is `IMPLEMENTING`; or
+- the commit closes that same phase from parent `IMPLEMENTING` to `AUDIT_REQUIRED`.
+
+Protected edits are therefore rejected while a phase is `AUDIT_REQUIRED`, `FAILED`, or after all completed phases are `PASSED`, unless the state is first moved through an allowed transition.
+
+The gate also verifies audit subject commits from repository history and requires an audit subject to show that phase as `AUDIT_REQUIRED`. CI checks out full history so old audit evidence remains verifiable as later phases accumulate.
 
 ## Audit independence contract
 

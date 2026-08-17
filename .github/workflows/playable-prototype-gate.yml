@@ -5,14 +5,6 @@ on:
     branches:
       - main
       - feature/village-vertical-slice
-    paths:
-      - "AGENTS.md"
-      - "DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md"
-      - "MACHINE/playable-prototype.json"
-      - "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/**"
-      - "TOOLS/validate_playable_prototype.py"
-      - "TOOLS/dev.py"
-      - ".github/workflows/playable-prototype-gate.yml"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -32,9 +24,10 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
 
       - name: Validate gate tooling syntax
         run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py
 
-      - name: Validate playable prototype phase state
+      - name: Validate playable prototype phase state and scope
         run: python TOOLS/validate_playable_prototype.py
