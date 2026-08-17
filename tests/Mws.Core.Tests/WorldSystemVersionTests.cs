@@ -23,6 +23,7 @@ public sealed class WorldSystemVersionTests
 
         Assert.Equal(expected, restored.SystemVersions.ToArray());
         Assert.Contains(WorldSystemIds.SettlementHourly, serialized, StringComparison.Ordinal);
+        Assert.Contains(WorldSystemIds.InputJournal, serialized, StringComparison.Ordinal);
         Assert.Contains(WorldSystemIds.ResidentMigration, serialized, StringComparison.Ordinal);
         Assert.Contains(WorldSystemIds.Scheduler, serialized, StringComparison.Ordinal);
     }

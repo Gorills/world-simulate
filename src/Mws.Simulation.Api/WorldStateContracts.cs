@@ -5,7 +5,7 @@ namespace Mws.Simulation.Api;
 
 public static class WorldVersions
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public const string CurrentModelVersion = "world-model-v1";
     public const string CurrentRulesVersion = "world-rules-v1";
     public const string CurrentContentVersion = "world-content-v1";
@@ -14,6 +14,7 @@ public static class WorldVersions
 public static class WorldSystemIds
 {
     public const string SettlementHourly = "settlement-hourly";
+    public const string InputJournal = "world-input-journal";
     public const string ResidentMigration = "world-resident-migration";
     public const string Scheduler = "world-scheduler";
 }
@@ -21,6 +22,7 @@ public static class WorldSystemIds
 public static class WorldSystemVersions
 {
     public const string SettlementHourly = "1.0.0";
+    public const string InputJournal = "1.0.0";
     public const string ResidentMigration = "1.0.0";
     public const string Scheduler = "1.0.0";
 
@@ -28,6 +30,7 @@ public static class WorldSystemVersions
         Array.AsReadOnly(new[]
         {
             new WorldSystemVersion(WorldSystemIds.SettlementHourly, SettlementHourly),
+            new WorldSystemVersion(WorldSystemIds.InputJournal, InputJournal),
             new WorldSystemVersion(WorldSystemIds.ResidentMigration, ResidentMigration),
             new WorldSystemVersion(WorldSystemIds.Scheduler, Scheduler),
         });
@@ -75,6 +78,22 @@ public static class WorldOperationKinds
     public const string ResidentMigration = "resident-migration";
 }
 
+public enum WorldInputKind
+{
+    AddDefaultSettlement,
+    AllocateOperationId,
+    AdvanceTo,
+    SettlementCommand,
+    ResidentMigration,
+}
+
+public enum WorldSettlementCommandKind
+{
+    FeedResident,
+    GiveItemToResident,
+    InteractWithResident,
+}
+
 public sealed record WorldSystemVersion(
     string SystemId,
     string Version);
@@ -103,6 +122,34 @@ public sealed record WorldOperationReceipt(
     SimulationScopeId? SourceScopeId,
     SimulationScopeId? DestinationScopeId);
 
+public sealed record WorldAddDefaultSettlementInput(
+    SimulationScopeId CreatedScopeId);
+
+public sealed record WorldAllocateOperationIdInput(
+    WorldOperationId AllocatedOperationId);
+
+public sealed record WorldAdvanceToInput(
+    SimulationTime TargetTime);
+
+public sealed record WorldSettlementCommandInput(
+    SimulationScopeId ScopeId,
+    WorldSettlementCommandKind CommandKind,
+    CommandId CommandId,
+    EntityId ResidentId,
+    string? ItemId,
+    int Quantity,
+    ResidentInteractionChoice? InteractionChoice);
+
+public sealed record WorldInputJournalEntry(
+    long Sequence,
+    SimulationTime RecordedAt,
+    WorldInputKind Kind,
+    WorldAddDefaultSettlementInput? AddDefaultSettlement,
+    WorldAllocateOperationIdInput? AllocateOperationId,
+    WorldAdvanceToInput? AdvanceTo,
+    WorldSettlementCommandInput? SettlementCommand,
+    ResidentMigrationIntent? ResidentMigration);
+
 public sealed record WorldManifestState(
     int SchemaVersion,
     string ModelVersion,
@@ -120,12 +167,31 @@ public sealed record WorldManifestState(
     IReadOnlyList<WorldOperationReceipt> OperationReceipts)
 {
     private IReadOnlyList<WorldSystemVersion> _systemVersions = WorldSystemVersions.CreateCurrent();
+    private IReadOnlyList<WorldInputJournalEntry> _inputJournal =
+        Array.AsReadOnly(Array.Empty<WorldInputJournalEntry>());
 
     [JsonRequired]
     public IReadOnlyList<WorldSystemVersion> SystemVersions
     {
         get => _systemVersions;
         init => _systemVersions = WorldSystemVersions.RequireCurrent(value);
+    }
+
+    [JsonRequired]
+    public long InputJournalFloor { get; init; } = 1;
+
+    [JsonRequired]
+    public long NextInputSequence { get; init; } = 1;
+
+    [JsonRequired]
+    public IReadOnlyList<WorldInputJournalEntry> InputJournal
+    {
+        get => _inputJournal;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _inputJournal = Array.AsReadOnly(value.ToArray());
+        }
     }
 }
 

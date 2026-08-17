@@ -8,23 +8,50 @@ public sealed partial class WorldRuntime
     public IReadOnlyList<WorldOperationReceipt> ResolveMigrations(IEnumerable<ResidentMigrationIntent> intents)
     {
         ArgumentNullException.ThrowIfNull(intents);
-        return intents
+        var ordered = intents
             .OrderBy(intent => intent.OperationId.Value)
             .ThenBy(intent => intent.ResidentId.Value)
             .ThenBy(intent => intent.SourceScopeId.Value)
             .ThenBy(intent => intent.DestinationScopeId.Value)
-            .Select(ResolveMigration)
             .ToArray();
+
+        EnsureInputJournalCapacity(ordered.Length);
+        var results = new WorldOperationReceipt[ordered.Length];
+        for (var index = 0; index < ordered.Length; index++)
+        {
+            var recordedAt = Time;
+            results[index] = ResolveMigrationCore(ordered[index]);
+            RecordInput(CreateInput(
+                recordedAt,
+                WorldInputKind.ResidentMigration,
+                residentMigration: ordered[index]));
+        }
+
+        return results;
     }
 
     public WorldOperationReceipt MigrateResident(
         WorldOperationId operationId,
         EntityId residentId,
         SimulationScopeId sourceScopeId,
-        SimulationScopeId destinationScopeId) =>
-        ResolveMigration(new ResidentMigrationIntent(operationId, residentId, sourceScopeId, destinationScopeId));
+        SimulationScopeId destinationScopeId)
+    {
+        EnsureInputJournalCapacity(1);
+        var recordedAt = Time;
+        var intent = new ResidentMigrationIntent(
+            operationId,
+            residentId,
+            sourceScopeId,
+            destinationScopeId);
+        var result = ResolveMigrationCore(intent);
+        RecordInput(CreateInput(
+            recordedAt,
+            WorldInputKind.ResidentMigration,
+            residentMigration: intent));
+        return result;
+    }
 
-    private WorldOperationReceipt ResolveMigration(ResidentMigrationIntent intent)
+    private WorldOperationReceipt ResolveMigrationCore(ResidentMigrationIntent intent)
     {
         if (intent.OperationId.Value <= 0 || intent.OperationId.Value == long.MaxValue)
         {

@@ -11,11 +11,14 @@ public sealed partial class WorldRuntime
     private readonly SortedDictionary<ulong, WorldPartitionRuntime> _partitions = [];
     private readonly SortedDictionary<long, SimulationScopeId> _entityLocations = [];
     private readonly SortedDictionary<long, WorldOperationReceipt> _operationReceipts = [];
+    private readonly Queue<WorldInputJournalEntry> _inputJournal = new();
     private ulong _nextScopeId;
     private long _nextEntityId;
     private long _nextOperationId;
     private long _operationReceiptFloor;
     private long _checkpointId;
+    private long _inputJournalFloor;
+    private long _nextInputSequence;
 
     private WorldRuntime(
         ulong worldSeed,
@@ -24,14 +27,19 @@ public sealed partial class WorldRuntime
         long nextEntityId,
         long nextOperationId,
         long operationReceiptFloor,
-        long checkpointId)
+        long checkpointId,
+        long inputJournalFloor,
+        long nextInputSequence)
     {
         if (time.Milliseconds < 0
             || nextScopeId == 0
             || nextEntityId <= 0
             || nextOperationId <= 0
             || operationReceiptFloor <= 0
-            || checkpointId < 0)
+            || checkpointId < 0
+            || inputJournalFloor <= 0
+            || nextInputSequence <= 0
+            || inputJournalFloor > nextInputSequence)
         {
             throw new InvalidOperationException("World runtime counters and time must be valid positive monotonic values.");
         }
@@ -43,6 +51,8 @@ public sealed partial class WorldRuntime
         _nextOperationId = nextOperationId;
         _operationReceiptFloor = operationReceiptFloor;
         _checkpointId = checkpointId;
+        _inputJournalFloor = inputJournalFloor;
+        _nextInputSequence = nextInputSequence;
     }
 
     public SimulationTime Time { get; private set; }
@@ -51,7 +61,7 @@ public sealed partial class WorldRuntime
         _partitions.Keys.Select(value => new SimulationScopeId(value)).ToArray();
 
     public static WorldRuntime Create(WorldSeed seed) =>
-        new(seed.Value, new SimulationTime(0), 1, 1, 1, 1, 0);
+        new(seed.Value, new SimulationTime(0), 1, 1, 1, 1, 0, 1, 1);
 
     public static WorldRuntime Restore(WorldCheckpointState checkpoint)
     {
@@ -66,7 +76,9 @@ public sealed partial class WorldRuntime
             manifest.NextEntityId,
             manifest.NextOperationId,
             manifest.OperationReceiptFloor,
-            manifest.CheckpointId);
+            manifest.CheckpointId,
+            manifest.InputJournalFloor,
+            manifest.NextInputSequence);
 
         var descriptors = manifest.Partitions.ToDictionary(descriptor => descriptor.ScopeId.Value);
         if (descriptors.Count != manifest.Partitions.Count || checkpoint.Partitions.Count != descriptors.Count)
@@ -113,31 +125,9 @@ public sealed partial class WorldRuntime
             world._operationReceipts.Add(receipt.OperationId.Value, receipt);
         }
 
+        world.RestoreInputJournal(manifest.InputJournal);
         world.ValidateCounters();
         return world;
-    }
-
-    public SimulationScopeId AddDefaultSettlement()
-    {
-        if (_nextScopeId == ulong.MaxValue)
-        {
-            throw new InvalidOperationException("World scope ID space is exhausted.");
-        }
-
-        if (_nextEntityId > long.MaxValue - SettlementPrototypeContent.EntityIdSpan)
-        {
-            throw new InvalidOperationException("World entity ID space cannot reserve another settlement block.");
-        }
-
-        var scopeId = new SimulationScopeId(_nextScopeId);
-        var blockStart = _nextEntityId;
-        var entityIdOffset = checked(blockStart - 1);
-        var settlement = SettlementSimulation.CreateDefault(new WorldSeed(_worldSeed), scopeId, entityIdOffset);
-
-        AddPartition(settlement, revision: 0);
-        _nextScopeId = checked(_nextScopeId + 1);
-        _nextEntityId = checked(blockStart + SettlementPrototypeContent.EntityIdSpan);
-        return scopeId;
     }
 
     public SettlementState CaptureSettlementState(SimulationScopeId scopeId) =>
@@ -151,18 +141,6 @@ public sealed partial class WorldRuntime
 
     public bool TryGetEntityLocation(EntityId entityId, out SimulationScopeId scopeId) =>
         _entityLocations.TryGetValue(entityId.Value, out scopeId);
-
-    public WorldOperationId AllocateOperationId()
-    {
-        if (_nextOperationId <= 0 || _nextOperationId == long.MaxValue)
-        {
-            throw new InvalidOperationException("World operation ID space is exhausted or invalid.");
-        }
-
-        var id = new WorldOperationId(_nextOperationId);
-        _nextOperationId = checked(_nextOperationId + 1);
-        return id;
-    }
 
     public WorldCheckpointState CreateCheckpoint()
     {
@@ -204,7 +182,13 @@ public sealed partial class WorldRuntime
             _entityLocations
                 .Select(entry => new WorldEntityLocation(new EntityId(entry.Key), entry.Value))
                 .ToArray(),
-            _operationReceipts.Values.ToArray());
+            _operationReceipts.Values.ToArray())
+        {
+            SystemVersions = WorldSystemVersions.CreateCurrent(),
+            InputJournalFloor = _inputJournalFloor,
+            NextInputSequence = _nextInputSequence,
+            InputJournal = _inputJournal.ToArray(),
+        };
         return new WorldCheckpointState(manifest, partitionStates);
     }
 
@@ -253,7 +237,10 @@ public sealed partial class WorldRuntime
         if (_nextScopeId <= maxScope
             || _nextEntityId <= maxEntity
             || _nextOperationId <= maxOperation
-            || _operationReceiptFloor > _nextOperationId)
+            || _operationReceiptFloor > _nextOperationId
+            || _inputJournalFloor <= 0
+            || _nextInputSequence <= 0
+            || _inputJournalFloor > _nextInputSequence)
         {
             throw new InvalidOperationException("World checkpoint next-ID markers are not monotonic.");
         }
@@ -278,7 +265,8 @@ public sealed partial class WorldRuntime
         if (manifest.SchemaVersion != WorldVersions.CurrentSchemaVersion
             || !string.Equals(manifest.ModelVersion, WorldVersions.CurrentModelVersion, StringComparison.Ordinal)
             || !string.Equals(manifest.RulesVersion, WorldVersions.CurrentRulesVersion, StringComparison.Ordinal)
-            || !string.Equals(manifest.ContentVersion, WorldVersions.CurrentContentVersion, StringComparison.Ordinal))
+            || !string.Equals(manifest.ContentVersion, WorldVersions.CurrentContentVersion, StringComparison.Ordinal)
+            || !WorldSystemVersions.IsCurrent(manifest.SystemVersions))
         {
             throw new NotSupportedException("World checkpoint version bundle is unsupported.");
         }

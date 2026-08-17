@@ -16,16 +16,24 @@ public sealed partial class WorldRuntime
 
     public void AdvanceTo(SimulationTime target)
     {
-        if (target.Milliseconds < Time.Milliseconds)
+        ValidateAdvanceTarget(target);
+        if (target == Time)
         {
-            throw new InvalidOperationException("World simulation time is monotonic.");
+            return;
         }
 
-        if (target.Milliseconds % SettlementSimulation.HourMilliseconds != 0)
-        {
-            throw new ArgumentException("World simulation advances on canonical whole-hour boundaries.", nameof(target));
-        }
+        EnsureInputJournalCapacity(1);
+        var recordedAt = Time;
+        AdvanceToCore(target);
+        RecordInput(CreateInput(
+            recordedAt,
+            WorldInputKind.AdvanceTo,
+            advanceTo: new WorldAdvanceToInput(target)));
+    }
 
+    private void AdvanceToCore(SimulationTime target)
+    {
+        ValidateAdvanceTarget(target);
         if (target == Time)
         {
             return;
@@ -51,5 +59,20 @@ public sealed partial class WorldRuntime
         }
 
         Time = target;
+    }
+
+    private void ValidateAdvanceTarget(SimulationTime target)
+    {
+        if (target.Milliseconds < Time.Milliseconds)
+        {
+            throw new InvalidOperationException("World simulation time is monotonic.");
+        }
+
+        if (target.Milliseconds % SettlementSimulation.HourMilliseconds != 0)
+        {
+            throw new ArgumentException(
+                "World simulation advances on canonical whole-hour boundaries.",
+                nameof(target));
+        }
     }
 }
