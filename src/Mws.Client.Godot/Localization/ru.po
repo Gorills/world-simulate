@@ -106,6 +106,33 @@ msgstr "{0} × {1} · запасы деревни"
 msgid "UI_PROMPT_ENTRANCE_OPEN"
 msgstr "{0} · проход открыт — можно войти"
 
+msgid "UI_DEBUG_TITLE"
+msgstr "Наблюдение за деревней [F3]"
+
+msgid "UI_DEBUG_SUMMARY"
+msgstr "Жителей {0} · отображается {1} · работа {2} · еда {3} · отдых {4} · без дела {5}"
+
+msgid "UI_DEBUG_TIME"
+msgstr "День {0}, {1}:00 · игрок X {2:0} Z {3:0}"
+
+msgid "UI_DEBUG_RESIDENT_ROW"
+msgstr "{0} #{1} · {2} · Г{3} Э{4} · {5} {6} {7:0}м · {8} т."
+
+msgid "UI_DEBUG_DEST_SOCIAL"
+msgstr "общественное место"
+
+msgid "UI_DEBUG_DEST_UNASSIGNED_HOME"
+msgstr "дом не назначен"
+
+msgid "UI_DEBUG_ROUTE_MISMATCH"
+msgstr "маршрут не совпадает с авторитетной активностью"
+
+msgid "UI_DEBUG_LEGEND"
+msgstr "Точки = жители · линия = оставшийся маршрут · крест = цель · кольцо/крест = игрок"
+
+msgid "UI_DEBUG_NO_DATA"
+msgstr "Данных о жителях пока нет."
+
 msgid "CONTENT_PROFESSION_FARMER"
 msgstr "Фермер"
 

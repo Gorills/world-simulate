@@ -125,11 +125,36 @@ public sealed class GodotClientQualityTests
 
         Assert.Equal(english, russian);
         Assert.Contains("UI_SETTLEMENT", english);
+        Assert.Contains("UI_DEBUG_TITLE", english);
         Assert.Contains("CONTENT_ITEM_RATION", english);
         Assert.Contains("FEEDBACK_ACTION_FAILED", english);
         Assert.Contains("locale/fallback=\"en\"", project, StringComparison.Ordinal);
         Assert.Contains("res://Localization/en.po", project, StringComparison.Ordinal);
         Assert.Contains("res://Localization/ru.po", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void VillageDebugObserverIsPresentationOnlyAndRemovable()
+    {
+        var client = FindClientRoot();
+        var debugRoot = Path.Combine(client, "Debug", "VillageMonitor");
+        Assert.True(Directory.Exists(debugRoot));
+
+        foreach (var file in Directory.EnumerateFiles(debugRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            var text = File.ReadAllText(file);
+            Assert.DoesNotContain("Mws.Simulation.Runtime", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Mws.Client.Godot.Session", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("AdvanceHours(", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Execute(", text, StringComparison.Ordinal);
+        }
+
+        var main = File.ReadAllText(Path.Combine(client, "App", "Main.cs"));
+        var mainScene = File.ReadAllText(Path.Combine(client, "App", "Main.tscn"));
+        var debugInput = File.ReadAllText(Path.Combine(client, "Input", "DebugInput.cs"));
+        Assert.DoesNotContain("VillageDebug", main, StringComparison.Ordinal);
+        Assert.Contains("res://Debug/VillageMonitor/VillageDebugOverlay.tscn", mainScene, StringComparison.Ordinal);
+        Assert.Contains("Key.F3", debugInput, StringComparison.Ordinal);
     }
 
     [Fact]
