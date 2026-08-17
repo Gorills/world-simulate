@@ -181,7 +181,7 @@ internal static class SettlementPrototypeContent
             name,
             hunger,
             energy,
-            ResidentActivity.Idle,
+            ResidentActivity.Resting,
             profession,
             workplaceId,
             0,

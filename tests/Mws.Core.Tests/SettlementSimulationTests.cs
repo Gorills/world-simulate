@@ -29,6 +29,23 @@ public sealed class SettlementSimulationTests
     }
 
     [Fact]
+    public void DefaultVillageStartsRestingAndTransitionsToWorkAtEight()
+    {
+        var simulation = SettlementSimulation.CreateDefault(new WorldSeed(507));
+        var midnight = simulation.Project();
+
+        Assert.Equal(0, midnight.Hour);
+        Assert.Equal(12, midnight.Residents.Count);
+        Assert.All(midnight.Residents, resident => Assert.Equal(ResidentActivity.Resting, resident.Activity));
+
+        simulation.AdvanceHours(8);
+        var morning = simulation.Project();
+
+        Assert.Equal(8, morning.Hour);
+        Assert.All(morning.Residents, resident => Assert.Equal(ResidentActivity.Working, resident.Activity));
+    }
+
+    [Fact]
     public void WorkplacesProduceAndTransformOwnedItemStacks()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(502));

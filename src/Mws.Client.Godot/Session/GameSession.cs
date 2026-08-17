@@ -11,12 +11,15 @@ internal sealed class GameSession
     public GameSession(WorldSeed seed)
     {
         _simulation = SettlementSimulation.CreateDefault(seed);
+        _simulation.AdvanceHours(PlaytestTimeProfile.StartHour);
         SelectedResidentId = _simulation.Project().Residents[0].Id;
     }
 
     public event Action? Changed;
 
     public EntityId SelectedResidentId { get; private set; }
+
+    public SimulationTime Time => _simulation.Time;
 
     public SettlementProjection Projection => _simulation.Project();
 

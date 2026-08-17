@@ -5,7 +5,6 @@ using Mws.Client.Godot.Session;
 using Mws.Client.Godot.UI.Screens.Hud;
 using Mws.Client.Godot.World.Village;
 using Mws.Domain;
-using Mws.Simulation.Api;
 using PromptView = Mws.Client.Godot.UI.Screens.WorldInteractionPrompt.WorldInteractionPrompt;
 
 namespace Mws.Client.Godot.App;
@@ -35,9 +34,14 @@ public partial class Main : Node
 
             if (string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase))
             {
-                RunHeadlessSmoke();
+                GD.Print(HeadlessClientSmoke.Run(_session));
+                GetTree().Quit(0);
                 return;
             }
+
+            var clock = new PlaytestClock();
+            AddChild(clock);
+            clock.Bind(_session);
 
             _village = GetNode<VillageWorld>("VillageWorld");
             _prompt = GetNode<PromptView>("WorldInteractionPrompt");
@@ -142,39 +146,5 @@ public partial class Main : Node
         }
 
         _village.Render(_session.Projection, _session.SelectedResidentId);
-    }
-
-    private void RunHeadlessSmoke()
-    {
-        if (_session is null)
-        {
-            throw new InvalidOperationException("Game session was not created.");
-        }
-
-        GameLocalization.ValidateCatalogs();
-        _session.AdvanceHours(24);
-        var interaction = _session.InteractSelected(ResidentInteractionChoice.Encourage);
-        var projection = _session.Projection;
-        VillageWorld.ValidateLifeProjection(projection);
-        var stockpileStack = projection.Stockpile[0];
-
-        if (!interaction.Success
-            || projection.Day != 1
-            || projection.Residents.Count != VillageLayout.PlaytestResidentCount
-            || projection.Homes?.Count != 10
-            || projection.Households?.Count != 6
-            || _session.FindStockpileStack(stockpileStack.StackId) is null)
-        {
-            throw new InvalidOperationException("Client foundation smoke produced an invalid state.");
-        }
-
-        var resident = _session.SelectedResident;
-        GD.Print(
-            $"MWS_GODOT_SMOKE_OK client=village-v0.10 day={projection.Day} resident={resident.Name} " +
-            $"population={projection.Residents.Count} affinity={resident.Affinity} " +
-            "input=third-person-keyboard-gamepad-validated locale=en-ru-validated " +
-            "spatial=village-layout-validated interaction=session-targeting-validated " +
-            "life=authoritative-residence-routing-validated");
-        GetTree().Quit(0);
     }
 }

@@ -1,6 +1,6 @@
-# Village Vertical Slice v0.10
+# Village Vertical Slice v0.11
 
-This milestone turns the authoritative settlement simulation into a physically playable village. Greybox dimensions, simulation identity, residence ownership, population density, interaction seams and debug observability are intended to survive later art replacement.
+This milestone turns the authoritative settlement simulation into a physically playable village. Greybox dimensions, simulation identity, residence ownership, population density, interaction seams, time progression and debug observability are intended to survive later art replacement.
 
 ## Spatial contract
 
@@ -54,6 +54,20 @@ Authoritative hourly `ResidentActivity` drives presentation destinations:
 
 A source-controlled route graph moves resident views along roads and work tracks. Building destinations route through the actual doorway before the interior. Render coordinates are presentation-only and are never persisted or replay-authoritative.
 
+## Playtest time contract
+
+The authoritative settlement runtime still advances only on canonical whole-hour boundaries and never reads ambient wall-clock time. The playable client owns only the cadence that decides when to request those deterministic hour advances.
+
+- Prototype residents start in `Resting`, which is consistent with authoritative time `00:00` before the first scheduler step.
+- A new playable `GameSession` bootstraps the deterministic runtime through hour 08:00 before the world is shown, so resident activity is already scheduler-derived at play start.
+- At the current content baseline, all 12 residents are `Working` at 08:00; a core test protects this schedule contract.
+- `PlaytestTimeProfile` is the single tuning store for client time cadence. Current baseline is one game minute per real second, or one authoritative game hour every 60 real seconds.
+- `PlaytestClock` lives on the Godot/client boundary and calls the existing `GameSession.AdvanceHours()` API; it never mutates resident state directly.
+- Manual `T / Y` hour advance remains available. External/manual time changes reset the real-time clock phase so a manual skip is not immediately followed by an accidental automatic extra hour.
+- Opening HUD or the F3 observer does not pause authoritative playtest time.
+
+The 60-second cadence is a playtest value, not final game balance. Future pause/time-scale gameplay can replace the cadence without changing deterministic settlement rules.
+
 ## Full-screen village observer
 
 `F3` toggles a removable, presentation-only observer workspace while the world continues running.
@@ -95,11 +109,11 @@ NPC presentation remains derived from authoritative resident identity/profession
 ## Immediate follow-up slices
 
 1. playtest and tune third-person control feel;
-2. inspect 12-resident movement/crowding through the full-screen observer;
+2. inspect the full-day 12-resident activity cycle and movement/crowding through the full-screen observer;
 3. household gameplay: housing allocation, household consumption and relationship/family semantics;
 4. real building/NPC/item asset archetype pipeline;
 5. idle/walk/run/work/interact animation state machine;
-6. continuous/time-scale village clock and time-of-day lighting;
+6. time-of-day lighting and final time-scale/pause UX;
 7. NPC collision/crowd avoidance as population grows.
 
 This is still a greybox gameplay milestone, not an art-complete milestone.
