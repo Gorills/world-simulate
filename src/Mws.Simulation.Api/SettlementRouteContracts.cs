@@ -14,6 +14,14 @@ public enum SettlementRoutePassageStatus
     Restricted,
 }
 
+public enum SettlementTravelMode
+{
+    OnFoot,
+    MountedOrAnimalAssisted,
+    CartWagonOrPack,
+    Water,
+}
+
 public sealed record SettlementRouteConnectionState(
     long ConnectionId,
     SettlementPlaceRef FirstPlace,
@@ -22,7 +30,8 @@ public sealed record SettlementRouteConnectionState(
     SettlementRoutePhysicalState PhysicalState,
     SettlementRoutePassageStatus PassageStatus,
     string ProvenanceReference,
-    bool IsFixture = false);
+    bool IsFixture = false,
+    IReadOnlyList<SettlementTravelMode>? SupportedModes = null);
 
 public sealed record SettlementResidentRouteKnowledgeState(
     EntityId ResidentId,
@@ -33,4 +42,5 @@ public sealed record SettlementRoutePathProjection(
     SettlementPlaceRef Origin,
     SettlementPlaceRef Destination,
     IReadOnlyList<long> ConnectionIds,
-    long TotalDistanceMeters);
+    long TotalDistanceMeters,
+    SettlementTravelMode TravelMode);

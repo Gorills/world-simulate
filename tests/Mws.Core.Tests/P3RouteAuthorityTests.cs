@@ -45,9 +45,15 @@ public sealed class P3RouteAuthorityTests
         Assert.Equal(workplace, routePath.Destination);
         Assert.Equal(new long[] { 1, 2 }, routePath.ConnectionIds);
         Assert.Equal(1_000, routePath.TotalDistanceMeters);
+        Assert.Equal(SettlementTravelMode.OnFoot, routePath.TravelMode);
 
         var captured = simulation.CaptureState();
         Assert.Equal(new long[] { 1, 2 }, captured.RouteConnections!.Select(route => route.ConnectionId));
+        Assert.All(
+            captured.RouteConnections!,
+            route => Assert.Equal(
+                new[] { SettlementTravelMode.OnFoot },
+                route.SupportedModes!));
         var capturedKnowledge = Assert.Single(captured.ResidentRouteKnowledge!);
         Assert.Equal(new long[] { 1, 2 }, capturedKnowledge.KnownConnectionIds);
 
@@ -61,6 +67,7 @@ public sealed class P3RouteAuthorityTests
         Assert.Equal(routePath.Destination, restoredPath.Destination);
         Assert.Equal(routePath.ConnectionIds, restoredPath.ConnectionIds);
         Assert.Equal(routePath.TotalDistanceMeters, restoredPath.TotalDistanceMeters);
+        Assert.Equal(routePath.TravelMode, restoredPath.TravelMode);
         Assert.Equal(projected.Location, restoredResident.Location);
     }
 
@@ -134,6 +141,46 @@ public sealed class P3RouteAuthorityTests
     }
 
     [Fact]
+    public void RoutePathRequiresExplicitOnFootModeSupport()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9337)).CaptureState();
+        var resident = state.Residents[0];
+        var home = ResidentHome(state, resident);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var taskState = state with
+        {
+            Residents = WithSelectedTask(state, resident.Id, SelectedTask(14, workplace)),
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(resident.Id, [1]),
+            ],
+        };
+
+        var legacyUndeclared = SettlementSimulation.Restore(taskState with
+        {
+            RouteConnections =
+            [
+                Route(1, home, workplace, 500) with { SupportedModes = null },
+            ],
+        });
+        var mountedOnly = SettlementSimulation.Restore(taskState with
+        {
+            RouteConnections =
+            [
+                Route(1, home, workplace, 500) with
+                {
+                    SupportedModes = [SettlementTravelMode.MountedOrAnimalAssisted],
+                },
+            ],
+        });
+
+        Assert.NotNull(legacyUndeclared.Project().Residents[0].DestinationRequest);
+        Assert.Null(legacyUndeclared.Project().Residents[0].RoutePath);
+        Assert.NotNull(mountedOnly.Project().Residents[0].DestinationRequest);
+        Assert.Null(mountedOnly.Project().Residents[0].RoutePath);
+    }
+
+    [Fact]
     public void RestoreRejectsInvalidRouteAuthorityState()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9332)).CaptureState();
@@ -165,6 +212,34 @@ public sealed class P3RouteAuthorityTests
             ResidentRouteKnowledge =
             [
                 new SettlementResidentRouteKnowledgeState(resident.Id, [2]),
+            ],
+        }));
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections = [valid with { SupportedModes = [] }],
+        }));
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections =
+            [
+                valid with
+                {
+                    SupportedModes =
+                    [
+                        SettlementTravelMode.OnFoot,
+                        SettlementTravelMode.OnFoot,
+                    ],
+                },
+            ],
+        }));
+        Assert.Throws<InvalidOperationException>(() => SettlementSimulation.Restore(state with
+        {
+            RouteConnections =
+            [
+                valid with
+                {
+                    SupportedModes = [(SettlementTravelMode)999],
+                },
             ],
         }));
     }
@@ -315,7 +390,8 @@ public sealed class P3RouteAuthorityTests
             SettlementRoutePhysicalState.Passable,
             SettlementRoutePassageStatus.Open,
             "fixture:test-route-authority",
-            IsFixture: true);
+            IsFixture: true,
+            SupportedModes: [SettlementTravelMode.OnFoot]);
 
     private static ResidentState[] WithSelectedTask(
         SettlementState state,

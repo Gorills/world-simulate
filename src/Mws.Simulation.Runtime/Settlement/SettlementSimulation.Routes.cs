@@ -47,6 +47,7 @@ public sealed partial class SettlementSimulation
                 throw new InvalidOperationException("Route connection has an unknown passage status.");
             }
 
+            ValidateRouteModeSupport(connection);
             _ = SettlementSemanticLocation.Normalize(SettlementActorLocationState.At(connection.FirstPlace));
             _ = SettlementSemanticLocation.Normalize(SettlementActorLocationState.At(connection.SecondPlace));
             ValidateSettlementPlaceReference(connection.FirstPlace);
@@ -64,7 +65,6 @@ public sealed partial class SettlementSimulation
             AddRouteConnectionToPlaceIndex(connection.SecondPlace, connection);
         }
     }
-
     private void AddRouteConnectionToPlaceIndex(
         SettlementPlaceRef place,
         SettlementRouteConnectionState connection)
@@ -139,7 +139,8 @@ public sealed partial class SettlementSimulation
                 origin,
                 request.Destination,
                 path.ConnectionIds,
-                path.TotalDistanceMeters);
+                path.TotalDistanceMeters,
+                SettlementTravelMode.OnFoot);
     }
 
     private RoutePathResult? FindUniqueKnownOpenRoutePath(
@@ -194,10 +195,10 @@ public sealed partial class SettlementSimulation
 
             foreach (var connection in connections)
             {
-                if (connection.ConnectionId == excludedConnectionId
-                    || !knownConnectionIds.Contains(connection.ConnectionId)
-                    || connection.PhysicalState != SettlementRoutePhysicalState.Passable
-                    || connection.PassageStatus != SettlementRoutePassageStatus.Open)
+                if (!IsKnownOpenOnFootConnection(
+                        connection,
+                        knownConnectionIds,
+                        excludedConnectionId))
                 {
                     continue;
                 }
