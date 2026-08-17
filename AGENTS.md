@@ -30,3 +30,15 @@ Routine Proof A/gameplay kernel changes do not require Godot headless CI unless 
 
 ## Agent task sizing
 Prefer small-to-medium vertical edits that a weaker local agent can understand from nearby code and tests. Escalate architecture/persistence/LOD/public-boundary changes to a stronger agent or deliberate review.
+
+## Playable prototype phase gate
+The active playable-prototype program is defined by `DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md` and `MACHINE/playable-prototype.json`.
+
+- Run `python TOOLS/validate_playable_prototype.py` before changing production scope.
+- Work only on the single phase marked `IMPLEMENTING`.
+- A phase in `AUDIT_REQUIRED` is frozen. Review the exact committed implementation; do not keep coding in the audit pass.
+- `FAILED` means repair the same phase. Do not start a later phase.
+- A later phase must remain `LOCKED` until all dependencies are `PASSED`.
+- Passing tests is not enough to mark a phase `PASSED`; both independent post-commit code review and systems audit must pass and be recorded under `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`.
+- Passing a phase does not automatically authorize or start the next phase.
+- Respect the program scope freeze. Do not add polish or unrelated systems while authority, scaling and gameplay-causality phases are unresolved.

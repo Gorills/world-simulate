@@ -1,0 +1,40 @@
+name: playable-prototype-gate
+
+on:
+  push:
+    branches:
+      - main
+      - feature/village-vertical-slice
+    paths:
+      - "AGENTS.md"
+      - "DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md"
+      - "MACHINE/playable-prototype.json"
+      - "AUDIT_RESULTS/PLAYABLE_PROTOTYPE/**"
+      - "TOOLS/validate_playable_prototype.py"
+      - "TOOLS/dev.py"
+      - ".github/workflows/playable-prototype-gate.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playable-prototype-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Validate gate tooling syntax
+        run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py
+
+      - name: Validate playable prototype phase state
+        run: python TOOLS/validate_playable_prototype.py

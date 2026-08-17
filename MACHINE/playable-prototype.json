@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "policy": "DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md",
+  "active_phase": "P0_PROCESS_GATE",
+  "phases": [
+    {
+      "id": "P0_PROCESS_GATE",
+      "status": "AUDIT_REQUIRED",
+      "depends_on": [],
+      "latest_audit": null
+    },
+    {
+      "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
+      "status": "LOCKED",
+      "depends_on": [
+        "P0_PROCESS_GATE"
+      ],
+      "latest_audit": null
+    },
+    {
+      "id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
+      "status": "LOCKED",
+      "depends_on": [
+        "P1_PLAYABLE_USES_WORLD_RUNTIME"
+      ],
+      "latest_audit": null
+    },
+    {
+      "id": "P3_SEMANTIC_LOCATION_AND_TRAVEL",
+      "status": "LOCKED",
+      "depends_on": [
+        "P2_AUTHORITATIVE_PLAYER_ACTOR"
+      ],
+      "latest_audit": null
+    },
+    {
+      "id": "P4_REMOVE_HOT_PATH_FULL_STATE_CLONE",
+      "status": "LOCKED",
+      "depends_on": [
+        "P3_SEMANTIC_LOCATION_AND_TRAVEL"
+      ],
+      "latest_audit": null
+    },
+    {
+      "id": "P5_FOOD_SHORTAGE_GAMEPLAY_LOOP",
+      "status": "LOCKED",
+      "depends_on": [
+        "P4_REMOVE_HOT_PATH_FULL_STATE_CLONE"
+      ],
+      "latest_audit": null
+    },
+    {
+      "id": "P6_MEASURABLE_VERTICAL_SLICE",
+      "status": "LOCKED",
+      "depends_on": [
+        "P5_FOOD_SHORTAGE_GAMEPLAY_LOOP"
+      ],
+      "latest_audit": null
+    }
+  ]
+}
