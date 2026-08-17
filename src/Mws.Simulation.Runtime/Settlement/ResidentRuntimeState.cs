@@ -17,6 +17,7 @@ internal sealed class ResidentRuntimeState
         WorkplaceId = state.WorkplaceId;
         HouseholdId = state.HouseholdId;
         Affinity = state.Affinity;
+        LocationWasOmitted = state.Location is null;
         Location = SettlementSemanticLocation.Normalize(state.Location);
     }
 
@@ -38,9 +39,14 @@ internal sealed class ResidentRuntimeState
 
     internal int Affinity { get; set; }
 
+    internal bool LocationWasOmitted { get; }
+
     internal SettlementActorLocationState Location { get; set; }
 
-    internal ResidentState Capture() => new(
+    internal ResidentState Capture() =>
+        Capture(SettlementSemanticLocation.Capture(Location));
+
+    internal ResidentState Capture(SettlementActorLocationState? location) => new(
         Id,
         Name,
         Hunger,
@@ -50,5 +56,5 @@ internal sealed class ResidentRuntimeState
         WorkplaceId,
         Affinity,
         HouseholdId,
-        SettlementSemanticLocation.Capture(Location));
+        location);
 }

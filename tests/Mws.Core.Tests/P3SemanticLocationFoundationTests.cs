@@ -18,7 +18,8 @@ public sealed class P3SemanticLocationFoundationTests
         {
             var location = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
             Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
-            Assert.Equal(SettlementPlaceRef.Settlement, location.CurrentPlace);
+            Assert.Equal(SettlementPlaceKind.Home, location.CurrentPlace.Kind);
+            Assert.Equal(resident.HomeId, location.CurrentPlace.EntityId);
             Assert.Equal(location.CurrentPlace, location.DestinationPlace);
         });
 

@@ -64,6 +64,8 @@ public sealed partial class SettlementSimulation
         ValidateResidenceState();
         RebuildEntityIndexes();
         RebuildResidenceIndexes();
+        RestoreOmittedResidentSemanticLocations();
+        ValidateResidentSemanticLocationReferences();
         RebuildInventoryIndexes();
         ValidateInventoryTotals();
         RebuildHistoryIndexes();
@@ -149,7 +151,9 @@ public sealed partial class SettlementSimulation
         _nextStackId,
         _nextCommandId,
         _settlementOwnerId,
-        _residents.Select(resident => resident.Capture()).ToArray(),
+        _residents
+            .Select(resident => resident.Capture(CaptureResidentSemanticLocation(resident)))
+            .ToArray(),
         _itemStacks.OrderBy(stack => stack.StackId).ToArray(),
         _workplaces.OrderBy(workplace => workplace.Id.Value).ToArray(),
         _events.OrderBy(entry => entry.Id).ToArray(),

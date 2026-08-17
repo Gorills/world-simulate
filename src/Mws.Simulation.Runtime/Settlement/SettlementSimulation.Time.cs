@@ -80,6 +80,7 @@ public sealed partial class SettlementSimulation
     private void ExecuteHourlyResidentSystem(SimulationTime targetTime)
     {
         var hour = checked((int)((targetTime.Milliseconds / HourMilliseconds) % 24));
+        AdvanceResidentSemanticLocations(hour);
         BuildHourlyPlan(targetTime, hour);
         ApplySettlementInventoryDelta(_hourlyPlanWorkspace.Consumed, _hourlyPlanWorkspace.Produced);
         CommitHourlyResidentPlan();
