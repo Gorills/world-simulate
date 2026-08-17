@@ -48,7 +48,7 @@ public sealed class P3SemanticLocationFoundationTests
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9304)).CaptureState();
         var resident = state.Residents[0];
-        var household = Assert.Single(state.Households!.Where(entry => entry.Id == resident.HouseholdId));
+        var household = Assert.Single(state.Households!, entry => entry.Id == resident.HouseholdId);
         var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
         var travel = new SettlementActorLocationState(
             SettlementActorLocationKind.Travelling,
