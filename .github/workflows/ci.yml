@@ -70,7 +70,7 @@ jobs:
             echo "core_required=false" >> "${GITHUB_OUTPUT}"
           fi
 
-          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/Settlement/|src/Mws\.Simulation\.Runtime/World/WorldRuntime(\.Advance|\.Commands|\.Inputs)?\.cs$|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/(WorldSeed|EntityId|SimulationTime|SimulationScopeId)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|\.editorconfig$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
+          if grep -Eq '^(src/Mws\.Client\.Godot/|src/Mws\.Simulation\.Api/|src/Mws\.Simulation\.Runtime/Settlement/|src/Mws\.Simulation\.Runtime/World/WorldRuntime(\.Advance|\.Commands|\.Inputs|\.Player)?\.cs$|src/Mws\.Simulation\.Runtime/Mws\.Simulation\.Runtime\.csproj$|src/Mws\.Domain/(WorldSeed|EntityId|SimulationTime|SimulationScopeId)\.cs$|src/Mws\.Domain/Mws\.Domain\.csproj$|Directory\.Build\.props$|\.editorconfig$|global\.json$|\.github/workflows/ci\.yml$)' "${RUNNER_TEMP}/changed-files.txt"; then
             echo "godot_required=true" >> "${GITHUB_OUTPUT}"
           else
             echo "godot_required=false" >> "${GITHUB_OUTPUT}"

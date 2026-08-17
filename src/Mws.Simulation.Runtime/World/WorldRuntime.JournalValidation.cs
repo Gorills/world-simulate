@@ -23,7 +23,8 @@ public sealed partial class WorldRuntime
             + (entry.DispatchOutbox is null ? 0 : 1)
             + (entry.DeliverInbox is null ? 0 : 1)
             + (entry.UnloadSettlement is null ? 0 : 1)
-            + (entry.LoadSettlement is null ? 0 : 1);
+            + (entry.LoadSettlement is null ? 0 : 1)
+            + (entry.AddPlayerActor is null ? 0 : 1);
         if (payloadCount != 1)
         {
             throw new InvalidOperationException("World input journal entry must contain exactly one payload.");
@@ -56,6 +57,11 @@ public sealed partial class WorldRuntime
                 && TransportBatchShapeIsValid(entry.DeliverInbox, allowBlocked: true),
             WorldInputKind.UnloadSettlement => ResidencyShapeIsValid(entry.UnloadSettlement),
             WorldInputKind.LoadSettlement => ResidencyShapeIsValid(entry.LoadSettlement),
+            WorldInputKind.AddPlayerActor =>
+                entry.AddPlayerActor is not null
+                && entry.AddPlayerActor.CreatedPlayerId.Value > 0
+                && entry.AddPlayerActor.CreatedPlayerId.Value < long.MaxValue
+                && entry.AddPlayerActor.ScopeId.Value > 0,
             _ => false,
         };
 

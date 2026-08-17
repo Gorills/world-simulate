@@ -24,6 +24,8 @@ Flow:
 
 `GameWorldSession` may orchestrate `WorldRuntime`, select the active settlement scope and expose projections/checkpoint seams. It must not own or construct `SettlementSimulation` directly.
 
+The authoritative player actor also lives in `WorldRuntime`: stable player identity, owned inventory and coarse settlement scope come from `GameWorldSession.Player`. `World/Player/` owns only Godot locomotion/camera/presentation state; never mirror authoritative inventory or player identity there.
+
 Only `Session/` may reference `Mws.Simulation.Runtime` from client C# code.
 
 ## Input rule
@@ -42,7 +44,7 @@ Only `Session/` may reference `Mws.Simulation.Runtime` from client C# code.
 - Locomotion/camera tuning belongs in `World/Player/PlayerControlProfile.cs`; do not scatter speed, gravity, jump, turn or camera-feel constants through scene scripts.
 - `PlayerMotor` owns CharacterBody3D velocity, braking, acceleration, jump forgiveness and locomotion state.
 - `ThirdPersonCameraController` owns orbit response, pitch limits, spring-arm tuning and FOV response.
-- `ThirdPersonPlayer` composes input, motor, camera and interaction targeting; it is not a second tuning store.
+- `ThirdPersonPlayer` composes input, motor, camera and interaction targeting; it is not a second tuning store or an authoritative player actor.
 - Animation/audio/FX consume `PlayerMotionState`; they do not re-decide movement rules.
 - A new control mode should normally be a new/reused profile plus explicitly owned motor/camera behaviour, not copied player code.
 
@@ -94,6 +96,7 @@ Before considering a Godot change complete:
 - authoritative rules remain outside views;
 - playable authority flows through `GameWorldSession -> WorldRuntime`;
 - no client-owned `SettlementSimulation` path exists;
+- player identity/inventory/scope are read from the world player projection, not Godot nodes;
 - keyboard and gamepad paths both exist for new gameplay actions;
 - controller focus can enter and leave new UI;
 - player-control tuning stays behind the profile/motor/camera seams;

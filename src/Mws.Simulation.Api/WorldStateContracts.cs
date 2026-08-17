@@ -102,6 +102,7 @@ public enum WorldInputKind
     DeliverInbox,
     UnloadSettlement,
     LoadSettlement,
+    AddPlayerActor,
 }
 
 public enum WorldSettlementCommandKind
@@ -214,7 +215,8 @@ public sealed record WorldInputJournalEntry(
     WorldTransportBatchInput? DispatchOutbox,
     WorldTransportBatchInput? DeliverInbox,
     WorldPartitionResidencyInput? UnloadSettlement = null,
-    WorldPartitionResidencyInput? LoadSettlement = null);
+    WorldPartitionResidencyInput? LoadSettlement = null,
+    WorldAddPlayerActorInput? AddPlayerActor = null);
 
 public sealed record WorldManifestState(
     int SchemaVersion,
@@ -241,6 +243,8 @@ public sealed record WorldManifestState(
         Array.AsReadOnly(Array.Empty<WorldTransportMessage>());
     private IReadOnlyList<WorldTransportDeliveryReceipt> _transportReceipts =
         Array.AsReadOnly(Array.Empty<WorldTransportDeliveryReceipt>());
+
+    public WorldPlayerActorState? Player { get; init; }
 
     [JsonRequired]
     public IReadOnlyList<WorldSystemVersion> SystemVersions

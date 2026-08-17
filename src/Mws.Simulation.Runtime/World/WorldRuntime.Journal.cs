@@ -101,6 +101,17 @@ public sealed partial class WorldRuntime
                 break;
             }
 
+            case WorldInputKind.AddPlayerActor:
+            {
+                var actual = AddPlayerActorCore(entry.AddPlayerActor!.ScopeId);
+                if (actual != entry.AddPlayerActor.CreatedPlayerId)
+                {
+                    throw new InvalidOperationException("Replay player entity allocation diverged.");
+                }
+
+                break;
+            }
+
             case WorldInputKind.AllocateOperationId:
             {
                 var actual = AllocateOperationIdCore();
@@ -221,7 +232,8 @@ public sealed partial class WorldRuntime
         WorldTransportBatchInput? dispatchOutbox = null,
         WorldTransportBatchInput? deliverInbox = null,
         WorldPartitionResidencyInput? unloadSettlement = null,
-        WorldPartitionResidencyInput? loadSettlement = null) =>
+        WorldPartitionResidencyInput? loadSettlement = null,
+        WorldAddPlayerActorInput? addPlayerActor = null) =>
         new(
             _nextInputSequence,
             recordedAt,
@@ -235,5 +247,6 @@ public sealed partial class WorldRuntime
             dispatchOutbox,
             deliverInbox,
             unloadSettlement,
-            loadSettlement);
+            loadSettlement,
+            addPlayerActor);
 }

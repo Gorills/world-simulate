@@ -8,19 +8,24 @@ internal sealed class GameWorldSession
 {
     private readonly WorldRuntime _world;
     private readonly SimulationScopeId _settlementScopeId;
+    private readonly EntityId _playerId;
 
     public GameWorldSession(WorldSeed seed)
     {
         _world = WorldRuntime.Create(seed);
         _settlementScopeId = _world.AddDefaultSettlement();
+        _playerId = _world.AddPlayerActor(_settlementScopeId);
         _world.AdvanceHours(PlaytestTimeProfile.StartHour);
         SelectedResidentId = Projection.Residents[0].Id;
     }
 
-    private GameWorldSession(WorldRuntime world, SimulationScopeId settlementScopeId)
+    private GameWorldSession(WorldRuntime world)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
-        _settlementScopeId = settlementScopeId;
+        _playerId = _world.PlayerId
+            ?? throw new InvalidOperationException("Playable world checkpoint has no authoritative player actor.");
+        var player = _world.ProjectPlayer();
+        _settlementScopeId = player.ScopeId;
         var projection = _world.ProjectSettlement(_settlementScopeId);
         if (projection.Residents.Count == 0)
         {
@@ -34,21 +39,23 @@ internal sealed class GameWorldSession
 
     public EntityId SelectedResidentId { get; private set; }
 
+    public EntityId PlayerId => _playerId;
+
     public SimulationScopeId SettlementScopeId => _settlementScopeId;
 
     public SimulationTime Time => _world.Time;
+
+    public WorldPlayerProjection Player => _world.ProjectPlayer();
 
     public SettlementProjection Projection => _world.ProjectSettlement(_settlementScopeId);
 
     public ResidentProjection SelectedResident =>
         Projection.Residents.Single(resident => resident.Id == SelectedResidentId);
 
-    public static GameWorldSession Restore(
-        WorldCheckpointState checkpoint,
-        SimulationScopeId settlementScopeId)
+    public static GameWorldSession Restore(WorldCheckpointState checkpoint)
     {
         ArgumentNullException.ThrowIfNull(checkpoint);
-        return new GameWorldSession(WorldRuntime.Restore(checkpoint), settlementScopeId);
+        return new GameWorldSession(WorldRuntime.Restore(checkpoint));
     }
 
     public WorldCheckpointState CreateCheckpoint() => _world.CreateCheckpoint();

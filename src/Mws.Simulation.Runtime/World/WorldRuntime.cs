@@ -108,6 +108,11 @@ public sealed partial class WorldRuntime
             }
         }
 
+        if (manifest.Player is not null)
+        {
+            world.RestorePlayer(manifest.Player);
+        }
+
         var expectedLocations = manifest.EntityLocations
             .OrderBy(entry => entry.EntityId.Value)
             .ToArray();
@@ -199,6 +204,7 @@ public sealed partial class WorldRuntime
                 .ToArray(),
             _operationReceipts.Values.ToArray())
         {
+            Player = CapturePlayerState(),
             SystemVersions = WorldSystemVersions.CreateCurrent(),
             InputJournalFloor = _inputJournalFloor,
             NextInputSequence = _nextInputSequence,
