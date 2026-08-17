@@ -50,5 +50,5 @@ internal sealed class ResidentRuntimeState
         WorkplaceId,
         Affinity,
         HouseholdId,
-        Location);
+        SettlementSemanticLocation.Capture(Location));
 }

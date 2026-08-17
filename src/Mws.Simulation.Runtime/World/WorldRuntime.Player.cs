@@ -97,7 +97,8 @@ public sealed partial class WorldRuntime
             _player.Inventory
                 .Select(item => new WorldPlayerInventoryItemState(item.ItemId, item.Quantity))
                 .ToArray(),
-            SettlementSemanticLocation.Normalize(_player.Location));
+            SettlementSemanticLocation.Capture(
+                SettlementSemanticLocation.Normalize(_player.Location)));
     }
 
     private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(

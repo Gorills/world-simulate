@@ -12,6 +12,16 @@ internal static class SettlementSemanticLocation
         return normalized;
     }
 
+    internal static SettlementActorLocationState? Capture(SettlementActorLocationState location)
+    {
+        ArgumentNullException.ThrowIfNull(location);
+        Validate(location);
+        return location.Kind == SettlementActorLocationKind.AtPlace
+            && location.CurrentPlace == SettlementPlaceRef.Settlement
+            ? null
+            : location;
+    }
+
     internal static SettlementActorLocationProjection Project(SettlementActorLocationState location)
     {
         ArgumentNullException.ThrowIfNull(location);
