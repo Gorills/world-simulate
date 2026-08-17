@@ -15,13 +15,15 @@ script = ExtResource("1_overlay")
 
 [node name="Anchor" type="MarginContainer" parent="."]
 layout_mode = 1
-anchor_left = 1.0
+anchors_preset = 15
 anchor_right = 1.0
-offset_left = -714.0
+anchor_bottom = 1.0
+offset_left = 16.0
 offset_top = 16.0
 offset_right = -16.0
-offset_bottom = 446.0
-grow_horizontal = 0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="Anchor"]
@@ -56,25 +58,31 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="MapPanel" type="PanelContainer" parent="Anchor/Panel/Root/Body"]
-custom_minimum_size = Vector2(390, 286)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="Map" type="Control" parent="Anchor/Panel/Root/Body/MapPanel"]
 layout_mode = 2
-mouse_filter = 2
-script = ExtResource("2_map")
-
-[node name="DetailsScroll" type="ScrollContainer" parent="Anchor/Panel/Root/Body"]
-custom_minimum_size = Vector2(270, 286)
-layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
+script = ExtResource("2_map")
+
+[node name="DetailsPanel" type="PanelContainer" parent="Anchor/Panel/Root/Body"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsScroll" type="ScrollContainer" parent="Anchor/Panel/Root/Body/DetailsPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
 horizontal_scroll_mode = 0
 
-[node name="Details" type="Label" parent="Anchor/Panel/Root/Body/DetailsScroll"]
-custom_minimum_size = Vector2(250, 0)
+[node name="Details" type="Label" parent="Anchor/Panel/Root/Body/DetailsPanel/DetailsScroll"]
+custom_minimum_size = Vector2(330, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 autowrap_mode = 2

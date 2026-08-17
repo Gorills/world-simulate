@@ -19,7 +19,8 @@ public sealed class DeterminismTests
             left.AdvanceHours(6);
             right.AdvanceHours(6);
 
-            var residentId = left.Project().Residents[step % 3].Id;
+            var residents = left.Project().Residents;
+            var residentId = residents[step % residents.Count].Id;
             var command = new InteractWithResidentCommand(
                 new CommandId(step + 1),
                 residentId,

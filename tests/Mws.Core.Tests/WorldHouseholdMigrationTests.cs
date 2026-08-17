@@ -19,8 +19,8 @@ public sealed class WorldHouseholdMigrationTests
         var firstIds = ResidenceIds(firstState);
         var secondIds = ResidenceIds(secondState);
 
-        Assert.Equal(12, firstIds.Count);
-        Assert.Equal(12, secondIds.Count);
+        Assert.Equal(16, firstIds.Count);
+        Assert.Equal(16, secondIds.Count);
         Assert.Empty(firstIds.Intersect(secondIds));
         Assert.All(firstIds, id =>
         {

@@ -47,6 +47,10 @@ internal static class LocalizedContent
     {
         "North Household" => GameLocalization.Tr("CONTENT_HOUSEHOLD_NORTH"),
         "East Household" => GameLocalization.Tr("CONTENT_HOUSEHOLD_EAST"),
+        "Miller Household" => GameLocalization.Tr("CONTENT_HOUSEHOLD_MILLER"),
+        "Cook Household" => GameLocalization.Tr("CONTENT_HOUSEHOLD_COOK"),
+        "River Household" => GameLocalization.Tr("CONTENT_HOUSEHOLD_RIVER"),
+        "Grove Household" => GameLocalization.Tr("CONTENT_HOUSEHOLD_GROVE"),
         _ => name,
     };
 

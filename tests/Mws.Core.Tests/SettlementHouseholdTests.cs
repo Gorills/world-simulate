@@ -23,17 +23,21 @@ public sealed class SettlementHouseholdTests
         var mira = projection.Residents.Single(resident => resident.Name == "Mira");
         var tor = projection.Residents.Single(resident => resident.Name == "Tor");
         var ena = projection.Residents.Single(resident => resident.Name == "Ena");
+        var ivo = projection.Residents.Single(resident => resident.Name == "Ivo");
 
+        Assert.Equal(12, projection.Residents.Count);
         Assert.Equal(10, homes.Count);
-        Assert.Equal(2, households.Count);
+        Assert.Equal(6, households.Count);
         Assert.Equal(mira.HouseholdId, tor.HouseholdId);
         Assert.Equal(mira.HomeId, tor.HomeId);
         Assert.NotEqual(default(EntityId), mira.HomeId);
+        Assert.Equal(ena.HouseholdId, ivo.HouseholdId);
+        Assert.Equal(ena.HomeId, ivo.HomeId);
         Assert.NotEqual(mira.HouseholdId, ena.HouseholdId);
         Assert.NotEqual(mira.HomeId, ena.HomeId);
-        Assert.Equal(2, homes.Single(home => home.Id == mira.HomeId).ResidentCount);
-        Assert.Equal(1, homes.Single(home => home.Id == ena.HomeId).ResidentCount);
-        Assert.Equal(8, homes.Count(home => home.ResidentCount == 0));
+        Assert.Equal(6, homes.Count(home => home.ResidentCount == 2));
+        Assert.Equal(4, homes.Count(home => home.ResidentCount == 0));
+        Assert.All(households, household => Assert.Equal(2, household.ResidentIds.Count));
 
         var json = SettlementStateJson.Serialize(simulation.CaptureState());
         var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(json));

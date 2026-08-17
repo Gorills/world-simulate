@@ -182,6 +182,7 @@ public sealed class GodotClientQualityTests
         Assert.Contains("UI_HOME", english);
         Assert.Contains("UI_AFFINITY", english);
         Assert.Contains("UI_DEBUG_TITLE", english);
+        Assert.Contains("CONTENT_HOUSEHOLD_GROVE", english);
         Assert.Contains("CONTENT_ITEM_RATION", english);
         Assert.Contains("FEEDBACK_ACTION_FAILED", english);
         Assert.Contains("locale/fallback=\"en\"", project, StringComparison.Ordinal);
@@ -264,7 +265,7 @@ public sealed class GodotClientQualityTests
     }
 
     [Fact]
-    public void VillageDebugObserverIsPresentationOnlyRemovableAndUsesSharedDesignSystem()
+    public void VillageDebugObserverIsFullScreenPresentationOnlyRemovableAndUsesSharedDesignSystem()
     {
         var client = FindClientRoot();
         var debugRoot = Path.Combine(client, "Debug", "VillageMonitor");
@@ -284,15 +285,21 @@ public sealed class GodotClientQualityTests
         var debugInput = File.ReadAllText(Path.Combine(client, "Input", "DebugInput.cs"));
         var overlay = File.ReadAllText(
             Path.Combine(debugRoot, "VillageDebugOverlay.cs"));
+        var overlayScene = File.ReadAllText(
+            Path.Combine(debugRoot, "VillageDebugOverlay.tscn"));
         var map = File.ReadAllText(
             Path.Combine(debugRoot, "VillageDebugMap.cs"));
 
         Assert.DoesNotContain("VillageDebug", main, StringComparison.Ordinal);
         Assert.Contains("res://Debug/VillageMonitor/VillageDebugOverlay.tscn", mainScene, StringComparison.Ordinal);
         Assert.Contains("Key.F3", debugInput, StringComparison.Ordinal);
-        Assert.Contains("UiSurface.Floating", overlay, StringComparison.Ordinal);
+        Assert.Contains("UiSurface.Window", overlay, StringComparison.Ordinal);
         Assert.Contains("UiSurface.Inset", overlay, StringComparison.Ordinal);
         Assert.Contains("ApplyBadge", overlay, StringComparison.Ordinal);
+        Assert.Contains("anchors_preset = 15", overlayScene, StringComparison.Ordinal);
+        Assert.Contains("offset_left = 16.0", overlayScene, StringComparison.Ordinal);
+        Assert.Contains("offset_right = -16.0", overlayScene, StringComparison.Ordinal);
+        Assert.Contains("custom_minimum_size = Vector2(360, 0)", overlayScene, StringComparison.Ordinal);
         Assert.Contains("DesignSystem.DataColor", map, StringComparison.Ordinal);
         Assert.DoesNotContain("new Color(", map, StringComparison.Ordinal);
     }

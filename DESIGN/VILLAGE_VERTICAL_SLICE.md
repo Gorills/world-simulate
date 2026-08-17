@@ -1,6 +1,6 @@
-# Village Vertical Slice v0.4
+# Village Vertical Slice v0.10
 
-This milestone turns the authoritative settlement simulation into a physically playable village. Greybox dimensions, simulation identity, residence ownership and interaction seams are intended to survive later art replacement.
+This milestone turns the authoritative settlement simulation into a physically playable village. Greybox dimensions, simulation identity, residence ownership, population density, interaction seams and debug observability are intended to survive later art replacement.
 
 ## Spatial contract
 
@@ -13,11 +13,24 @@ This milestone turns the authoritative settlement simulation into a physically p
 
 `VillageLayout` is source-controlled and validated by the Godot headless smoke. Final assets must fit these anchors rather than shrinking the world around the art.
 
+## Playtest population contract
+
+The village playtest baseline is 12 authoritative residents. Three residents were only the original simulation prototype and are not the intended village density.
+
+- Residents have stable simulation `EntityId`, identity, profession, workplace and household assignments.
+- The baseline population is split evenly across Farmer, Cook and Forager: four residents per profession.
+- Six households contain two residents each and occupy the first six authoritative homes.
+- Four of the ten homes remain vacant so later housing-allocation gameplay still has meaningful capacity.
+- Initial ration and grain stock is scaled for the 12-resident baseline rather than the original three-person prototype.
+- `VillageLayout` provides at least 12 resident spawn anchors and 12 social anchors so the baseline population is spatially distributed instead of stacked.
+
+This is a playtest content baseline, not a hard population ceiling. Population growth, migration and future settlement sizes remain simulation concerns.
+
 ## Third-person player contract
 
-The feel target is authored third-person exploration in the broad family of The Witcher 3: character embodiment, camera-relative locomotion, trailing collision-aware camera, walk/run distinction and smooth facing. This is a feel reference only; assets, animation, UI and gameplay content remain original.
+The feel target is authored third-person exploration in the broad family of The Witcher 3: character embodiment, camera-relative locomotion, trailing collision-aware camera, walk/run distinction, jump, smooth acceleration and smooth facing. This is a feel reference only; assets, animation, UI and gameplay content remain original.
 
-Current controls include WASD / left stick movement, Shift / L3 sprint, mouse / right-stick look, `SpringArm3D` camera collision and Tab / Start for the simulation HUD.
+Player control tuning lives in `DESIGN/PLAYER_CONTROL_SYSTEM.md`; feature code does not own locomotion constants.
 
 ## Physical interaction contract
 
@@ -41,6 +54,19 @@ Authoritative hourly `ResidentActivity` drives presentation destinations:
 
 A source-controlled route graph moves resident views along roads and work tracks. Building destinations route through the actual doorway before the interior. Render coordinates are presentation-only and are never persisted or replay-authoritative.
 
+## Full-screen village observer
+
+`F3` toggles a removable, presentation-only observer workspace while the world continues running.
+
+- The observer fills the viewport with a shared DesignSystem `Window` surface.
+- The village map consumes the main available area instead of living in a small floating card.
+- A fixed-width diagnostic column lists each rendered resident, activity, needs, destination, distance and remaining route points.
+- The map draws the actual remaining presentation route for every rendered resident plus destination and player markers.
+- The summary compares authoritative resident count with rendered resident-view count and groups residents by activity.
+- The observer remains read-only: it has no `GameSession`, simulation-runtime or command dependency.
+
+The observer is deliberately easy to remove: its implementation remains under `Debug/VillageMonitor/`, with one scene instance and one debug input binding at composition boundaries.
+
 ## Authoritative residence contract
 
 Settlement schema v5 introduces persisted housing without duplicating membership truth.
@@ -53,7 +79,6 @@ Settlement schema v5 introduces persisted housing without duplicating membership
 - `HomeId` is derived through the household and exposed in read-only projections.
 - `SpatialKey` maps authoritative homes to source-controlled physical buildings; display-name changes do not break routing.
 - All 10 visible residential buildings have authoritative `HomeState`, including currently vacant homes.
-- The default village has two occupied households: Mira and Tor share one home; Ena occupies another.
 
 World-global entity identity includes homes and households. Their IDs live inside the existing settlement entity-ID block.
 
@@ -61,7 +86,7 @@ Resident migration deliberately clears `WorkplaceId` and `HouseholdId`. The sour
 
 ### Persistence compatibility
 
-Settlement schema advances from v4 to v5. `SettlementStateJson` explicitly migrates both v4 and v3 snapshots. Legacy residents load with `HouseholdId = 0` and no homes/households are fabricated. This preserves old state honestly instead of guessing historical residence assignments.
+Settlement schema remains v5. `SettlementStateJson` explicitly migrates both v4 and v3 snapshots. Legacy residents load with `HouseholdId = 0` and no homes/households are fabricated. Changing the default playtest population does not rewrite existing persisted settlements: resident/home/household state is already stored explicitly in snapshots.
 
 ## NPC and item identity
 
@@ -69,10 +94,12 @@ NPC presentation remains derived from authoritative resident identity/profession
 
 ## Immediate follow-up slices
 
-1. household gameplay: housing allocation, household consumption and relationship/family semantics;
-2. real building/NPC/item asset archetype pipeline;
-3. idle/walk/run/work/interact animation state machine;
-4. continuous/time-scale village clock and time-of-day lighting;
-5. NPC collision/crowd avoidance as population grows.
+1. playtest and tune third-person control feel;
+2. inspect 12-resident movement/crowding through the full-screen observer;
+3. household gameplay: housing allocation, household consumption and relationship/family semantics;
+4. real building/NPC/item asset archetype pipeline;
+5. idle/walk/run/work/interact animation state machine;
+6. continuous/time-scale village clock and time-of-day lighting;
+7. NPC collision/crowd avoidance as population grows.
 
 This is still a greybox gameplay milestone, not an art-complete milestone.

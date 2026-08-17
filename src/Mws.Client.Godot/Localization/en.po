@@ -193,6 +193,18 @@ msgstr "North Household"
 msgid "CONTENT_HOUSEHOLD_EAST"
 msgstr "East Household"
 
+msgid "CONTENT_HOUSEHOLD_MILLER"
+msgstr "Miller Household"
+
+msgid "CONTENT_HOUSEHOLD_COOK"
+msgstr "Cook Household"
+
+msgid "CONTENT_HOUSEHOLD_RIVER"
+msgstr "River Household"
+
+msgid "CONTENT_HOUSEHOLD_GROVE"
+msgstr "Grove Household"
+
 msgid "CONTENT_HOME_UNKNOWN"
 msgstr "Unknown home"
 

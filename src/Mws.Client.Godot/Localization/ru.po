@@ -193,6 +193,18 @@ msgstr "Северное домохозяйство"
 msgid "CONTENT_HOUSEHOLD_EAST"
 msgstr "Восточное домохозяйство"
 
+msgid "CONTENT_HOUSEHOLD_MILLER"
+msgstr "Домохозяйство мельника"
+
+msgid "CONTENT_HOUSEHOLD_COOK"
+msgstr "Домохозяйство повара"
+
+msgid "CONTENT_HOUSEHOLD_RIVER"
+msgstr "Домохозяйство у реки"
+
+msgid "CONTENT_HOUSEHOLD_GROVE"
+msgstr "Домохозяйство у рощи"
+
 msgid "CONTENT_HOME_UNKNOWN"
 msgstr "Неизвестный дом"
 

@@ -163,7 +163,7 @@ public sealed class WorldRuntimeFoundationTests
 
         var page = world.ProjectResidents(scope, offset: 1, limit: 1);
 
-        Assert.Equal(3, page.TotalCount);
+        Assert.Equal(state.Residents.Count, page.TotalCount);
         Assert.Equal(1, page.Offset);
         Assert.Single(page.Residents);
         Assert.Equal(state.Residents[1].Id, page.Residents[0].Id);

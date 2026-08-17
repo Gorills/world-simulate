@@ -160,9 +160,9 @@ public partial class Main : Node
 
         if (!interaction.Success
             || projection.Day != 1
-            || projection.Residents.Count != 3
+            || projection.Residents.Count != VillageLayout.PlaytestResidentCount
             || projection.Homes?.Count != 10
-            || projection.Households?.Count != 2
+            || projection.Households?.Count != 6
             || _session.FindStockpileStack(stockpileStack.StackId) is null)
         {
             throw new InvalidOperationException("Client foundation smoke produced an invalid state.");
@@ -170,10 +170,11 @@ public partial class Main : Node
 
         var resident = _session.SelectedResident;
         GD.Print(
-            $"MWS_GODOT_SMOKE_OK client=village-v0.5 day={projection.Day} resident={resident.Name} " +
-            $"affinity={resident.Affinity} input=third-person-keyboard-gamepad-validated " +
-            "locale=en-ru-validated spatial=village-layout-validated " +
-            "interaction=session-targeting-validated life=authoritative-residence-routing-validated");
+            $"MWS_GODOT_SMOKE_OK client=village-v0.10 day={projection.Day} resident={resident.Name} " +
+            $"population={projection.Residents.Count} affinity={resident.Affinity} " +
+            "input=third-person-keyboard-gamepad-validated locale=en-ru-validated " +
+            "spatial=village-layout-validated interaction=session-targeting-validated " +
+            "life=authoritative-residence-routing-validated");
         GetTree().Quit(0);
     }
 }

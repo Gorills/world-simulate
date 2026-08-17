@@ -11,49 +11,35 @@ internal static class SettlementPrototypeContent
     {
         var farmId = Entity(entityIdOffset, 101);
         var kitchenId = Entity(entityIdOffset, 102);
-        var groveId = Entity(entityIdOffset, 103);
+        var herbGroveId = Entity(entityIdOffset, 103);
         var northHouseholdId = Entity(entityIdOffset, 301);
         var eastHouseholdId = Entity(entityIdOffset, 302);
+        var millerHouseholdId = Entity(entityIdOffset, 303);
+        var cookHouseholdId = Entity(entityIdOffset, 304);
+        var riverHouseholdId = Entity(entityIdOffset, 305);
+        var groveHouseholdId = Entity(entityIdOffset, 306);
 
         return
         [
-            new ResidentState(
-                Entity(entityIdOffset, 1),
-                "Mira",
-                20,
-                100,
-                ResidentActivity.Idle,
-                ResidentProfession.Farmer,
-                farmId,
-                0,
-                northHouseholdId),
-            new ResidentState(
-                Entity(entityIdOffset, 2),
-                "Tor",
-                25,
-                90,
-                ResidentActivity.Idle,
-                ResidentProfession.Cook,
-                kitchenId,
-                0,
-                northHouseholdId),
-            new ResidentState(
-                Entity(entityIdOffset, 3),
-                "Ena",
-                30,
-                80,
-                ResidentActivity.Idle,
-                ResidentProfession.Forager,
-                groveId,
-                0,
-                eastHouseholdId),
+            Resident(entityIdOffset, 1, "Mira", 20, 100, ResidentProfession.Farmer, farmId, northHouseholdId),
+            Resident(entityIdOffset, 2, "Tor", 25, 90, ResidentProfession.Cook, kitchenId, northHouseholdId),
+            Resident(entityIdOffset, 3, "Ena", 30, 80, ResidentProfession.Forager, herbGroveId, eastHouseholdId),
+            Resident(entityIdOffset, 4, "Ivo", 18, 92, ResidentProfession.Farmer, farmId, eastHouseholdId),
+            Resident(entityIdOffset, 5, "Lysa", 36, 88, ResidentProfession.Cook, kitchenId, millerHouseholdId),
+            Resident(entityIdOffset, 6, "Bran", 28, 84, ResidentProfession.Forager, herbGroveId, millerHouseholdId),
+            Resident(entityIdOffset, 7, "Nera", 42, 95, ResidentProfession.Farmer, farmId, cookHouseholdId),
+            Resident(entityIdOffset, 8, "Oren", 22, 78, ResidentProfession.Cook, kitchenId, cookHouseholdId),
+            Resident(entityIdOffset, 9, "Sela", 34, 86, ResidentProfession.Forager, herbGroveId, riverHouseholdId),
+            Resident(entityIdOffset, 10, "Dain", 26, 91, ResidentProfession.Farmer, farmId, riverHouseholdId),
+            Resident(entityIdOffset, 11, "Veya", 38, 82, ResidentProfession.Cook, kitchenId, groveHouseholdId),
+            Resident(entityIdOffset, 12, "Karo", 24, 89, ResidentProfession.Forager, herbGroveId, groveHouseholdId),
         ];
     }
 
     internal static ItemStackState[] CreateItemStacks(long entityIdOffset = 0) =>
     [
-        new ItemStackState(1, SettlementItems.Ration, GetSettlementOwnerId(entityIdOffset), 6),
-        new ItemStackState(2, SettlementItems.Grain, GetSettlementOwnerId(entityIdOffset), 4),
+        new ItemStackState(1, SettlementItems.Ration, GetSettlementOwnerId(entityIdOffset), 24),
+        new ItemStackState(2, SettlementItems.Grain, GetSettlementOwnerId(entityIdOffset), 16),
     ];
 
     internal static WorkplaceState[] CreateWorkplaces(long entityIdOffset = 0) =>
@@ -100,14 +86,12 @@ internal static class SettlementPrototypeContent
 
     internal static HouseholdState[] CreateHouseholds(long entityIdOffset = 0) =>
     [
-        new HouseholdState(
-            Entity(entityIdOffset, 301),
-            "North Household",
-            Entity(entityIdOffset, 201)),
-        new HouseholdState(
-            Entity(entityIdOffset, 302),
-            "East Household",
-            Entity(entityIdOffset, 202)),
+        Household(entityIdOffset, 301, "North Household", 201),
+        Household(entityIdOffset, 302, "East Household", 202),
+        Household(entityIdOffset, 303, "Miller Household", 203),
+        Household(entityIdOffset, 304, "Cook Household", 204),
+        Household(entityIdOffset, 305, "River Household", 205),
+        Household(entityIdOffset, 306, "Grove Household", 206),
     ];
 
     internal static EntityId GetSettlementOwnerId(long entityIdOffset = 0) =>
@@ -183,6 +167,26 @@ internal static class SettlementPrototypeContent
         }
     }
 
+    private static ResidentState Resident(
+        long entityIdOffset,
+        long localId,
+        string name,
+        int hunger,
+        int energy,
+        ResidentProfession profession,
+        EntityId workplaceId,
+        EntityId householdId) =>
+        new(
+            Entity(entityIdOffset, localId),
+            name,
+            hunger,
+            energy,
+            ResidentActivity.Idle,
+            profession,
+            workplaceId,
+            0,
+            householdId);
+
     private static HomeState Home(
         long entityIdOffset,
         long localId,
@@ -190,6 +194,13 @@ internal static class SettlementPrototypeContent
         string spatialKey,
         int capacity) =>
         new(Entity(entityIdOffset, localId), name, spatialKey, capacity);
+
+    private static HouseholdState Household(
+        long entityIdOffset,
+        long localId,
+        string name,
+        long homeLocalId) =>
+        new(Entity(entityIdOffset, localId), name, Entity(entityIdOffset, homeLocalId));
 
     private static EntityId Entity(long entityIdOffset, long localId)
     {

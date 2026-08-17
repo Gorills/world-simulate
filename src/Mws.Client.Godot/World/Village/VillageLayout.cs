@@ -27,6 +27,7 @@ internal static class VillageLayout
     internal const float MainRoadWidthMeters = 7.0f;
     internal const float SideRoadWidthMeters = 5.0f;
     internal const float MinimumBuildingCenterSpacingMeters = 14.0f;
+    internal const int PlaytestResidentCount = 12;
     internal const string CookWorkBuildingName = "Cook House";
     internal const string FoodBuildingName = "The Hearth Inn";
 
@@ -43,6 +44,12 @@ internal static class VillageLayout
         new(18.0f, 0.0f, -70.0f),
         new(-42.0f, 0.0f, 24.0f),
         new(44.0f, 0.0f, -30.0f),
+        new(-8.0f, 0.0f, 82.0f),
+        new(11.0f, 0.0f, 48.0f),
+        new(-11.0f, 0.0f, -8.0f),
+        new(10.0f, 0.0f, -58.0f),
+        new(-57.0f, 0.0f, -49.0f),
+        new(61.0f, 0.0f, -13.0f),
     ];
 
     internal static readonly Vector3[] SocialAnchors =
@@ -53,6 +60,12 @@ internal static class VillageLayout
         new(6.0f, 0.0f, -10.0f),
         new(-28.0f, 0.0f, 27.0f),
         new(31.0f, 0.0f, -30.0f),
+        new(-6.0f, 0.0f, 55.0f),
+        new(7.0f, 0.0f, 43.0f),
+        new(-7.0f, 0.0f, -28.0f),
+        new(8.0f, 0.0f, -47.0f),
+        new(-45.0f, 0.0f, -31.0f),
+        new(47.0f, 0.0f, -47.0f),
     ];
 
     internal static readonly VillageBuildingPlacement[] Buildings =
@@ -148,6 +161,12 @@ internal static class VillageLayout
         {
             throw new InvalidOperationException(
                 "Village greybox must contain a meaningful settlement and housing footprint.");
+        }
+
+        if (ResidentSpawns.Length < PlaytestResidentCount || SocialAnchors.Length < PlaytestResidentCount)
+        {
+            throw new InvalidOperationException(
+                "Village presentation does not have enough resident/social anchors for the playtest population.");
         }
 
         for (var index = 0; index < Buildings.Length; index++)

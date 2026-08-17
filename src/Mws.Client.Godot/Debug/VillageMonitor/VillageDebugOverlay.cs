@@ -33,21 +33,24 @@ public partial class VillageDebugOverlay : Control
         var divider = GetNode<HSeparator>("Anchor/Panel/Root/Divider");
         var body = GetNode<HBoxContainer>("Anchor/Panel/Root/Body");
         var mapPanel = GetNode<PanelContainer>("Anchor/Panel/Root/Body/MapPanel");
-        var detailsScroll = GetNode<ScrollContainer>("Anchor/Panel/Root/Body/DetailsScroll");
+        var detailsPanel = GetNode<PanelContainer>("Anchor/Panel/Root/Body/DetailsPanel");
+        var detailsScroll = GetNode<ScrollContainer>(
+            "Anchor/Panel/Root/Body/DetailsPanel/DetailsScroll");
 
         _map = GetNode<VillageDebugMap>("Anchor/Panel/Root/Body/MapPanel/Map");
         _title = GetNode<Label>("Anchor/Panel/Root/TitleRow/Title");
         _badge = GetNode<Label>("Anchor/Panel/Root/TitleRow/Badge");
         _summary = GetNode<Label>("Anchor/Panel/Root/Summary");
         _time = GetNode<Label>("Anchor/Panel/Root/Time");
-        _details = GetNode<Label>("Anchor/Panel/Root/Body/DetailsScroll/Details");
+        _details = GetNode<Label>("Anchor/Panel/Root/Body/DetailsPanel/DetailsScroll/Details");
         _legend = GetNode<Label>("Anchor/Panel/Root/Legend");
 
-        DesignSystem.ApplySurface(panel, UiSurface.Floating);
+        DesignSystem.ApplySurface(panel, UiSurface.Window);
         DesignSystem.ApplyStack(root, UiGap.Small);
         DesignSystem.ApplyStack(titleRow, UiGap.Small);
         DesignSystem.ApplyStack(body, UiGap.Small);
         DesignSystem.ApplySurface(mapPanel, UiSurface.Inset);
+        DesignSystem.ApplySurface(detailsPanel, UiSurface.Inset);
         DesignSystem.ApplyScroll(detailsScroll);
         DesignSystem.ApplyDivider(divider);
         DesignSystem.ApplyText(_title, UiTextRole.Heading);
