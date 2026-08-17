@@ -13,10 +13,27 @@ public sealed class WorldRuntimeClientBoundaryTests
         var world = WorldRuntime.Create(new WorldSeed(9101));
         var scope = world.AddDefaultSettlement();
         _ = world.AddPlayerActor(scope);
-        world.AdvanceHours(8);
-        var before = world.CaptureSettlementState(scope);
-        var residentId = before.Residents[0].Id;
 
+        var resident = world.ProjectSettlement(scope).Residents[0];
+        var residentLocation = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, residentLocation.Kind);
+
+        var positioned = world.CaptureCheckpoint();
+        var player = positioned.Manifest.Player
+            ?? throw new InvalidOperationException("Test fixture is missing player actor.");
+        world = WorldRuntime.Restore(positioned with
+        {
+            Manifest = positioned.Manifest with
+            {
+                Player = player with
+                {
+                    Location = SettlementActorLocationState.At(residentLocation.CurrentPlace),
+                },
+            },
+        });
+
+        var before = world.CaptureSettlementState(scope);
+        var residentId = resident.Id;
         var result = world.ExecuteResidentInteraction(
             scope,
             residentId,
@@ -36,7 +53,7 @@ public sealed class WorldRuntimeClientBoundaryTests
         Assert.Equal(after.CommandReceipts.Count, restoredState.CommandReceipts.Count);
         Assert.Equal(world.Time, restored.Time);
         Assert.Equal(
-            world.ProjectSettlement(scope).Residents.Single(resident => resident.Id == residentId).Affinity,
-            restored.ProjectSettlement(scope).Residents.Single(resident => resident.Id == residentId).Affinity);
+            world.ProjectSettlement(scope).Residents.Single(entry => entry.Id == residentId).Affinity,
+            restored.ProjectSettlement(scope).Residents.Single(entry => entry.Id == residentId).Affinity);
     }
 }

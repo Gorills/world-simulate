@@ -99,8 +99,7 @@ public sealed partial class WorldRuntime
             return InteractionRejected(SettlementResultCodes.InteractionActorTravelling, residentId);
         }
 
-        if (playerLocation.CurrentPlace != SettlementPlaceRef.Settlement
-            && playerLocation.CurrentPlace != residentLocation.CurrentPlace)
+        if (playerLocation.CurrentPlace != residentLocation.CurrentPlace)
         {
             return InteractionRejected(SettlementResultCodes.InteractionNotCoLocated, residentId);
         }

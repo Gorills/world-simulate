@@ -54,6 +54,36 @@ public sealed class P3InteractionLocationGateTests
     }
 
     [Fact]
+    public void SettlementPresenceIsNotWildcardCoLocationForResidentInteraction()
+    {
+        var world = WorldRuntime.Create(new WorldSeed(9404));
+        var scope = world.AddDefaultSettlement();
+        _ = world.AddPlayerActor(scope);
+        var before = world.CaptureSettlementState(scope);
+        var residentId = before.Residents[0].Id;
+        var playerLocation = Assert.IsType<SettlementActorLocationProjection>(world.ProjectPlayer().Location);
+        var resident = world.ProjectSettlement(scope).Residents.Single(entry => entry.Id == residentId);
+        var residentLocation = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
+
+        Assert.Equal(SettlementPlaceRef.Settlement, playerLocation.CurrentPlace);
+        Assert.NotEqual(playerLocation.CurrentPlace, residentLocation.CurrentPlace);
+
+        var result = world.ExecuteResidentInteraction(
+            scope,
+            residentId,
+            ResidentInteractionChoice.Encourage);
+        var after = world.CaptureSettlementState(scope);
+
+        Assert.False(result.Success);
+        Assert.Equal(SettlementResultCodes.InteractionNotCoLocated, result.Code);
+        Assert.Equal(before.NextCommandId, after.NextCommandId);
+        Assert.Equal(before.CommandReceipts.Count, after.CommandReceipts.Count);
+        Assert.Equal(
+            WorldInputKind.SettlementCommand,
+            world.CaptureCheckpoint().Manifest.InputJournal[^1].Kind);
+    }
+
+    [Fact]
     public void ResidentInteractionRejectsCommuteAndReplayKeepsSettlementUnchanged()
     {
         var world = WorldRuntime.Create(new WorldSeed(9403));
