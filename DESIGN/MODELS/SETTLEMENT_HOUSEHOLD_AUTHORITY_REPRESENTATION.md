@@ -1,6 +1,6 @@
 # Settlement Household Authority and Representation — Model Contract
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the minimum causal structure for authority, representation and household-level coordination. It answers who may act for themselves, who may act on behalf of another person or a household-scoped interest, and when a household pressure or plan may legitimately create obligations, resource commitments or labour expectations.
 
