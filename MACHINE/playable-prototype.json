@@ -12,7 +12,7 @@
     },
     {
       "id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
-      "status": "IMPLEMENTING",
+      "status": "AUDIT_REQUIRED",
       "depends_on": [
         "P0_PROCESS_GATE"
       ],
