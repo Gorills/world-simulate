@@ -12,6 +12,17 @@ Optimize for a solo developer using coding agents. Quality gates exist to shorte
 - Prefer `MODEL_UNDERDEFINED` and stop implementation over filling a research gap with a convenient constant.
 - `python TOOLS/validate_reality_model.py` is part of routine validation. Starting at P3, a phase cannot PASS without the required model-review evidence.
 
+## Bounded research/modeling workflow
+
+Follow `DESIGN/RESEARCH_MODELING_WORKFLOW.md` for historical/causal model work.
+
+- One bounded research/modeling task -> coherent commit/push -> report -> stop. Do not begin the next task in the same pass.
+- On owner-directed continuation, audit the exact previous commit before starting anything new. A blocker keeps work on the same task.
+- Preserve source-to-claim evidence and limits in model contracts so accepted research can be reused instead of repeated from zero.
+- Audit must independently re-check load-bearing historical facts against their underlying sources; do not merely trust the previous research summary.
+- Audit includes relevant CI/required checks on the exact SHA. Running CI means pending, failed CI means repair the same task, and a later task must not start while a blocker remains.
+- Do not turn audit into a full literature-search loop: reopen non-load-bearing evidence only for a concrete contradiction, ambiguity, weak citation or changed dependency.
+
 ## Git
 - Keep `main` plus one active milestone/feature branch. Do not create a branch for each task, fix, test, or agent.
 - Batch coherent edits into one commit. Do not push intermediate placeholders.
