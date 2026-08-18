@@ -275,6 +275,8 @@ static SettlementState CreateVillageState(int residentCount)
         Residents = residents,
         ItemStacks = stacks,
         Workplaces = workplaces,
+        RouteConnections = [],
+        ResidentRouteKnowledge = [],
     };
 }
 
