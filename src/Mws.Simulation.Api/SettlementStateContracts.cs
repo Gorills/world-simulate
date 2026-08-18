@@ -32,7 +32,11 @@ public sealed record ResidentState(
     SettlementOnFootActorCapabilityClass OnFootCapability =
         SettlementOnFootActorCapabilityClass.Unknown,
     string? OnFootCapabilityProvenanceReference = null,
-    bool IsOnFootCapabilityFixture = false);
+    bool IsOnFootCapabilityFixture = false,
+    SettlementOnFootCarriedLoadClass OnFootCarriedLoad =
+        SettlementOnFootCarriedLoadClass.Unknown,
+    string? OnFootCarriedLoadProvenanceReference = null,
+    bool IsOnFootCarriedLoadFixture = false);
 
 public sealed record HomeState(
     EntityId Id,

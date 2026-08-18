@@ -6,3 +6,10 @@ public enum SettlementOnFootActorCapabilityClass
     BaselineCompatible = 1,
     NonBaseline = 2,
 }
+
+public enum SettlementOnFootCarriedLoadClass
+{
+    Unknown = 0,
+    NoMaterialLoad = 1,
+    MaterialLoadPresent = 2,
+}

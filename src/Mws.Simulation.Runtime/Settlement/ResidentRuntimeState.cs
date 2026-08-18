@@ -14,6 +14,10 @@ internal sealed class ResidentRuntimeState
             state.OnFootCapability,
             state.OnFootCapabilityProvenanceReference,
             state.IsOnFootCapabilityFixture);
+        SettlementOnFootCarriedLoadAuthority.Validate(
+            state.OnFootCarriedLoad,
+            state.OnFootCarriedLoadProvenanceReference,
+            state.IsOnFootCarriedLoadFixture);
         Id = state.Id;
         Name = state.Name;
         Hunger = state.Hunger;
@@ -31,6 +35,9 @@ internal sealed class ResidentRuntimeState
         OnFootCapability = state.OnFootCapability;
         OnFootCapabilityProvenanceReference = state.OnFootCapabilityProvenanceReference;
         IsOnFootCapabilityFixture = state.IsOnFootCapabilityFixture;
+        OnFootCarriedLoad = state.OnFootCarriedLoad;
+        OnFootCarriedLoadProvenanceReference = state.OnFootCarriedLoadProvenanceReference;
+        IsOnFootCarriedLoadFixture = state.IsOnFootCarriedLoadFixture;
     }
 
     internal EntityId Id { get; }
@@ -63,6 +70,12 @@ internal sealed class ResidentRuntimeState
 
     internal bool IsOnFootCapabilityFixture { get; }
 
+    internal SettlementOnFootCarriedLoadClass OnFootCarriedLoad { get; }
+
+    internal string? OnFootCarriedLoadProvenanceReference { get; }
+
+    internal bool IsOnFootCarriedLoadFixture { get; }
+
     internal ResidentState Capture() =>
         Capture(SettlementSemanticLocation.Capture(Location));
 
@@ -80,5 +93,8 @@ internal sealed class ResidentRuntimeState
         SelectedTask,
         OnFootCapability,
         OnFootCapabilityProvenanceReference,
-        IsOnFootCapabilityFixture);
+        IsOnFootCapabilityFixture,
+        OnFootCarriedLoad,
+        OnFootCarriedLoadProvenanceReference,
+        IsOnFootCarriedLoadFixture);
 }

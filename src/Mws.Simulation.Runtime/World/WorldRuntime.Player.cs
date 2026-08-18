@@ -91,6 +91,10 @@ public sealed partial class WorldRuntime
             state.OnFootCapability,
             state.OnFootCapabilityProvenanceReference,
             state.IsOnFootCapabilityFixture);
+        SettlementOnFootCarriedLoadAuthority.Validate(
+            state.OnFootCarriedLoad,
+            state.OnFootCarriedLoadProvenanceReference,
+            state.IsOnFootCarriedLoadFixture);
         var inventory = CanonicalPlayerInventory(state.Inventory);
         var location = SettlementSemanticLocation.NormalizeForRestore(
             state.Location,
@@ -103,7 +107,10 @@ public sealed partial class WorldRuntime
             WorldPlayerLocationVersions.CurrentEncodingVersion,
             state.OnFootCapability,
             state.OnFootCapabilityProvenanceReference,
-            state.IsOnFootCapabilityFixture);
+            state.IsOnFootCapabilityFixture,
+            state.OnFootCarriedLoad,
+            state.OnFootCarriedLoadProvenanceReference,
+            state.IsOnFootCarriedLoadFixture);
         _entityLocations.Add(state.Id.Value, state.ScopeId);
     }
 
@@ -125,7 +132,10 @@ public sealed partial class WorldRuntime
             WorldPlayerLocationVersions.CurrentEncodingVersion,
             _player.OnFootCapability,
             _player.OnFootCapabilityProvenanceReference,
-            _player.IsOnFootCapabilityFixture);
+            _player.IsOnFootCapabilityFixture,
+            _player.OnFootCarriedLoad,
+            _player.OnFootCarriedLoadProvenanceReference,
+            _player.IsOnFootCarriedLoadFixture);
     }
 
     private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(
