@@ -12,7 +12,8 @@ public sealed partial class SettlementSimulation
         {
             var travel = resident.Location.Travel;
             if (resident.Location.Kind != SettlementActorLocationKind.Travelling
-                || travel?.Plan is null)
+                || travel?.Plan is null
+                || !IsActiveTravelPlanTraversable(travel))
             {
                 continue;
             }
@@ -39,8 +40,10 @@ public sealed partial class SettlementSimulation
 
         foreach (var resident in _residents)
         {
+            var travel = resident.Location.Travel;
             if (resident.Location.Kind != SettlementActorLocationKind.Travelling
-                || resident.Location.Travel?.Plan is null)
+                || travel?.Plan is null
+                || !IsActiveTravelPlanTraversable(travel))
             {
                 continue;
             }
@@ -49,5 +52,28 @@ public sealed partial class SettlementSimulation
                 resident.Location,
                 elapsedMilliseconds);
         }
+    }
+
+    private bool IsActiveTravelPlanTraversable(SettlementTravelProgressState travel)
+    {
+        var plan = travel.Plan
+            ?? throw new InvalidOperationException(
+                "Active travel plan availability requires a persisted plan.");
+
+        foreach (var connectionId in plan.ConnectionIds)
+        {
+            if (!_routeConnectionsById.TryGetValue(connectionId, out var connection)
+                || connection.PhysicalState != SettlementRoutePhysicalState.Passable
+                || connection.PassageStatus != SettlementRoutePassageStatus.Open
+                || connection.SupportedModes?.Contains(plan.TravelMode) != true)
+            {
+                // The plan stays authoritative while unavailable. Without an accepted
+                // reroute/reconsideration decision, preserve its progress instead of
+                // teleporting, silently completing, or inventing another route.
+                return false;
+            }
+        }
+
+        return true;
     }
 }
