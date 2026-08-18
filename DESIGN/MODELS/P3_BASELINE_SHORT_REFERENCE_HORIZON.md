@@ -1,6 +1,6 @@
 # P3 Baseline Short-Reference Horizon
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract answers one narrow P3 model question:
 
