@@ -22,6 +22,13 @@ public enum SettlementTravelMode
     Water,
 }
 
+public enum SettlementOnFootRouteTimingClass
+{
+    Unknown = 0,
+    BaselineLevelUnobstructed = 1,
+    NonBaseline = 2,
+}
+
 public sealed record SettlementRouteConnectionState(
     long ConnectionId,
     SettlementPlaceRef FirstPlace,
@@ -31,7 +38,9 @@ public sealed record SettlementRouteConnectionState(
     SettlementRoutePassageStatus PassageStatus,
     string ProvenanceReference,
     bool IsFixture = false,
-    IReadOnlyList<SettlementTravelMode>? SupportedModes = null);
+    IReadOnlyList<SettlementTravelMode>? SupportedModes = null,
+    SettlementOnFootRouteTimingClass OnFootTimingClass =
+        SettlementOnFootRouteTimingClass.Unknown);
 
 public sealed record SettlementResidentRouteKnowledgeState(
     EntityId ResidentId,

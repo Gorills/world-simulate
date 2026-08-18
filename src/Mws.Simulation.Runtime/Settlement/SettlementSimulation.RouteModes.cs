@@ -8,6 +8,8 @@ public sealed partial class SettlementSimulation
 
     private void ValidateRouteModeSupport(SettlementRouteConnectionState connection)
     {
+        ValidateRouteTimingClass(connection);
+
         var supportedModes = connection.SupportedModes;
         if (supportedModes is null)
         {
