@@ -29,7 +29,7 @@ public sealed class SettlementSimulationTests
     }
 
     [Fact]
-    public void DefaultVillageStartsRestingAndTransitionsToWorkAtEight()
+    public void DefaultVillageDoesNotInventWorkFromClockOrProfession()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(507));
         var midnight = simulation.Project();
@@ -42,11 +42,20 @@ public sealed class SettlementSimulationTests
         var morning = simulation.Project();
 
         Assert.Equal(8, morning.Hour);
-        Assert.All(morning.Residents, resident => Assert.Equal(ResidentActivity.Working, resident.Activity));
+        Assert.DoesNotContain(morning.Residents, resident => resident.Activity == ResidentActivity.Working);
+        Assert.All(morning.Residents, resident =>
+        {
+            Assert.Null(resident.SelectedTask);
+            var location = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
+            Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+            Assert.Equal(SettlementPlaceKind.Home, location.CurrentPlace.Kind);
+            Assert.Equal(resident.HomeId, location.CurrentPlace.EntityId);
+            Assert.Null(location.Travel);
+        });
     }
 
     [Fact]
-    public void WorkplacesProduceAndTransformOwnedItemStacks()
+    public void WorkplacesDoNotProduceWithoutCausalTasks()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(502));
 
@@ -54,10 +63,10 @@ public sealed class SettlementSimulationTests
         var projection = simulation.Project();
 
         Assert.Equal(3, projection.Workplaces.Count);
-        Assert.Contains(projection.Residents, resident => resident.Activity == ResidentActivity.Working);
-        Assert.True(StockpileQuantity(projection, SettlementItems.Ration) > 24);
-        Assert.True(StockpileQuantity(projection, SettlementItems.Herb) > 0);
-        Assert.True(StockpileQuantity(projection, SettlementItems.Grain) >= 16);
+        Assert.DoesNotContain(projection.Residents, resident => resident.Activity == ResidentActivity.Working);
+        Assert.Equal(0, StockpileQuantity(projection, SettlementItems.Herb));
+        Assert.Equal(16, StockpileQuantity(projection, SettlementItems.Grain));
+        Assert.True(StockpileQuantity(projection, SettlementItems.Ration) <= 24);
     }
 
     [Fact]
@@ -86,9 +95,9 @@ public sealed class SettlementSimulationTests
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(504));
         simulation.AdvanceHours(12);
         var resident = simulation.Project().Residents[0];
-        var stockpileBefore = StockpileQuantity(simulation.Project(), SettlementItems.Herb);
+        var stockpileBefore = StockpileQuantity(simulation.Project(), SettlementItems.Grain);
 
-        var result = simulation.GiveItemToResident(resident.Id, SettlementItems.Herb, 2);
+        var result = simulation.GiveItemToResident(resident.Id, SettlementItems.Grain, 2);
         var saved = SettlementStateJson.Serialize(simulation.CaptureState());
         var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(saved));
         var projection = restored.Project();
@@ -96,8 +105,8 @@ public sealed class SettlementSimulationTests
 
         Assert.True(result.Success);
         Assert.Equal(SettlementResultCodes.ItemGiven, result.Code);
-        Assert.Equal(stockpileBefore - 2, StockpileQuantity(projection, SettlementItems.Herb));
-        Assert.Equal(2, InventoryQuantity(restoredResident, SettlementItems.Herb));
+        Assert.Equal(stockpileBefore - 2, StockpileQuantity(projection, SettlementItems.Grain));
+        Assert.Equal(2, InventoryQuantity(restoredResident, SettlementItems.Grain));
         Assert.Contains(projection.RecentEvents, entry =>
             entry.Kind == SettlementEventKinds.ItemGiven && entry.SubjectId == resident.Id);
     }

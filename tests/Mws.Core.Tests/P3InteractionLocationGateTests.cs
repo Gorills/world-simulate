@@ -84,17 +84,49 @@ public sealed class P3InteractionLocationGateTests
     }
 
     [Fact]
-    public void ResidentInteractionRejectsCommuteAndReplayKeepsSettlementUnchanged()
+    public void ResidentInteractionRejectsPreparedTravelAndReplayKeepsSettlementUnchanged()
     {
         var world = WorldRuntime.Create(new WorldSeed(9403));
         var scope = world.AddDefaultSettlement();
         _ = world.AddPlayerActor(scope);
-        world.AdvanceHours(7);
+        var checkpoint = world.CaptureCheckpoint();
+        var partition = Assert.Single(checkpoint.Partitions, entry => entry.ScopeId == scope);
+        var resident = partition.Settlement.Residents[0];
+        var household = Assert.Single(
+            partition.Settlement.Households!,
+            entry => entry.Id == resident.HouseholdId);
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var travellingResident = resident with
+        {
+            Location = new SettlementActorLocationState(
+                SettlementActorLocationKind.Travelling,
+                home,
+                workplace,
+                new SettlementTravelProgressState(
+                    SettlementSimulation.HourMilliseconds,
+                    0)),
+        };
+        var preparedPartition = partition with
+        {
+            Settlement = partition.Settlement with
+            {
+                Residents = partition.Settlement.Residents
+                    .Select(entry => entry.Id == resident.Id ? travellingResident : entry)
+                    .ToArray(),
+            },
+        };
+        world = WorldRuntime.Restore(checkpoint with
+        {
+            Partitions = checkpoint.Partitions
+                .Select(entry => entry.ScopeId == scope ? preparedPartition : entry)
+                .ToArray(),
+        });
 
         var before = world.CaptureSettlementState(scope);
-        var residentId = before.Residents[0].Id;
-        var resident = world.ProjectSettlement(scope).Residents.Single(entry => entry.Id == residentId);
-        var location = Assert.IsType<SettlementActorLocationProjection>(resident.Location);
+        var residentId = resident.Id;
+        var projected = world.ProjectSettlement(scope).Residents.Single(entry => entry.Id == residentId);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
         Assert.Equal(SettlementActorLocationKind.Travelling, location.Kind);
 
         var baseline = world.CaptureCheckpoint();

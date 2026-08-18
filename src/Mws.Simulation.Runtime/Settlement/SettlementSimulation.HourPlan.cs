@@ -10,7 +10,6 @@ public sealed partial class SettlementSimulation
     private void BuildHourlyPlan(SimulationTime targetTime, int hour)
     {
         var restingHours = hour >= 22 || hour < 6;
-        var workHours = hour >= 8 && hour < 17;
         var plan = _hourlyPlanWorkspace;
         plan.Reset(_residents);
 
@@ -79,7 +78,7 @@ public sealed partial class SettlementSimulation
             if (resident.SelectedTask is not null)
             {
                 // The selected task is authoritative. Until task execution is implemented,
-                // keep compatibility eat/rest/work selection from replacing it implicitly.
+                // keep compatibility eat/rest behavior from replacing it implicitly.
                 plan.Energy[index] = Math.Max(0, resident.Energy - 1);
                 continue;
             }
@@ -91,55 +90,9 @@ public sealed partial class SettlementSimulation
                 continue;
             }
 
-            if (workHours
-                && resident.Energy >= 25
-                && FindWorkplace(resident.WorkplaceId) is not null
-                && IsResidentAtWorkplace(resident))
-            {
-                plan.WorkCandidates.Add(index);
-                continue;
-            }
-
+            // Clock hour and profession are not sufficient causes for work. P3 leaves
+            // production idle until an accepted task/action producer owns that behavior.
             plan.Energy[index] = Math.Max(0, resident.Energy - 1);
-        }
-
-        plan.WorkCandidates.Sort((left, right) =>
-        {
-            var leftRank = DeterministicSimulationHash.Rank(
-                _worldSeed,
-                _scopeId,
-                targetTime,
-                "resident-work-reservation",
-                _residents[left].Id);
-            var rightRank = DeterministicSimulationHash.Rank(
-                _worldSeed,
-                _scopeId,
-                targetTime,
-                "resident-work-reservation",
-                _residents[right].Id);
-            var rank = leftRank.CompareTo(rightRank);
-            return rank != 0 ? rank : _residents[left].Id.Value.CompareTo(_residents[right].Id.Value);
-        });
-
-        foreach (var index in plan.WorkCandidates)
-        {
-            var resident = _residents[index];
-            var workplace = FindWorkplace(resident.WorkplaceId);
-            if (workplace is null || workplace.Profession != resident.Profession)
-            {
-                plan.Energy[index] = Math.Max(0, resident.Energy - 1);
-                continue;
-            }
-
-            if (!CanReserveWork(workplace, plan.AvailableInputs, plan.ProjectedFinal))
-            {
-                plan.Energy[index] = Math.Max(0, resident.Energy - 1);
-                continue;
-            }
-
-            ReserveWork(workplace, plan.AvailableInputs, plan.ProjectedFinal, plan.Consumed, plan.Produced);
-            plan.Energy[index] = Math.Max(0, resident.Energy - 6);
-            plan.Activity[index] = ResidentActivity.Working;
         }
     }
 
@@ -158,42 +111,6 @@ public sealed partial class SettlementSimulation
         return available;
     }
 
-    private bool CanReserveWork(
-        WorkplaceState workplace,
-        IDictionary<string, int> availableInputs,
-        IDictionary<string, int> projectedFinal)
-    {
-        if (workplace.InputItemId is not null)
-        {
-            var available = GetBudget(workplace.InputItemId, availableInputs, projectedFinal);
-            if (available < workplace.InputQuantity)
-            {
-                return false;
-            }
-        }
-
-        _ = GetBudget(workplace.OutputItemId, availableInputs, projectedFinal);
-        return projectedFinal[workplace.OutputItemId] <= int.MaxValue - workplace.OutputQuantity;
-    }
-
-    private static void ReserveWork(
-        WorkplaceState workplace,
-        IDictionary<string, int> availableInputs,
-        IDictionary<string, int> projectedFinal,
-        IDictionary<string, int> consumed,
-        IDictionary<string, int> produced)
-    {
-        if (workplace.InputItemId is not null)
-        {
-            availableInputs[workplace.InputItemId] -= workplace.InputQuantity;
-            projectedFinal[workplace.InputItemId] -= workplace.InputQuantity;
-            AddQuantity(consumed, workplace.InputItemId, workplace.InputQuantity);
-        }
-
-        projectedFinal[workplace.OutputItemId] += workplace.OutputQuantity;
-        AddQuantity(produced, workplace.OutputItemId, workplace.OutputQuantity);
-    }
-
     private static void AddQuantity(IDictionary<string, int> totals, string itemId, int quantity)
     {
         totals.TryGetValue(itemId, out var current);
@@ -209,7 +126,6 @@ public sealed partial class SettlementSimulation
             Activity = new ResidentActivity[residentCount];
             Eating = new bool[residentCount];
             HungryCandidates = new List<int>(residentCount);
-            WorkCandidates = new List<int>(residentCount);
         }
 
         internal int[] Hunger { get; }
@@ -222,8 +138,6 @@ public sealed partial class SettlementSimulation
 
         internal List<int> HungryCandidates { get; }
 
-        internal List<int> WorkCandidates { get; }
-
         internal Dictionary<string, int> AvailableInputs { get; } = new(StringComparer.Ordinal);
 
         internal Dictionary<string, int> ProjectedFinal { get; } = new(StringComparer.Ordinal);
@@ -235,7 +149,6 @@ public sealed partial class SettlementSimulation
         internal void Reset(ResidentRuntimeState[] residents)
         {
             HungryCandidates.Clear();
-            WorkCandidates.Clear();
             AvailableInputs.Clear();
             ProjectedFinal.Clear();
             Consumed.Clear();
