@@ -1,6 +1,6 @@
 # P3 Continuous On-Foot V1 Scope
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 ## Narrow question
 
@@ -41,7 +41,7 @@ Such a route must not silently receive the simple duration. It can remain unsupp
 
 ## Relationship to existing accepted contracts
 
-If accepted, this contract narrows the current P3 implementation scope without changing the accepted historical proposition that travel conditions can vary.
+This contract narrows the current P3 implementation scope without changing the accepted historical proposition that travel conditions can vary.
 
 For the **continuous ordinary on-foot v1 profile only**, it supersedes the requirement in `P3_ON_FOOT_TRAVERSAL_APPLICABILITY.md` and `P3_PLANNED_TRAVERSAL_ASSESSMENT_CONTEXT.md` that production must first create an independent traversal-delay producer before the simple baseline can become `Applicable`.
 
