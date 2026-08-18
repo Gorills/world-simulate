@@ -51,23 +51,19 @@ public sealed partial class WorldRuntime
             }
         }
 
-        var state = partition.Simulation.CaptureState();
-        var staged = SettlementSimulation.Restore(state);
-        var result = staged.Execute(command);
-        var mutated = command.Id.Value >= state.NextCommandId;
-
-        if (!mutated)
-        {
-            return result;
-        }
-
-        if (partition.Revision == long.MaxValue)
+        var simulation = partition.Simulation;
+        var mutated = simulation.WouldMutateCommandState(command);
+        if (mutated && partition.Revision == long.MaxValue)
         {
             throw new InvalidOperationException("World partition revision space is exhausted.");
         }
 
-        partition.Simulation = staged;
-        partition.Revision = checked(partition.Revision + 1);
+        var result = simulation.Execute(command);
+        if (mutated)
+        {
+            partition.Revision = checked(partition.Revision + 1);
+        }
+
         return result;
     }
 

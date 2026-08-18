@@ -41,27 +41,41 @@ public sealed partial class WorldRuntime
         }
 
         var stagedPlayer = StagePlayerAdvance(target);
-        var staged = new List<(WorldPartitionRuntime Partition, SettlementSimulation Simulation)>(_partitions.Count);
-        foreach (var partition in _partitions.Values)
+        var rollbackStates = new List<(
+            WorldPartitionRuntime Partition,
+            SettlementAdvanceRollbackState State)>(_partitions.Count);
+        try
         {
-            if (EffectiveRevision(partition) == long.MaxValue)
+            foreach (var partition in _partitions.Values)
             {
-                throw new InvalidOperationException("World partition revision space is exhausted.");
+                if (EffectiveRevision(partition) == long.MaxValue)
+                {
+                    throw new InvalidOperationException("World partition revision space is exhausted.");
+                }
+
+                if (!partition.IsLoaded)
+                {
+                    continue;
+                }
+
+                var simulation = partition.Simulation;
+                rollbackStates.Add((partition, simulation.CaptureAdvanceRollbackState()));
+                simulation.AdvanceTo(target);
+            }
+        }
+        catch
+        {
+            for (var index = rollbackStates.Count - 1; index >= 0; index--)
+            {
+                var entry = rollbackStates[index];
+                entry.Partition.Simulation.RestoreAdvanceRollbackState(entry.State);
             }
 
-            if (!partition.IsLoaded)
-            {
-                continue;
-            }
-
-            var simulation = SettlementSimulation.Restore(partition.Simulation.CaptureState());
-            simulation.AdvanceTo(target);
-            staged.Add((partition, simulation));
+            throw;
         }
 
-        foreach (var entry in staged)
+        foreach (var entry in rollbackStates)
         {
-            entry.Partition.Simulation = entry.Simulation;
             entry.Partition.Revision = checked(entry.Partition.Revision + 1);
         }
 
