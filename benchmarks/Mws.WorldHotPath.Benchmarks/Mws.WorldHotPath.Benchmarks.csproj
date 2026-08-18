@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <MwsSourceRoot Condition="'$(MwsSourceRoot)' == ''">$(MSBuildThisFileDirectory)../../</MwsSourceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(MwsSourceRoot)src/Mws.Domain/Mws.Domain.csproj" />
+    <ProjectReference Include="$(MwsSourceRoot)src/Mws.Simulation.Api/Mws.Simulation.Api.csproj" />
+    <ProjectReference Include="$(MwsSourceRoot)src/Mws.Simulation.Runtime/Mws.Simulation.Runtime.csproj" />
+  </ItemGroup>
+</Project>
