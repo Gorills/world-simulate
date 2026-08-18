@@ -1,6 +1,6 @@
 # P3 On-Foot Traversal Applicability
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the authoritative boundary for deciding whether the already accepted `1400 mm/s` on-foot reference calibration may be used for a concrete traversal.
 
