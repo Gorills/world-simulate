@@ -83,6 +83,32 @@ public static class SettlementOnFootTraversalApplicabilityRules
     }
 }
 
+public static class SettlementOnFootTraversalHorizonRules
+{
+    private const long BaselineReferenceWalkingSpeedMillimetersPerSecond = 1_400;
+    private const long ProlongedReferenceHorizonMilliseconds = 1_800_000;
+    private const long MillisecondsPerSecond = 1_000;
+    private const long MillimetersPerMeter = 1_000;
+    private const long ProlongedReferenceDistanceMeters =
+        BaselineReferenceWalkingSpeedMillimetersPerSecond
+        * ProlongedReferenceHorizonMilliseconds
+        / MillisecondsPerSecond
+        / MillimetersPerMeter;
+
+    public static SettlementOnFootTraversalHorizonClass ClassifyReferenceHorizon(
+        long totalDistanceMeters)
+    {
+        if (totalDistanceMeters <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(totalDistanceMeters));
+        }
+
+        return totalDistanceMeters >= ProlongedReferenceDistanceMeters
+            ? SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant
+            : SettlementOnFootTraversalHorizonClass.Unknown;
+    }
+}
+
 public sealed partial class SettlementSimulation
 {
     private SettlementOnFootTraversalApplicabilityProjection? ProjectOnFootTraversalApplicability(
@@ -97,8 +123,8 @@ public sealed partial class SettlementSimulation
         var routeTiming = AggregateOnFootRouteTiming(routePath.ConnectionIds);
         const SettlementOnFootTraversalDelayClass traversalDelay =
             SettlementOnFootTraversalDelayClass.Unknown;
-        const SettlementOnFootTraversalHorizonClass traversalHorizon =
-            SettlementOnFootTraversalHorizonClass.Unknown;
+        var traversalHorizon = SettlementOnFootTraversalHorizonRules.ClassifyReferenceHorizon(
+            routePath.TotalDistanceMeters);
         var decision = SettlementOnFootTraversalApplicabilityRules.Evaluate(
             resident.OnFootCapability,
             resident.OnFootCarriedLoad,

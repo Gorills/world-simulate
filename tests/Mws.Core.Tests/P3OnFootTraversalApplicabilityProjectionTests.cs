@@ -57,8 +57,29 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
                 SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible));
     }
 
+    [Theory]
+    [InlineData(2_519, SettlementOnFootTraversalHorizonClass.Unknown)]
+    [InlineData(2_520, SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant)]
+    [InlineData(2_521, SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant)]
+    public void HorizonRulesApplyOnlyTheAcceptedOneSidedRejectionBound(
+        long totalDistanceMeters,
+        SettlementOnFootTraversalHorizonClass expected)
+    {
+        var actual = SettlementOnFootTraversalHorizonRules.ClassifyReferenceHorizon(
+            totalDistanceMeters);
+
+        Assert.Equal(expected, actual);
+    }
+
     [Fact]
-    public void ProductionProjectionKeepsUnmodeledDelayAndHorizonUnresolvedAcrossSaveLoad()
+    public void HorizonRulesRejectNonPositiveDistance()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            SettlementOnFootTraversalHorizonRules.ClassifyReferenceHorizon(0));
+    }
+
+    [Fact]
+    public void ProductionProjectionKeepsUnmodeledDelayAndShortHorizonUnresolvedAcrossSaveLoad()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9380)).CaptureState();
         var resident = state.Residents[0];
@@ -81,6 +102,38 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
         Assert.Equal(SettlementOnFootTraversalDelayClass.Unknown, applicability.TraversalDelay);
         Assert.Equal(SettlementOnFootTraversalHorizonClass.Unknown, applicability.TraversalHorizon);
         Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.Unresolved, applicability.Decision);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+        Assert.Null(location.Travel);
+
+        var decoded = SettlementStateJson.Deserialize(
+            SettlementStateJson.Serialize(simulation.CaptureState()));
+        var restored = SettlementSimulation.Restore(decoded);
+        var restoredApplicability = Assert.IsType<SettlementOnFootTraversalApplicabilityProjection>(
+            FindResident(restored, resident.Id).OnFootTraversalApplicability);
+
+        Assert.Equal(applicability, restoredApplicability);
+    }
+
+    [Fact]
+    public void ProductionProjectionUsesAuthoritativeMultiEdgeExtentForProlongedHorizonWithoutStartingTravel()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9383)).CaptureState();
+        var resident = state.Residents[0];
+        var simulation = SettlementSimulation.Restore(PreparedMultiEdgeProlongedState(state, resident));
+
+        var projected = FindResident(simulation, resident.Id);
+        var routePath = Assert.IsType<SettlementRoutePathProjection>(projected.RoutePath);
+        var applicability = Assert.IsType<SettlementOnFootTraversalApplicabilityProjection>(
+            projected.OnFootTraversalApplicability);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+
+        Assert.Equal(new long[] { 1, 2 }, routePath.ConnectionIds);
+        Assert.Equal(2_520, routePath.TotalDistanceMeters);
+        Assert.Equal(SettlementOnFootTraversalDelayClass.Unknown, applicability.TraversalDelay);
+        Assert.Equal(
+            SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant,
+            applicability.TraversalHorizon);
+        Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.NotApplicable, applicability.Decision);
         Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
         Assert.Null(location.Travel);
 
@@ -180,6 +233,73 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
                 new SettlementResidentRouteKnowledgeState(
                     resident.Id,
                     [route.ConnectionId]),
+            ],
+        };
+    }
+
+    private static SettlementState PreparedMultiEdgeProlongedState(
+        SettlementState state,
+        ResidentState resident)
+    {
+        var household = Assert.Single(
+            state.Households!,
+            entry => entry.Id == resident.HouseholdId);
+        var home = new SettlementPlaceRef(
+            SettlementPlaceKind.Home,
+            household.HomeId);
+        var workplace = new SettlementPlaceRef(
+            SettlementPlaceKind.Workplace,
+            resident.WorkplaceId);
+        var task = new SettlementSelectedTaskState(
+            41,
+            "fixture.traversal-horizon-task",
+            "fixture:test-traversal-horizon",
+            new SimulationTime(0),
+            workplace);
+        var preparedResident = resident with
+        {
+            SelectedTask = task,
+            OnFootCapability = SettlementOnFootActorCapabilityClass.BaselineCompatible,
+            OnFootCapabilityProvenanceReference = CapabilityProvenance,
+            IsOnFootCapabilityFixture = true,
+            OnFootCarriedLoad = SettlementOnFootCarriedLoadClass.NoMaterialLoad,
+            OnFootCarriedLoadProvenanceReference = LoadProvenance,
+            IsOnFootCarriedLoadFixture = true,
+        };
+        var firstRoute = new SettlementRouteConnectionState(
+            1,
+            home,
+            SettlementPlaceRef.Settlement,
+            1_260,
+            SettlementRoutePhysicalState.Passable,
+            SettlementRoutePassageStatus.Open,
+            RouteProvenance,
+            IsFixture: true,
+            SupportedModes: [SettlementTravelMode.OnFoot],
+            OnFootTimingClass: SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed);
+        var secondRoute = new SettlementRouteConnectionState(
+            2,
+            SettlementPlaceRef.Settlement,
+            workplace,
+            1_260,
+            SettlementRoutePhysicalState.Passable,
+            SettlementRoutePassageStatus.Open,
+            RouteProvenance,
+            IsFixture: true,
+            SupportedModes: [SettlementTravelMode.OnFoot],
+            OnFootTimingClass: SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed);
+
+        return state with
+        {
+            Residents = state.Residents
+                .Select(entry => entry.Id == resident.Id ? preparedResident : entry)
+                .ToArray(),
+            RouteConnections = [firstRoute, secondRoute],
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(
+                    resident.Id,
+                    [firstRoute.ConnectionId, secondRoute.ConnectionId]),
             ],
         };
     }
