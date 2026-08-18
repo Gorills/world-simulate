@@ -83,14 +83,10 @@ public partial class VillageWorld : Node3D
         }
     }
 
-    internal static void ValidateSpatialContract()
-    {
-        VillageLayout.Validate();
-        VillageRoutePlanner.Validate();
-    }
+    internal static void ValidateSpatialContract() => VillageLayout.Validate();
 
     internal static void ValidateLifeProjection(SettlementProjection projection) =>
-        VillageResidentSchedule.ValidateProjection(projection);
+        VillageResidentPlacement.ValidateProjection(projection);
 
     private void UpdateInteractionTarget()
     {
@@ -149,23 +145,17 @@ public partial class VillageWorld : Node3D
             _residentViews.Remove(staleId);
         }
 
-        for (var index = 0; index < residents.Count; index++)
+        foreach (var resident in residents)
         {
-            var resident = residents[index];
             if (!_residentViews.TryGetValue(resident.Id.Value, out var view))
             {
                 view = new VillageResidentView();
                 _residentsRoot.AddChild(view);
                 view.Initialize(resident);
-                var spawn = VillageLayout.ResidentSpawns[index % VillageLayout.ResidentSpawns.Length];
-                var row = index / VillageLayout.ResidentSpawns.Length;
-                view.Position = spawn + new Vector3(row * 1.4f, 0.0f, row * 1.2f);
                 _residentViews.Add(resident.Id.Value, view);
             }
 
-            var destination = VillageResidentSchedule.Resolve(resident, projection);
-            var route = VillageRoutePlanner.Plan(view.Position, destination);
-            view.SetRoute(route, resident.Activity);
+            view.Position = VillageResidentPlacement.Resolve(resident, projection);
             view.Render(resident, resident.Id == selectedResidentId);
         }
     }

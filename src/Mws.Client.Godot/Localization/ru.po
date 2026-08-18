@@ -131,7 +131,7 @@ msgid "UI_DEBUG_TIME"
 msgstr "День {0}, {1}:00 · игрок X {2:0} Z {3:0}"
 
 msgid "UI_DEBUG_RESIDENT_ROW"
-msgstr "{0} #{1} · {2} · Г{3} Э{4} · {5} {6} {7:0}м · {8} т."
+msgstr "{0} #{1} · {2} · Г{3} Э{4} · {5} {6} {7:0}м · {8}"
 
 msgid "UI_DEBUG_DEST_SOCIAL"
 msgstr "общественное место"
@@ -139,11 +139,11 @@ msgstr "общественное место"
 msgid "UI_DEBUG_DEST_UNASSIGNED_HOME"
 msgstr "дом не назначен"
 
-msgid "UI_DEBUG_ROUTE_MISMATCH"
-msgstr "маршрут не совпадает с авторитетной активностью"
+msgid "UI_DEBUG_PLACEMENT_MISMATCH"
+msgstr "позиция отображения не совпадает с авторитетным semantic location/travel"
 
 msgid "UI_DEBUG_LEGEND"
-msgstr "Точки = жители · линия = оставшийся маршрут · крест = цель · кольцо/крест = игрок"
+msgstr "Точки = жители · линия = вектор к semantic-цели · крест = semantic-цель · предупреждающее кольцо = ошибка отображения · кольцо/крест = игрок"
 
 msgid "UI_DEBUG_NO_DATA"
 msgstr "Данных о жителях пока нет."

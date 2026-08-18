@@ -150,16 +150,11 @@ public partial class VillageDebugOverlay : Control
         SettlementProjection projection,
         VillageDebugResidentSnapshot resident)
     {
-        var movement = resident.DistanceToDestination > 0.25f ? "→" : "✓";
-        var destination = resident.Activity switch
-        {
-            ResidentActivity.Working => LocalizedContent.Workplace(resident.WorkplaceName),
-            ResidentActivity.Resting when resident.HomeId != default =>
-                LocalizedContent.Home(projection, resident.HomeId),
-            ResidentActivity.Resting => GameLocalization.Tr("UI_DEBUG_DEST_UNASSIGNED_HOME"),
-            ResidentActivity.Eating => LocalizedContent.Building(VillageLayout.FoodBuildingName),
-            _ => GameLocalization.Tr("UI_DEBUG_DEST_SOCIAL"),
-        };
+        var movement = resident.LocationKind == SettlementActorLocationKind.Travelling ? "→" : "✓";
+        var destination = FormatPlace(projection, resident.DestinationPlace);
+        var progress = resident.LocationKind == SettlementActorLocationKind.Travelling
+            ? $"{resident.TravelElapsedMilliseconds}/{resident.TravelDurationMilliseconds}ms"
+            : "AtPlace";
         var row = GameLocalization.Format(
             "UI_DEBUG_RESIDENT_ROW",
             resident.Name,
@@ -170,11 +165,23 @@ public partial class VillageDebugOverlay : Control
             destination,
             movement,
             resident.DistanceToDestination,
-            resident.Route.Count);
-        return resident.RouteMatchesActivity
+            progress);
+        return resident.PlacementMatchesAuthority
             ? row
-            : $"{row}\n  ! {GameLocalization.Tr("UI_DEBUG_ROUTE_MISMATCH")}";
+            : $"{row}\n  ! {GameLocalization.Tr("UI_DEBUG_PLACEMENT_MISMATCH")}";
     }
+
+    private static string FormatPlace(
+        SettlementProjection projection,
+        SettlementPlaceRef place) =>
+        place.Kind switch
+        {
+            SettlementPlaceKind.Home => LocalizedContent.Home(projection, place.EntityId),
+            SettlementPlaceKind.Workplace => LocalizedContent.Workplace(
+                projection.Workplaces.Single(entry => entry.Id == place.EntityId).Name),
+            SettlementPlaceKind.Settlement => GameLocalization.Tr("UI_SETTLEMENT"),
+            _ => $"{place.Kind} #{place.EntityId.Value}",
+        };
 
     private void RefreshStaticText()
     {

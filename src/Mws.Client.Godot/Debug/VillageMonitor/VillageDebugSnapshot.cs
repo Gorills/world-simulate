@@ -8,15 +8,15 @@ internal sealed record VillageDebugResidentSnapshot(
     EntityId Id,
     string Name,
     ResidentActivity Activity,
-    ResidentProfession Profession,
     int Hunger,
     int Energy,
-    string WorkplaceName,
-    EntityId HomeId,
     Vector3 Position,
     Vector3 Destination,
-    IReadOnlyList<Vector3> Route,
-    bool RouteMatchesActivity)
+    SettlementActorLocationKind LocationKind,
+    SettlementPlaceRef DestinationPlace,
+    long? TravelElapsedMilliseconds,
+    long? TravelDurationMilliseconds,
+    bool PlacementMatchesAuthority)
 {
     internal float DistanceToDestination
     {
@@ -34,9 +34,3 @@ internal sealed record VillageDebugSnapshot(
     int Hour,
     Vector3 PlayerPosition,
     IReadOnlyList<VillageDebugResidentSnapshot> Residents);
-
-internal sealed record VillageResidentDebugMotion(
-    Vector3 Destination,
-    IReadOnlyList<Vector3> Route,
-    ResidentActivity Activity,
-    bool HasTarget);

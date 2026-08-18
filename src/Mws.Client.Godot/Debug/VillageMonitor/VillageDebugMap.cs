@@ -100,32 +100,25 @@ public partial class VillageDebugMap : Control
     {
         var routeColor = DesignSystem.DataColor(UiDataColor.Route);
         var from = WorldToMap(resident.Position);
-        var previous = from;
-        foreach (var waypoint in resident.Route)
+        if (resident.LocationKind == SettlementActorLocationKind.Travelling
+            && resident.DistanceToDestination > 0.25f)
         {
-            var next = WorldToMap(waypoint);
-            DrawLine(previous, next, routeColor, 1.4f, antialiased: true);
-            previous = next;
+            var destination = WorldToMap(resident.Destination);
+            DrawLine(from, destination, routeColor, 1.2f, antialiased: true);
+            DrawLine(
+                destination - new Vector2(3.0f, 0.0f),
+                destination + new Vector2(3.0f, 0.0f),
+                routeColor,
+                1.0f);
+            DrawLine(
+                destination - new Vector2(0.0f, 3.0f),
+                destination + new Vector2(0.0f, 3.0f),
+                routeColor,
+                1.0f);
         }
 
-        if (resident.Route.Count == 0 && resident.DistanceToDestination > 0.25f)
-        {
-            DrawLine(from, WorldToMap(resident.Destination), routeColor, 1.2f, antialiased: true);
-        }
-
-        var destination = WorldToMap(resident.Destination);
-        DrawLine(
-            destination - new Vector2(3.0f, 0.0f),
-            destination + new Vector2(3.0f, 0.0f),
-            routeColor,
-            1.0f);
-        DrawLine(
-            destination - new Vector2(0.0f, 3.0f),
-            destination + new Vector2(0.0f, 3.0f),
-            routeColor,
-            1.0f);
         DrawCircle(from, 4.5f, ActivityColor(resident.Activity));
-        if (!resident.RouteMatchesActivity)
+        if (!resident.PlacementMatchesAuthority)
         {
             DrawCircle(
                 from,
