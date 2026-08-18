@@ -72,9 +72,50 @@ public sealed class P3TravelPlanStateTests
             RestoreWithPlan(fixture, valid with { TravelMode = (SettlementTravelMode)999 }));
     }
 
+    [Fact]
+    public void RestoreRejectsTravelPlanThatContradictsTaskRouteModeOrTime()
+    {
+        var fixture = Prepare();
+        var valid = new SettlementTravelPlanState(
+            fixture.Task.TaskId,
+            new SimulationTime(0),
+            [1, 2],
+            SettlementTravelMode.OnFoot);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(fixture, valid with { TaskId = fixture.Task.TaskId + 1 }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(fixture, valid with { ConnectionIds = [1, 3] }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(fixture, valid with { ConnectionIds = [2, 1] }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(fixture, valid with { ConnectionIds = [1] }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(
+                fixture,
+                valid with { TravelMode = SettlementTravelMode.MountedOrAnimalAssisted }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(
+                fixture,
+                valid with { DepartedAt = fixture.State.Time.AddMilliseconds(1) }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(
+                fixture,
+                valid,
+                fixture.Task with { SelectedAt = new SimulationTime(1) }));
+        Assert.Throws<InvalidOperationException>(() =>
+            RestoreWithPlan(
+                fixture,
+                valid,
+                fixture.Task with { RequiredPlace = SettlementPlaceRef.Settlement }));
+    }
+
     private static TravelFixture Prepare()
     {
-        var state = SettlementSimulation.CreateDefault(new WorldSeed(9340)).CaptureState();
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9340)).CaptureState() with
+        {
+            Time = new SimulationTime(SettlementSimulation.HourMilliseconds),
+        };
         var resident = state.Residents[0];
         var household = Assert.Single(
             state.Households!,
@@ -94,7 +135,8 @@ public sealed class P3TravelPlanStateTests
 
     private static SettlementSimulation RestoreWithPlan(
         TravelFixture fixture,
-        SettlementTravelPlanState plan)
+        SettlementTravelPlanState plan,
+        SettlementSelectedTaskState? selectedTask = null)
     {
         var travelling = new SettlementActorLocationState(
             SettlementActorLocationKind.Travelling,
@@ -109,7 +151,7 @@ public sealed class P3TravelPlanStateTests
                 ? entry with
                 {
                     Location = travelling,
-                    SelectedTask = fixture.Task,
+                    SelectedTask = selectedTask ?? fixture.Task,
                 }
                 : entry)
             .ToArray();

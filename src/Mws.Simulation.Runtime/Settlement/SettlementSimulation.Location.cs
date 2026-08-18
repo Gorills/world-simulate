@@ -51,6 +51,74 @@ public sealed partial class SettlementSimulation
             {
                 ValidateResidentSelectedTask(resident.SelectedTask);
             }
+
+            var travel = resident.Location.Travel;
+            if (travel?.Plan is not null)
+            {
+                ValidateResidentTravelPlan(resident, travel);
+            }
+        }
+    }
+
+    private void ValidateResidentTravelPlan(
+        ResidentRuntimeState resident,
+        SettlementTravelProgressState travel)
+    {
+        var plan = travel.Plan
+            ?? throw new InvalidOperationException("Travel plan validation requires a plan.");
+        var task = resident.SelectedTask
+            ?? throw new InvalidOperationException("Travel plan requires its source selected task.");
+        if (plan.TaskId != task.TaskId)
+        {
+            throw new InvalidOperationException("Travel plan task does not match the resident selected task.");
+        }
+
+        if (task.RequiredPlace is null || task.RequiredPlace != resident.Location.DestinationPlace)
+        {
+            throw new InvalidOperationException("Travel plan destination does not match its selected task.");
+        }
+
+        if (plan.DepartedAt.Milliseconds < task.SelectedAt.Milliseconds
+            || plan.DepartedAt.Milliseconds > Time.Milliseconds)
+        {
+            throw new InvalidOperationException("Travel plan departure time is outside its causal time range.");
+        }
+
+        var elapsedSinceDeparture = Time.Milliseconds - plan.DepartedAt.Milliseconds;
+        if (travel.ElapsedMilliseconds > elapsedSinceDeparture)
+        {
+            throw new InvalidOperationException("Travel progress exceeds elapsed simulation time since departure.");
+        }
+
+        var currentPlace = resident.Location.CurrentPlace;
+        foreach (var connectionId in plan.ConnectionIds)
+        {
+            var connection = _routeConnections.FirstOrDefault(
+                entry => entry.ConnectionId == connectionId)
+                ?? throw new InvalidOperationException("Travel plan references a missing route connection.");
+            if (connection.SupportedModes?.Contains(plan.TravelMode) != true)
+            {
+                throw new InvalidOperationException("Travel plan uses a mode unsupported by its route connection.");
+            }
+
+            if (connection.FirstPlace == currentPlace)
+            {
+                currentPlace = connection.SecondPlace;
+                continue;
+            }
+
+            if (connection.SecondPlace == currentPlace)
+            {
+                currentPlace = connection.FirstPlace;
+                continue;
+            }
+
+            throw new InvalidOperationException("Travel plan route connections do not form an ordered path.");
+        }
+
+        if (currentPlace != resident.Location.DestinationPlace)
+        {
+            throw new InvalidOperationException("Travel plan route does not end at its destination.");
         }
     }
 
