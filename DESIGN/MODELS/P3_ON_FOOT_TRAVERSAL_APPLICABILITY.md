@@ -8,7 +8,7 @@ It does **not** add a universal resident walking speed, terrain/weather coeffici
 
 ## Mechanic
 
-Convert independently known actor, load, route and delay facts into one explicit answer to a narrow question:
+Convert independently known actor, load, route, delay and traversal-horizon facts into one explicit answer to a narrow question:
 
 `May the accepted baseline on-foot duration calibration be applied to this planned traversal?`
 
@@ -16,15 +16,15 @@ The answer is not inferred from missing data and is not stored as an immutable c
 
 ## Intended feeling
 
-When travel duration becomes visible, the player should be able to trust that the simulation used a physical rule because the relevant world facts justified it, not because every person or every road was silently assigned the same speed.
+When travel duration becomes visible, the player should be able to trust that the simulation used a physical rule because the relevant world facts justified it, not because every person, every road or every journey length was silently assigned the same speed.
 
 ## Real-world process
 
-Human walking speed depends on the walker and traversal conditions. The accepted `DESIGN/MODELS/P3_ON_FOOT_TRAVEL_DURATION_CALIBRATION.md` establishes `1400 mm/s` only for an explicitly constrained `adult + level + unloaded + unimpaired + OnFoot` reference class.
+Human walking speed depends on the walker and traversal conditions. The accepted `DESIGN/MODELS/P3_ON_FOOT_TRAVEL_DURATION_CALIBRATION.md` establishes `1400 mm/s` only for an explicitly constrained short-reference `adult + level + unloaded + unimpaired + OnFoot` class.
 
 The parent `DESIGN/MODELS/P3_SEMANTIC_LOCATION_AND_TRAVEL.md` requires duration to derive from route extent plus materially relevant mode, actor, load and environment inputs.
 
-This contract specifies how those accepted limits become an authoritative planning gate without inventing coefficients for non-baseline conditions.
+This contract specifies how those accepted limits become an authoritative planning gate without inventing coefficients for non-baseline conditions or silently extending short walking measurements into prolonged journey pace.
 
 ## Reference context and evidence inheritance
 
@@ -33,7 +33,7 @@ Historical world context remains rural lowland England c. 1270–1348, with 1350
 No new historical-human behavior claim is introduced here. This contract inherits reviewed evidence from:
 
 - `DESIGN/MODELS/P3_SEMANTIC_LOCATION_AND_TRAVEL.md` and its audit record: movement is ordinary, route/mode/access state matters, and one universal journey speed is unsupported;
-- `DESIGN/MODELS/P3_ON_FOOT_TRAVEL_DURATION_CALIBRATION.md` and its audit record: `1400 mm/s` is accepted only as a narrow modern-biomechanics reference, while actor variation and carried load reject universal application.
+- `DESIGN/MODELS/P3_ON_FOOT_TRAVEL_DURATION_CALIBRATION.md` and its audit record: `1400 mm/s` is accepted only as a narrow modern-biomechanics reference, while actor variation, carried load and prolonged-travel uncertainty reject universal application.
 
 The underlying load-bearing sources already audited for this boundary are Browning et al. 2006, Bohannon 1997 and Middleton et al. 2022. This contract does not broaden their claims.
 
@@ -50,6 +50,8 @@ The authoritative gate is:
 `+ route/environment baseline-class fact`
 
 `+ traversal-delay applicability fact`
+
+`+ traversal-horizon applicability fact`
 
 `-> baseline applicability decision`
 
@@ -87,7 +89,7 @@ Minimum semantic states:
 
 Owned goods are not automatically carried goods. Conversely, absence of a carried-load mechanic must not be interpreted as `NoMaterialLoad`.
 
-This contract accepts no slowdown coefficient for `MaterialLoadPresent`; that state makes the baseline unresolved for duration until a separately accepted model exists.
+`MaterialLoadPresent` makes the accepted unloaded baseline `NotApplicable`. This contract accepts no slowdown coefficient for that case, so the full traversal duration remains unresolved until a separately accepted load model exists.
 
 ### 3. Route/environment class
 
@@ -115,7 +117,23 @@ Minimum semantic states:
 - `NoMaterialDelay`;
 - `MaterialDelayPresent`.
 
-Examples that may later produce `MaterialDelayPresent` include ferry waiting, queueing, known stop requirements or other modeled traversal delay. This contract does not invent their duration.
+Examples that may later produce `MaterialDelayPresent` include ferry waiting, queueing, known stop requirements or other modeled traversal delay. `MaterialDelayPresent` makes the simple baseline total-duration calculation `NotApplicable`; this contract does not invent the added delay duration.
+
+### 5. Traversal horizon
+
+The accepted calibration comes from preferred/comfortable walking evidence that does not establish a universal prolonged-journey or endurance pace. Planning therefore needs an explicit fact that the intended traversal is within the bounded short/reference horizon for which the baseline is being used.
+
+Minimum semantic states:
+
+- `Unknown` — production has no accepted basis for treating this traversal length/duration as a short-reference case;
+- `BaselineShortReferenceCompatible` — authoritative scenario/content explicitly constrains this traversal to the accepted short-reference calibration scope;
+- `ProlongedOrEnduranceRelevant` — the traversal materially enters a regime where sustained pace, fatigue, rest/stops or endurance calibration could matter.
+
+This contract accepts **no universal distance or time threshold** separating short from prolonged travel. Inventing `N kilometres` or `N minutes` would merely replace one unsupported constant with another.
+
+Until a later model derives this boundary causally, production may use `BaselineShortReferenceCompatible` only for an explicitly bounded calibration/test/content scenario with provenance. Missing long-duration/fatigue mechanics do not imply that an arbitrary long route is short-reference compatible.
+
+`ProlongedOrEnduranceRelevant` makes the accepted short-reference baseline `NotApplicable`; the full duration remains unresolved until separately calibrated sustained-travel behavior exists.
 
 ## Derived decision
 
@@ -136,7 +154,7 @@ The source facts may later change. A future accepted travel plan therefore needs
 1. the duration-driving applicability snapshot used at departure, including provenance/version needed for deterministic replay; or
 2. an immutable calibration/input reference that reconstructs the same result without consulting later-mutated content.
 
-After departure, changing a resident health/load field or route content must not silently rewrite elapsed history or retroactively change the originally planned duration. Interruption/reroute rules decide whether a new plan is needed.
+After departure, changing a resident health/load field, route content or applicability classification must not silently rewrite elapsed history or retroactively change the originally planned duration. Interruption/reroute rules decide whether a new plan is needed.
 
 ## Player/NPC symmetry
 
@@ -148,9 +166,10 @@ Controller type cannot:
 - ignore a material load or impairment;
 - treat Godot animation speed as authoritative capability;
 - bypass a non-baseline route condition;
+- treat an arbitrary long player journey as short-reference compatible;
 - receive a private faster baseline.
 
-The same actor/route/load/delay facts produce the same planning result regardless of controller.
+The same actor/route/load/delay/horizon facts produce the same planning result regardless of controller.
 
 ## Rights and authorization
 
@@ -170,9 +189,10 @@ A baseline-compatible route is not automatically open or authorized. An authoriz
 4. Actor baseline capability is current traversal input, not a permanent `WalkingSpeed` resident stat.
 5. Non-baseline states do not receive convenient fallback coefficients in this contract.
 6. Multi-edge paths require every timing-relevant connection to satisfy the baseline route/environment class.
-7. The derived applicability decision is engine-side authoritative; Godot may display it but cannot create it.
-8. No departure occurs merely because applicability becomes `Applicable`.
-9. No current prototype `one hour` duration is used as fallback when applicability is unresolved.
+7. Short/reference-horizon compatibility must be explicit; route length is not silently assumed short because no fatigue model exists.
+8. The derived applicability decision is engine-side authoritative; Godot may display it but cannot create it.
+9. No departure occurs merely because applicability becomes `Applicable`.
+10. No current prototype `one hour` duration is used as fallback when applicability is unresolved or not applicable.
 
 ## Current production gap
 
@@ -180,6 +200,7 @@ At the time of this contract:
 
 - `ResidentState` has hunger, energy, activity, profession, household/workplace references, semantic location and selected task, but no accepted actor baseline-capability or carried-load applicability state;
 - `SettlementRouteConnectionState` has endpoints, distance, physical state, passage status, provenance and supported modes, but no route/environment timing class;
+- production has no accepted traversal-horizon fact proving that an arbitrary route lies inside the short/reference calibration scope;
 - route projection can produce a unique known/open `OnFoot` path, but cannot yet prove baseline timing applicability;
 - legacy one-hour compatibility travel remains separate fixture behavior for residents without authoritative selected-task travel planning.
 
@@ -200,7 +221,9 @@ Implementation must test at least:
 - carried load unknown -> `Unresolved`;
 - route timing class unknown on any path edge -> `Unresolved`;
 - delay state unknown -> `Unresolved`;
+- traversal horizon unknown -> `Unresolved`;
 - explicit non-baseline actor/load/route/delay -> `NotApplicable`;
+- prolonged/endurance-relevant traversal -> `NotApplicable`;
 - missing data never emits baseline duration;
 - save/load retains the same source facts/derived outcome;
 - player/AI controller identity does not alter outcome;
@@ -218,17 +241,19 @@ Allowed only as explicit fixture/reconstruction input where needed to exercise t
 
 - asserting a resident is baseline-capable for a test/calibration scenario;
 - asserting a route connection is `BaselineLevelUnobstructed` for a test/calibration scenario;
-- asserting `NoMaterialLoad` or `NoMaterialDelay` for that bounded scenario.
+- asserting `NoMaterialLoad` or `NoMaterialDelay` for that bounded scenario;
+- asserting `BaselineShortReferenceCompatible` for a deliberately bounded short traversal scenario.
 
-Such fixture assertions must not be generalized into statements that all residents are unimpaired adults, all routes are level, no one carries goods, or no journey has stops.
+Such fixture assertions must not be generalized into statements that all residents are unimpaired adults, all routes are level, no one carries goods, no journey has stops, or every route is short enough to sustain the short-reference rate.
 
 ## Falsifiers
 
 Revise this model if:
 
 - a required applicability dimension cannot be represented without conflating rights, knowledge or controller state;
-- a future health/load/terrain model shows this three-state boundary loses a materially causal distinction needed before planning;
+- a future health/load/terrain/endurance model shows this three-state-per-dimension boundary loses a materially causal distinction needed before planning;
 - implementation can emit baseline duration while any required dimension is unknown;
+- an arbitrary prolonged route can become `Applicable` merely because no fatigue/endurance model exists;
 - fixture assertions leak into default canonical world content without evidence/provenance;
 - save/load or replay can change a plan's duration because later source facts/calibration changed.
 
@@ -240,10 +265,11 @@ Revise this model if:
 4. Carried-load applicability is explicitly `NoMaterialLoad`.
 5. Every route connection is explicitly `BaselineLevelUnobstructed` for timing.
 6. Traversal-delay applicability is explicitly `NoMaterialDelay`.
-7. Engine derives `Applicable`.
-8. Replacing any one required dimension with `Unknown` derives `Unresolved` and produces no baseline duration.
-9. Replacing any one dimension with an explicit non-baseline state derives `NotApplicable` and produces no invented duration.
-10. Player-controlled and AI-controlled instances with the same facts produce the same result.
+7. Traversal horizon is explicitly `BaselineShortReferenceCompatible` for the bounded scenario.
+8. Engine derives `Applicable`.
+9. Replacing any one required dimension with `Unknown` derives `Unresolved` and produces no baseline duration.
+10. Replacing any one dimension with an explicit non-baseline state, including `ProlongedOrEnduranceRelevant`, derives `NotApplicable` and produces no invented duration.
+11. Player-controlled and AI-controlled instances with the same facts produce the same result.
 
 ## Deferred complexity
 
@@ -252,7 +278,8 @@ Deferred to later bounded tasks:
 - lifecycle/health system that causally produces actor capability;
 - carried inventory/load representation and quantitative slowdown;
 - terrain/surface/gradient/weather classes and coefficients;
-- long-duration fatigue/stops;
+- evidence-backed derivation of short versus prolonged traversal horizon;
+- long-duration pace, fatigue and stops;
 - mounted/cart/water timing;
 - creation and persistence of a full travel plan;
 - departure, progress, interruption, reroute, cancellation and arrival.
