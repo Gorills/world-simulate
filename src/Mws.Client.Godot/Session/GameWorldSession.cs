@@ -9,14 +9,16 @@ internal sealed class GameWorldSession
     private readonly WorldRuntime _world;
     private readonly SimulationScopeId _settlementScopeId;
     private readonly EntityId _playerId;
+    private bool _travelPlaytestPending;
 
     public GameWorldSession(WorldSeed seed)
     {
-        _world = WorldRuntime.Create(seed);
-        _settlementScopeId = _world.AddDefaultSettlement();
-        _playerId = _world.AddPlayerActor(_settlementScopeId);
-        _world.AdvanceHours(PlaytestTimeProfile.StartHour);
-        SelectedResidentId = Projection.Residents[0].Id;
+        var bootstrap = P3TravelPlaytestScenario.Create(seed);
+        _world = bootstrap.World;
+        _settlementScopeId = bootstrap.ScopeId;
+        _playerId = bootstrap.PlayerId;
+        SelectedResidentId = bootstrap.ResidentId;
+        _travelPlaytestPending = true;
     }
 
     private GameWorldSession(WorldRuntime world)
@@ -33,6 +35,7 @@ internal sealed class GameWorldSession
         }
 
         SelectedResidentId = projection.Residents[0].Id;
+        _travelPlaytestPending = false;
     }
 
     public event Action? Changed;
@@ -51,6 +54,8 @@ internal sealed class GameWorldSession
 
     public ResidentProjection SelectedResident =>
         Projection.Residents.Single(resident => resident.Id == SelectedResidentId);
+
+    internal bool TravelPlaytestPending => _travelPlaytestPending;
 
     public static GameWorldSession Restore(WorldCheckpointState checkpoint)
     {
@@ -101,6 +106,68 @@ internal sealed class GameWorldSession
     public void AdvanceHours(int hours)
     {
         _world.AdvanceHours(hours);
+        _travelPlaytestPending = false;
         Changed?.Invoke();
+    }
+
+    internal bool TryStartTravelPlaytest()
+    {
+        if (!_travelPlaytestPending)
+        {
+            return false;
+        }
+
+        var before = SelectedResident;
+        var location = before.Location;
+        var requiredPlace = before.SelectedTask?.RequiredPlace;
+        if (location is null
+            || requiredPlace is null
+            || location.Kind != SettlementActorLocationKind.AtPlace
+            || location.CurrentPlace == requiredPlace.Value)
+        {
+            return false;
+        }
+
+        var remainder = Time.Milliseconds % SettlementSimulation.HourMilliseconds;
+        var toNextDecisionBoundary = remainder == 0
+            ? SettlementSimulation.HourMilliseconds
+            : SettlementSimulation.HourMilliseconds - remainder;
+        _world.AdvanceTo(new SimulationTime(checked(Time.Milliseconds + toNextDecisionBoundary)));
+        var started = SelectedResident.Location?.Kind == SettlementActorLocationKind.Travelling;
+        if (started)
+        {
+            _travelPlaytestPending = false;
+        }
+
+        Changed?.Invoke();
+        return started;
+    }
+
+    internal bool AdvanceActiveTravelSample(long elapsedMilliseconds)
+    {
+        if (elapsedMilliseconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(elapsedMilliseconds),
+                elapsedMilliseconds,
+                "Travel sample duration must be positive.");
+        }
+
+        _world.AdvanceTo(new SimulationTime(checked(Time.Milliseconds + elapsedMilliseconds)));
+        _travelPlaytestPending = false;
+        var active = HasActiveTravel();
+        Changed?.Invoke();
+        return active;
+    }
+
+    private bool HasActiveTravel()
+    {
+        if (Player.Location?.Kind == SettlementActorLocationKind.Travelling)
+        {
+            return true;
+        }
+
+        return Projection.Residents.Any(
+            resident => resident.Location?.Kind == SettlementActorLocationKind.Travelling);
     }
 }
