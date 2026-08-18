@@ -6,7 +6,8 @@ namespace Mws.Client.Godot.App;
 public partial class PlaytestClock : Node
 {
     private const double ActiveTravelSampleSeconds = 0.10;
-    private const long ActiveTravelSampleMilliseconds = 400;
+    private const long ActiveTravelSampleMilliseconds = 150;
+    private const double ExpectedActiveTravelTimeScale = 1.5;
 
     private GameWorldSession? _session;
     private double _elapsedSeconds;
@@ -15,6 +16,7 @@ public partial class PlaytestClock : Node
 
     internal void Bind(GameWorldSession session)
     {
+        ValidateActiveTravelPresentationRate();
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _elapsedSeconds = 0.0;
         _observedTimeMilliseconds = session.Time.Milliseconds;
@@ -31,6 +33,17 @@ public partial class PlaytestClock : Node
         _elapsedSeconds = 0.0;
         _observedTimeMilliseconds = _session.Time.Milliseconds;
         _activeTravelSampling = true;
+    }
+
+    internal static void ValidateActiveTravelPresentationRate()
+    {
+        var actualScale = ActiveTravelSampleMilliseconds
+            / (ActiveTravelSampleSeconds * 1_000.0);
+        if (Math.Abs(actualScale - ExpectedActiveTravelTimeScale) > 0.001)
+        {
+            throw new InvalidOperationException(
+                "P3 manual travel sampling no longer preserves the accepted observable walking presentation rate.");
+        }
     }
 
     public override void _Process(double delta)
