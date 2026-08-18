@@ -12,6 +12,35 @@ Optimize for a solo developer using coding agents. Quality gates exist to shorte
 - Prefer `MODEL_UNDERDEFINED` and stop implementation over filling a research gap with a convenient constant.
 - `python TOOLS/validate_reality_model.py` is part of routine validation. Starting at P3, a phase cannot PASS without the required model-review evidence.
 
+## Simulation scope / anti-overmodeling gate
+
+World Simulate targets a **playable, scalable magical-medieval life simulation**, not exhaustive microscopic reproduction and not museum-grade reenactment.
+
+Before starting research, adding authoritative state, introducing a new model dependency, or requiring a review blocker for extra detail, state what the detail changes **now**. Detail is load-bearing only when omitting or coarsening it would materially affect at least one of:
+
+- a player-observable choice, consequence, feedback loop or meaningful NPC behavior;
+- causal correctness, ownership/rights, determinism, persistence or another authoritative invariant;
+- scaling from village to town/region/world, including LOD, performance or state-ownership boundaries;
+- long-horizon economic, demographic, institutional or social outcomes that the active milestone must validate;
+- an explicit magic/world-law mechanic or a material downstream consequence of that magic;
+- a stated acceptance criterion of the active playable-prototype phase.
+
+If none applies, **do not research or model the detail now**. Record/defer it if useful and continue with the coarser model. “More realistic”, “historically interesting”, “could happen” and “we may need it someday” are not sufficient reasons.
+
+Always ask whether a coarser causal category preserves the same gameplay and scaling behavior. Prefer that abstraction when it does. Do not model incidental bodily, locomotion, social or environmental minutiae by default: gait micro-variation, tiny pauses, exact bodily processes, fine-grained weather effects, individual path trivia and similar detail require a concrete load-bearing reason.
+
+`MODEL_UNDERDEFINED` does not automatically mean “research this next”. An underdefined area may remain explicitly deferred when the active system can safely proceed without inventing a false rule.
+
+Research depth must be proportional to decision impact. Quantify a value only when the number or threshold changes gameplay, scaling, long-horizon behavior or a required invariant. Reviews must challenge **unnecessary complexity** as well as incorrect models: a historically true and technically correct detail can still be rejected or deferred when it adds no load-bearing value.
+
+### Magical-medieval target
+
+Historical evidence supplies the mundane baseline for people, material life, institutions and constraints. Magic is an explicit counterfactual world law, not something that needs fake historical proof.
+
+When magic is modeled, define its source/availability, costs, limits, knowledge/access and ordinary consequences. If magic materially changes labour, transport, medicine, warfare, religion, property, communication, agriculture or other systems, those systems must adapt instead of silently preserving an incompatible historical baseline. Historical research should then ground the **human/institutional response and useful analogies**, not attempt to prove that the magical phenomenon existed.
+
+The target is believable lived experience in a coherent magical-medieval world: enough historical structure to make choices and consequences feel authentic, enough systemic magic to make the setting genuinely magical, and no simulation detail that exists only because it is possible to model.
+
 ## Bounded research/modeling workflow
 
 Follow `DESIGN/RESEARCH_MODELING_WORKFLOW.md` for historical/causal model work.
