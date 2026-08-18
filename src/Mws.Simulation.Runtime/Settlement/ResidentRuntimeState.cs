@@ -10,6 +10,10 @@ internal sealed class ResidentRuntimeState
         bool allowLegacyMissingTravelProgress)
     {
         ArgumentNullException.ThrowIfNull(state);
+        SettlementOnFootActorCapabilityAuthority.Validate(
+            state.OnFootCapability,
+            state.OnFootCapabilityProvenanceReference,
+            state.IsOnFootCapabilityFixture);
         Id = state.Id;
         Name = state.Name;
         Hunger = state.Hunger;
@@ -24,6 +28,9 @@ internal sealed class ResidentRuntimeState
             state.Location,
             allowLegacyMissingTravelProgress);
         SelectedTask = state.SelectedTask;
+        OnFootCapability = state.OnFootCapability;
+        OnFootCapabilityProvenanceReference = state.OnFootCapabilityProvenanceReference;
+        IsOnFootCapabilityFixture = state.IsOnFootCapabilityFixture;
     }
 
     internal EntityId Id { get; }
@@ -50,6 +57,12 @@ internal sealed class ResidentRuntimeState
 
     internal SettlementSelectedTaskState? SelectedTask { get; }
 
+    internal SettlementOnFootActorCapabilityClass OnFootCapability { get; }
+
+    internal string? OnFootCapabilityProvenanceReference { get; }
+
+    internal bool IsOnFootCapabilityFixture { get; }
+
     internal ResidentState Capture() =>
         Capture(SettlementSemanticLocation.Capture(Location));
 
@@ -64,5 +77,8 @@ internal sealed class ResidentRuntimeState
         Affinity,
         HouseholdId,
         location,
-        SelectedTask);
+        SelectedTask,
+        OnFootCapability,
+        OnFootCapabilityProvenanceReference,
+        IsOnFootCapabilityFixture);
 }

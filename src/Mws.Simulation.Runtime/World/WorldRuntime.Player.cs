@@ -87,6 +87,10 @@ public sealed partial class WorldRuntime
                 $"World player location encoding {state.LocationEncodingVersion} is unsupported.");
         }
 
+        SettlementOnFootActorCapabilityAuthority.Validate(
+            state.OnFootCapability,
+            state.OnFootCapabilityProvenanceReference,
+            state.IsOnFootCapabilityFixture);
         var inventory = CanonicalPlayerInventory(state.Inventory);
         var location = SettlementSemanticLocation.NormalizeForRestore(
             state.Location,
@@ -96,7 +100,10 @@ public sealed partial class WorldRuntime
             state.ScopeId,
             inventory,
             location,
-            WorldPlayerLocationVersions.CurrentEncodingVersion);
+            WorldPlayerLocationVersions.CurrentEncodingVersion,
+            state.OnFootCapability,
+            state.OnFootCapabilityProvenanceReference,
+            state.IsOnFootCapabilityFixture);
         _entityLocations.Add(state.Id.Value, state.ScopeId);
     }
 
@@ -115,7 +122,10 @@ public sealed partial class WorldRuntime
                 .ToArray(),
             SettlementSemanticLocation.Capture(
                 SettlementSemanticLocation.Normalize(_player.Location)),
-            WorldPlayerLocationVersions.CurrentEncodingVersion);
+            WorldPlayerLocationVersions.CurrentEncodingVersion,
+            _player.OnFootCapability,
+            _player.OnFootCapabilityProvenanceReference,
+            _player.IsOnFootCapabilityFixture);
     }
 
     private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(

@@ -17,7 +17,11 @@ public sealed record WorldPlayerActorState(
     SimulationScopeId ScopeId,
     IReadOnlyList<WorldPlayerInventoryItemState> Inventory,
     SettlementActorLocationState? Location = null,
-    int LocationEncodingVersion = WorldPlayerLocationVersions.LegacyEncodingVersion);
+    int LocationEncodingVersion = WorldPlayerLocationVersions.LegacyEncodingVersion,
+    SettlementOnFootActorCapabilityClass OnFootCapability =
+        SettlementOnFootActorCapabilityClass.Unknown,
+    string? OnFootCapabilityProvenanceReference = null,
+    bool IsOnFootCapabilityFixture = false);
 
 public sealed record WorldPlayerInventoryItemProjection(
     string ItemId,

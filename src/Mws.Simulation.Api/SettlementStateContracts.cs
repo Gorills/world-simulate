@@ -28,7 +28,11 @@ public sealed record ResidentState(
     int Affinity,
     EntityId HouseholdId = default,
     SettlementActorLocationState? Location = null,
-    SettlementSelectedTaskState? SelectedTask = null);
+    SettlementSelectedTaskState? SelectedTask = null,
+    SettlementOnFootActorCapabilityClass OnFootCapability =
+        SettlementOnFootActorCapabilityClass.Unknown,
+    string? OnFootCapabilityProvenanceReference = null,
+    bool IsOnFootCapabilityFixture = false);
 
 public sealed record HomeState(
     EntityId Id,
