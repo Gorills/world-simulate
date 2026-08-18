@@ -17,13 +17,13 @@ internal static class HeadlessClientSmoke
         var startingRation = player.Inventory.Single(item => item.ItemId == SettlementItems.Ration);
         if (initial.Hour != PlaytestTimeProfile.StartHour
             || initial.Residents.Count != VillageLayout.PlaytestResidentCount
-            || initial.Residents.Any(resident => resident.Activity != ResidentActivity.Working)
+            || initial.Residents.Any(resident => !HasAuthoritativeHomePresence(resident))
             || player.Id != session.PlayerId
             || player.ScopeId != session.SettlementScopeId
             || startingRation.Quantity != 2)
         {
             throw new InvalidOperationException(
-                "Playtest session did not bootstrap authoritative world/player morning state.");
+                "Playtest session did not bootstrap authoritative world/player home state.");
         }
 
         session.AdvanceHours(24);
@@ -43,6 +43,7 @@ internal static class HeadlessClientSmoke
             || projection.Day != 1
             || projection.Hour != PlaytestTimeProfile.StartHour
             || projection.Residents.Count != VillageLayout.PlaytestResidentCount
+            || projection.Residents.Any(resident => !HasAuthoritativeHomePresence(resident))
             || projection.Homes?.Count != 10
             || projection.Households?.Count != 6
             || session.FindStockpileStack(stockpileStack.StackId) is null
@@ -65,6 +66,17 @@ internal static class HeadlessClientSmoke
             "clock=continuous-hourly-playtest input=third-person-keyboard-gamepad-validated " +
             "locale=en-ru-validated spatial=village-layout-validated " +
             "interaction=semantic-colocation-rejection-validated checkpoint=world-runtime-roundtrip-validated " +
-            "player_actor=authoritative-persisted-replayable life=authoritative-residence-routing-validated";
+            "player_actor=authoritative-persisted-replayable life=authoritative-home-presence-validated";
+    }
+
+    private static bool HasAuthoritativeHomePresence(ResidentProjection resident)
+    {
+        var location = resident.Location;
+        return resident.Activity != ResidentActivity.Working
+            && location is not null
+            && location.Kind == SettlementActorLocationKind.AtPlace
+            && location.CurrentPlace.Kind == SettlementPlaceKind.Home
+            && location.CurrentPlace.EntityId == resident.HomeId
+            && location.Travel is null;
     }
 }
