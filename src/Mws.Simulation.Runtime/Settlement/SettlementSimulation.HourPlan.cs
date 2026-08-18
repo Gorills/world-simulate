@@ -98,8 +98,8 @@ public sealed partial class SettlementSimulation
 
     private int GetBudget(
         string itemId,
-        IDictionary<string, int> availableInputs,
-        IDictionary<string, int> projectedFinal)
+        Dictionary<string, int> availableInputs,
+        Dictionary<string, int> projectedFinal)
     {
         if (!availableInputs.TryGetValue(itemId, out var available))
         {
@@ -111,7 +111,7 @@ public sealed partial class SettlementSimulation
         return available;
     }
 
-    private static void AddQuantity(IDictionary<string, int> totals, string itemId, int quantity)
+    private static void AddQuantity(Dictionary<string, int> totals, string itemId, int quantity)
     {
         totals.TryGetValue(itemId, out var current);
         totals[itemId] = checked(current + quantity);
