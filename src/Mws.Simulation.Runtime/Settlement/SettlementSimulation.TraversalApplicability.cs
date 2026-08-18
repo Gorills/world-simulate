@@ -1,0 +1,148 @@
+using Mws.Simulation.Api;
+
+namespace Mws.Simulation.Runtime;
+
+public static class SettlementOnFootTraversalApplicabilityRules
+{
+    public static SettlementOnFootTraversalApplicabilityDecision Evaluate(
+        SettlementOnFootActorCapabilityClass actorCapability,
+        SettlementOnFootCarriedLoadClass carriedLoad,
+        SettlementOnFootRouteTimingClass routeTiming,
+        SettlementOnFootTraversalDelayClass traversalDelay,
+        SettlementOnFootTraversalHorizonClass traversalHorizon)
+    {
+        Validate(actorCapability, carriedLoad, routeTiming, traversalDelay, traversalHorizon);
+
+        if (actorCapability == SettlementOnFootActorCapabilityClass.NonBaseline
+            || carriedLoad == SettlementOnFootCarriedLoadClass.MaterialLoadPresent
+            || routeTiming == SettlementOnFootRouteTimingClass.NonBaseline
+            || traversalDelay == SettlementOnFootTraversalDelayClass.MaterialDelayPresent
+            || traversalHorizon == SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant)
+        {
+            return SettlementOnFootTraversalApplicabilityDecision.NotApplicable;
+        }
+
+        if (actorCapability == SettlementOnFootActorCapabilityClass.Unknown
+            || carriedLoad == SettlementOnFootCarriedLoadClass.Unknown
+            || routeTiming == SettlementOnFootRouteTimingClass.Unknown
+            || traversalDelay == SettlementOnFootTraversalDelayClass.Unknown
+            || traversalHorizon == SettlementOnFootTraversalHorizonClass.Unknown)
+        {
+            return SettlementOnFootTraversalApplicabilityDecision.Unresolved;
+        }
+
+        return SettlementOnFootTraversalApplicabilityDecision.Applicable;
+    }
+
+    private static void Validate(
+        SettlementOnFootActorCapabilityClass actorCapability,
+        SettlementOnFootCarriedLoadClass carriedLoad,
+        SettlementOnFootRouteTimingClass routeTiming,
+        SettlementOnFootTraversalDelayClass traversalDelay,
+        SettlementOnFootTraversalHorizonClass traversalHorizon)
+    {
+        if (actorCapability is not (
+            SettlementOnFootActorCapabilityClass.Unknown
+            or SettlementOnFootActorCapabilityClass.BaselineCompatible
+            or SettlementOnFootActorCapabilityClass.NonBaseline))
+        {
+            throw new ArgumentOutOfRangeException(nameof(actorCapability));
+        }
+
+        if (carriedLoad is not (
+            SettlementOnFootCarriedLoadClass.Unknown
+            or SettlementOnFootCarriedLoadClass.NoMaterialLoad
+            or SettlementOnFootCarriedLoadClass.MaterialLoadPresent))
+        {
+            throw new ArgumentOutOfRangeException(nameof(carriedLoad));
+        }
+
+        if (routeTiming is not (
+            SettlementOnFootRouteTimingClass.Unknown
+            or SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed
+            or SettlementOnFootRouteTimingClass.NonBaseline))
+        {
+            throw new ArgumentOutOfRangeException(nameof(routeTiming));
+        }
+
+        if (traversalDelay is not (
+            SettlementOnFootTraversalDelayClass.Unknown
+            or SettlementOnFootTraversalDelayClass.NoMaterialDelay
+            or SettlementOnFootTraversalDelayClass.MaterialDelayPresent))
+        {
+            throw new ArgumentOutOfRangeException(nameof(traversalDelay));
+        }
+
+        if (traversalHorizon is not (
+            SettlementOnFootTraversalHorizonClass.Unknown
+            or SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible
+            or SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant))
+        {
+            throw new ArgumentOutOfRangeException(nameof(traversalHorizon));
+        }
+    }
+}
+
+public sealed partial class SettlementSimulation
+{
+    private SettlementOnFootTraversalApplicabilityProjection? ProjectOnFootTraversalApplicability(
+        ResidentRuntimeState resident,
+        SettlementRoutePathProjection? routePath)
+    {
+        if (routePath is null || routePath.TravelMode != SettlementTravelMode.OnFoot)
+        {
+            return null;
+        }
+
+        var routeTiming = AggregateOnFootRouteTiming(routePath.ConnectionIds);
+        const SettlementOnFootTraversalDelayClass traversalDelay =
+            SettlementOnFootTraversalDelayClass.Unknown;
+        const SettlementOnFootTraversalHorizonClass traversalHorizon =
+            SettlementOnFootTraversalHorizonClass.Unknown;
+        var decision = SettlementOnFootTraversalApplicabilityRules.Evaluate(
+            resident.OnFootCapability,
+            resident.OnFootCarriedLoad,
+            routeTiming,
+            traversalDelay,
+            traversalHorizon);
+
+        return new SettlementOnFootTraversalApplicabilityProjection(
+            routePath.TaskId,
+            resident.OnFootCapability,
+            resident.OnFootCarriedLoad,
+            routeTiming,
+            traversalDelay,
+            traversalHorizon,
+            decision);
+    }
+
+    private SettlementOnFootRouteTimingClass AggregateOnFootRouteTiming(
+        IReadOnlyList<long> connectionIds)
+    {
+        if (connectionIds.Count == 0)
+        {
+            return SettlementOnFootRouteTimingClass.Unknown;
+        }
+
+        var sawUnknown = false;
+        foreach (var connectionId in connectionIds)
+        {
+            if (!_routeConnectionsById.TryGetValue(connectionId, out var connection))
+            {
+                throw new InvalidOperationException(
+                    "Projected route path references a missing route connection.");
+            }
+
+            if (connection.OnFootTimingClass == SettlementOnFootRouteTimingClass.NonBaseline)
+            {
+                return SettlementOnFootRouteTimingClass.NonBaseline;
+            }
+
+            sawUnknown |= connection.OnFootTimingClass == SettlementOnFootRouteTimingClass.Unknown;
+        }
+
+        return sawUnknown
+            ? SettlementOnFootRouteTimingClass.Unknown
+            : SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed;
+    }
+}

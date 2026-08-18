@@ -77,6 +77,7 @@ public sealed partial class SettlementSimulation
             var home = household is null ? null : FindHome(household.HomeId);
             var selectedTask = ProjectSelectedTask(resident);
             var destinationRequest = ProjectDestinationRequest(resident);
+            var routePath = ProjectRoutePath(resident, destinationRequest);
             result[index] = new ResidentProjection(
                 resident.Id,
                 resident.Name,
@@ -95,7 +96,8 @@ public sealed partial class SettlementSimulation
                 SettlementSemanticLocation.Project(resident.Location),
                 selectedTask,
                 destinationRequest,
-                ProjectRoutePath(resident, destinationRequest));
+                routePath,
+                ProjectOnFootTraversalApplicability(resident, routePath));
         }
 
         return result;

@@ -48,7 +48,8 @@ public sealed record ResidentProjection(
     SettlementActorLocationProjection? Location = null,
     SettlementSelectedTaskProjection? SelectedTask = null,
     SettlementDestinationRequestProjection? DestinationRequest = null,
-    SettlementRoutePathProjection? RoutePath = null);
+    SettlementRoutePathProjection? RoutePath = null,
+    SettlementOnFootTraversalApplicabilityProjection? OnFootTraversalApplicability = null);
 
 public sealed record ResidentProjectionPage(
     SimulationScopeId ScopeId,
