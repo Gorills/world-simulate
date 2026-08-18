@@ -78,6 +78,7 @@ public sealed partial class SettlementSimulation
             var selectedTask = ProjectSelectedTask(resident);
             var destinationRequest = ProjectDestinationRequest(resident);
             var routePath = ProjectRoutePath(resident, destinationRequest);
+            var applicability = ProjectOnFootTraversalApplicability(resident, routePath);
             result[index] = new ResidentProjection(
                 resident.Id,
                 resident.Name,
@@ -97,7 +98,8 @@ public sealed partial class SettlementSimulation
                 selectedTask,
                 destinationRequest,
                 routePath,
-                ProjectOnFootTraversalApplicability(resident, routePath));
+                applicability,
+                ProjectTravelDurationPlan(routePath, applicability));
         }
 
         return result;
