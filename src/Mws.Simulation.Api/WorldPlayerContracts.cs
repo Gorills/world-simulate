@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Mws.Domain;
 
 namespace Mws.Simulation.Api;
@@ -22,9 +23,12 @@ public sealed record WorldPlayerActorState(
         SettlementOnFootActorCapabilityClass.Unknown,
     string? OnFootCapabilityProvenanceReference = null,
     bool IsOnFootCapabilityFixture = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     SettlementOnFootCarriedLoadClass OnFootCarriedLoad =
         SettlementOnFootCarriedLoadClass.Unknown,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     string? OnFootCarriedLoadProvenanceReference = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     bool IsOnFootCarriedLoadFixture = false);
 
 public sealed record WorldPlayerInventoryItemProjection(

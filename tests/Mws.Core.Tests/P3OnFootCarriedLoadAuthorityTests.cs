@@ -29,6 +29,18 @@ public sealed class P3OnFootCarriedLoadAuthorityTests
     }
 
     [Fact]
+    public void DefaultResidentCarriedLoadUsesCompactSnapshotEncoding()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9377)).CaptureState();
+        var encoded = SettlementStateJson.Serialize(state);
+
+        Assert.False(encoded.Contains("OnFootCarriedLoad", StringComparison.Ordinal));
+
+        var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(encoded));
+        Assert.All(restored.CaptureState().Residents, AssertUnknownCarriedLoad);
+    }
+
+    [Fact]
     public void ResidentCarriedLoadSurvivesSettlementStateRoundTripWithoutStartingTravel()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9372)).CaptureState();
