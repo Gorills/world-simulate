@@ -1,6 +1,6 @@
 # P3 Traversal Horizon Rejection Bound
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract answers one narrow question inside the accepted planned-traversal assessment model:
 
