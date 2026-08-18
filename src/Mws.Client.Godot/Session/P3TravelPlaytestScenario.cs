@@ -1,6 +1,5 @@
 using Mws.Domain;
 using Mws.Simulation.Api;
-using Mws.Simulation.Runtime;
 
 namespace Mws.Client.Godot.Session;
 
@@ -12,14 +11,11 @@ internal static class P3TravelPlaytestScenario
     private const string CapabilityProvenance = "fixture:playable-p3-manual-travel-capability";
     private const string LoadProvenance = "fixture:playable-p3-manual-travel-load";
 
-    internal static P3TravelPlaytestBootstrap Create(WorldSeed seed)
+    internal static P3TravelPlaytestPreparation Prepare(
+        WorldCheckpointState checkpoint,
+        SimulationScopeId scopeId)
     {
-        var world = WorldRuntime.Create(seed);
-        var scopeId = world.AddDefaultSettlement();
-        var playerId = world.AddPlayerActor(scopeId);
-        world.AdvanceHours(PlaytestTimeProfile.StartHour);
-
-        var checkpoint = world.CaptureCheckpoint();
+        ArgumentNullException.ThrowIfNull(checkpoint);
         var partition = checkpoint.Partitions.Single(entry => entry.ScopeId == scopeId);
         var settlement = partition.Settlement;
         var resident = settlement.Residents.Single(entry => entry.Name == "Karo");
@@ -34,7 +30,7 @@ internal static class P3TravelPlaytestScenario
             TaskId,
             TaskKind,
             TaskReason,
-            world.Time,
+            checkpoint.Manifest.Time,
             workplace);
         var preparedResident = resident with
         {
@@ -68,12 +64,7 @@ internal static class P3TravelPlaytestScenario
                     : entry)
                 .ToArray(),
         };
-        var restored = WorldRuntime.Restore(preparedCheckpoint);
-        return new P3TravelPlaytestBootstrap(
-            restored,
-            scopeId,
-            playerId,
-            resident.Id);
+        return new P3TravelPlaytestPreparation(preparedCheckpoint, resident.Id);
     }
 
     private static bool Connects(
@@ -84,8 +75,6 @@ internal static class P3TravelPlaytestScenario
         || (connection.FirstPlace == second && connection.SecondPlace == first);
 }
 
-internal sealed record P3TravelPlaytestBootstrap(
-    WorldRuntime World,
-    SimulationScopeId ScopeId,
-    EntityId PlayerId,
+internal sealed record P3TravelPlaytestPreparation(
+    WorldCheckpointState Checkpoint,
     EntityId ResidentId);

@@ -13,11 +13,16 @@ internal sealed class GameWorldSession
 
     public GameWorldSession(WorldSeed seed)
     {
-        var bootstrap = P3TravelPlaytestScenario.Create(seed);
-        _world = bootstrap.World;
-        _settlementScopeId = bootstrap.ScopeId;
-        _playerId = bootstrap.PlayerId;
-        SelectedResidentId = bootstrap.ResidentId;
+        _world = WorldRuntime.Create(seed);
+        _settlementScopeId = _world.AddDefaultSettlement();
+        _playerId = _world.AddPlayerActor(_settlementScopeId);
+        _world.AdvanceHours(PlaytestTimeProfile.StartHour);
+
+        var prepared = P3TravelPlaytestScenario.Prepare(
+            _world.CreateCheckpoint(),
+            _settlementScopeId);
+        _world = WorldRuntime.Restore(prepared.Checkpoint);
+        SelectedResidentId = prepared.ResidentId;
         _travelPlaytestPending = true;
     }
 
@@ -128,11 +133,7 @@ internal sealed class GameWorldSession
             return false;
         }
 
-        var remainder = Time.Milliseconds % SettlementSimulation.HourMilliseconds;
-        var toNextDecisionBoundary = remainder == 0
-            ? SettlementSimulation.HourMilliseconds
-            : SettlementSimulation.HourMilliseconds - remainder;
-        _world.AdvanceTo(new SimulationTime(checked(Time.Milliseconds + toNextDecisionBoundary)));
+        _world.AdvanceHours(1);
         var started = SelectedResident.Location?.Kind == SettlementActorLocationKind.Travelling;
         if (started)
         {
