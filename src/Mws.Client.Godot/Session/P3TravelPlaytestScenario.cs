@@ -19,7 +19,9 @@ internal static class P3TravelPlaytestScenario
         var partition = checkpoint.Partitions.Single(entry => entry.ScopeId == scopeId);
         var settlement = partition.Settlement;
         var resident = settlement.Residents.Single(entry => entry.Name == "Karo");
-        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, resident.HomeId);
+        var household = (settlement.Households ?? Array.Empty<HouseholdState>())
+            .Single(entry => entry.Id == resident.HouseholdId);
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
         var workplace = new SettlementPlaceRef(
             SettlementPlaceKind.Workplace,
             resident.WorkplaceId);

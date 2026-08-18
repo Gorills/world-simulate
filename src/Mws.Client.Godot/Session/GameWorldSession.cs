@@ -128,7 +128,7 @@ internal sealed class GameWorldSession
         if (location is null
             || requiredPlace is null
             || location.Kind != SettlementActorLocationKind.AtPlace
-            || location.CurrentPlace == requiredPlace.Value)
+            || location.CurrentPlace == requiredPlace)
         {
             return false;
         }
