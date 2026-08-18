@@ -134,13 +134,13 @@ internal static class HeadlessClientSmoke
         }
 
         return
-            $"MWS_GODOT_SMOKE_OK client=village-v0.13 day={projection.Day} hour={projection.Hour} " +
+            $"MWS_GODOT_SMOKE_OK client=village-v0.14 day={projection.Day} hour={projection.Hour} " +
             $"resident={resident.Name} population={projection.Residents.Count} " +
             $"player={restored.PlayerId.Value} player_scope={restoredPlayer.ScopeId.Value} " +
-            "clock=hourly-plus-active-travel-sampling input=third-person-keyboard-gamepad-validated " +
-            "locale=en-ru-validated spatial=authoritative-location-travel-validated " +
+            "clock=hourly-plus-observable-active-travel-sampling input=third-person-keyboard-gamepad-validated " +
+            "locale=en-ru-validated spatial=authoritative-location-route-progress-validated " +
             "interaction=semantic-colocation-rejection-validated checkpoint=travel-progress-roundtrip-validated " +
-            "playtest=p3-manual-travel-fixture-validated life=authoritative-placement-validated";
+            "playtest=p3-manual-road-travel-observable-validated life=authoritative-placement-validated";
     }
 
     private static void ValidateAuthoritativeResidentPlacement(SettlementProjection projection)
@@ -162,6 +162,15 @@ internal static class HeadlessClientSmoke
         {
             throw new InvalidOperationException(
                 "Resident presentation moved because Activity changed without semantic location travel.");
+        }
+
+        var housemate = projection.Residents.Single(
+            entry => entry.Id != resident.Id && entry.HouseholdId == resident.HouseholdId);
+        var housematePosition = VillageResidentPlacement.Resolve(housemate, projection);
+        if (homePosition.DistanceTo(housematePosition) < 1.0f)
+        {
+            throw new InvalidOperationException(
+                "Residents sharing one semantic home are visually stacked and cannot be distinguished in playtest.");
         }
     }
 
@@ -186,11 +195,14 @@ internal static class HeadlessClientSmoke
         var workplacePosition = VillageResidentPlacement.Resolve(arrivedResident, projection);
         var actual = VillageResidentPlacement.Resolve(travellingResident, projection);
         var progress = (float)travel.ElapsedMilliseconds / travel.DurationMilliseconds;
-        var expected = homePosition.Lerp(workplacePosition, progress);
-        if (actual.DistanceTo(expected) > 0.001f)
+        var oldStraightLine = homePosition.Lerp(workplacePosition, progress);
+        if (actual.DistanceTo(oldStraightLine) < 10.0f
+            || Math.Abs(actual.X) > 1.0f
+            || actual.Z < 80.0f
+            || actual.Z > 99.0f)
         {
             throw new InvalidOperationException(
-                "Runtime resident placement does not follow authoritative travel progress.");
+                "Runtime resident presentation did not follow the accepted P3 road/track path.");
         }
     }
 

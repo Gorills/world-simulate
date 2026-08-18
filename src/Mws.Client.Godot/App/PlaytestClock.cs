@@ -5,8 +5,8 @@ namespace Mws.Client.Godot.App;
 
 public partial class PlaytestClock : Node
 {
-    private const double ActiveTravelSampleSeconds = 0.25;
-    private const long ActiveTravelSampleMilliseconds = 15_000;
+    private const double ActiveTravelSampleSeconds = 0.10;
+    private const long ActiveTravelSampleMilliseconds = 400;
 
     private GameWorldSession? _session;
     private double _elapsedSeconds;
