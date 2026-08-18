@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P3_SEMANTIC_LOCATION_AND_TRAVEL",
+  "subject_sha": "2648ef183154f3cb2a8a420a07eb17cf01725da8",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "PASS",
+  "systems_audit": "PASS",
+  "overall": "PASS",
+  "validation": [
+    "User strict local prepush passed on exact subject 2648ef183154f3cb2a8a420a07eb17cf01725da8: core=True, godot=True, proof_measure=False.",
+    "GitHub Actions on exact subject: ci #218 success.",
+    "GitHub Actions on exact subject: proof-a-measure #212 success.",
+    "GitHub Actions on exact subject: playable-prototype-gate #286 success.",
+    "Manual P3 playtest on the preceding implementation head verified route-following resident motion is smooth and walking pace is acceptable; subject 2648ef18 changes only phase state."
+  ],
+  "systems_examined": [
+    "P3 accepted semantic-location/travel and continuous ordinary on-foot model contracts plus their independent model audits.",
+    "Resident selected-task -> destination -> unique known/open OnFoot route -> applicability -> duration -> departure authority.",
+    "Persistent plan-bearing travel progress, exact sub-hour arrival boundaries, blocked-route freeze/resume, checkpoint/save/load and replay.",
+    "HumanController and resident travel symmetry through the shared external-actor travel authority.",
+    "WorldRuntime resident interaction co-location/travelling gates and separate post-arrival action conditions.",
+    "Legacy location/travel compatibility paths to ensure they cannot create new clock/profession travel.",
+    "Godot resident placement, route presentation and interpolation boundary.",
+    "P3 default vertical slice, world travel progress, route interruption, player symmetry, interaction-location and arrival-action tests.",
+    "Playable-prototype and reality-model validation contracts."
+  ],
+  "findings": [],
+  "residual_risks": [
+    "Resident selected-task departure is observed at the resident hourly scheduler boundary. This is scheduling resolution rather than a clock-derived destination, but finer reconsideration/departure cadence may become gameplay-relevant later.",
+    "Legacy snapshots may still hydrate historical clock-derived stable places or finish persisted planless one-hour travel. Current-schema state cannot create new travel through those compatibility paths.",
+    "Free-form Godot WASD position is not yet authoritative local semantic presence, so ad-hoc mid-route player/NPC conversation remains intentionally unsupported rather than being inferred from render coordinates.",
+    "WorldRuntime settlement commands still stage a full settlement CaptureState/Restore clone; removing that hot-path clone is explicitly P4.",
+    "The prototype contains only one bounded reconstructed P3 route; expanding route content or process-bearing routes requires explicit content/model support rather than extrapolating the v1 baseline."
+  ],
+  "model_contracts": [
+    "DESIGN/MODELS/P3_SEMANTIC_LOCATION_AND_TRAVEL.md",
+    "DESIGN/MODELS/P3_CONTINUOUS_ON_FOOT_V1_SCOPE.md"
+  ],
+  "model_review": {
+    "causal_logic": {
+      "verdict": "PASS",
+      "summary": "Current production movement is caused by explicit selected task, destination, actor route knowledge, feasible unique route, on-foot applicability, duration plan, departure and persisted progress; clock hour or profession no longer creates new travel or work.",
+      "evidence": [
+        "SettlementSimulation.ExternalActorTravel requires a selected task, required destination, non-empty known route set, one unique known/open OnFoot path and Applicable traversal facts before BeginTravel.",
+        "SettlementSimulation.Routes declines to choose when multiple feasible known paths exist, avoiding an unmodeled route-choice law.",
+        "SettlementSimulation.HourPlan and P3ResidentScheduleLocationTests show clock hour/profession do not create current travel or work without a selected task.",
+        "P3DefaultTravelVerticalSliceTests exercises explicit task/authority through 300 m route, 214286 ms duration, departure, partial progress, save/load and exact arrival.",
+        "P3RouteInterruptionTests preserves and freezes the same travel plan when its active route becomes blocked, then resumes after reopening without teleportation."
+      ]
+    },
+    "historical_grounding": {
+      "verdict": "PASS",
+      "summary": "The implementation stays within the accepted rural-English structural travel model and narrow continuous ordinary on-foot calibration; it does not promote one universal medieval commute, route graph or walking rule.",
+      "evidence": [
+        "The accepted P3 semantic-location/travel audit grounds explicit routes, variable travel conditions, legal passage state, non-omniscient route knowledge and opportunity-caused movement while rejecting fixed clock commutes.",
+        "The accepted continuous-on-foot v1 scope limits 1400 mm/s timing to baseline-compatible short, ordinary, uninterrupted walking and leaves unknown/non-baseline/process-bearing journeys unresolved or inapplicable.",
+        "Production requires route timing class, actor capability, carried-load class and traversal horizon; Passable/Open alone is insufficient.",
+        "Default content creates no resident selected task, route knowledge, baseline actor capability or no-material-load authority."
+      ],
+      "model_context": {
+        "region": "Rural lowland England",
+        "period": "c. 1270-1348, with c. 1350-1450 retained as a separate stress/validation regime"
+      },
+      "sources": [
+        {
+          "citation": "Wendy R. Childs, “Moving around,” in A Social History of England, 1200–1500 (Cambridge University Press, 2006).",
+          "supports": "Regular medieval movement and context-dependent journey speed; does not support a universal fixed commute or walking speed."
+        },
+        {
+          "citation": "Paul Hindle, “Sources for the English medieval road system,” in Roadworks: Medieval Britain, Medieval Roads (Manchester University Press, 2016).",
+          "supports": "A functioning road-centered transport network existed while exact historical route reconstruction remains incomplete."
+        },
+        {
+          "citation": "Alan Cooper, “Once a highway, always a highway: roads and English law, c. 1150–1300,” in Roadworks (Manchester University Press, 2016).",
+          "supports": "Road passage, obstruction, toll and maintenance status had legal/institutional dimensions beyond geometry."
+        },
+        {
+          "citation": "Christopher Dyer, Peasants Making History, ch. 4, “Peasants changing society” (Oxford University Press, 2022).",
+          "supports": "Short-distance rural movement could be caused by concrete land, employment and marriage opportunities."
+        },
+        {
+          "citation": "Browning, Baker, Herron and Kram, “Effects of obesity and sex on the energetic cost and preferred speed of walking,” Journal of Applied Physiology 100(2) (2006).",
+          "supports": "A modern level-walking physical calibration near 1.4 m/s, used only as a bounded baseline rather than a universal medieval rate."
+        }
+      ]
+    },
+    "player_npc_symmetry": {
+      "verdict": "PASS",
+      "summary": "HumanController and resident actors use the same route, passability, mode, applicability and duration authority; player status does not confer teleportation or route bypass.",
+      "evidence": [
+        "WorldRuntime.PlayerTravel delegates player departure/progress to the same SettlementSimulation.BeginSelectedTaskTravelForActor and AdvanceTravelForActor used for residents.",
+        "P3HumanControllerTravelSymmetryTests verifies identical 300 m route cost, 214286 ms duration, OnFoot route binding, save/replay persistence and blocked-route refusal.",
+        "WorldRuntime interaction gates use authoritative semantic location and reject travelling/non-co-located actors instead of trusting Godot coordinates.",
+        "Godot resident placement and interpolation consume projected travel progress and never write semantic arrival or route state back into simulation."
+      ]
+    },
+    "long_horizon": {
+      "verdict": "NOT_APPLICABLE",
+      "summary": "P3 establishes structural place/travel authority and a bounded local walking calibration but does not establish economy, demography or resource-balance laws requiring a ten-year PASS.",
+      "evidence": [
+        "DESIGN/REALITY_MODELING_POLICY.md requires P3 causal logic, historical grounding and player/NPC symmetry, while long_horizon is reviewed but may be NOT_APPLICABLE.",
+        "The P3 model audit defers integrated labour/economy consequences and >=10-year proof to P5/P6.",
+        "The continuous-on-foot v1 scope introduces no new persistent economic/demographic rate or autonomous travel demand."
+      ]
+    }
+  }
+}
