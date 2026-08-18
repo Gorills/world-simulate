@@ -23,7 +23,26 @@ public sealed class SettlementSimulationTests
         Assert.Equal(
             SettlementStateJson.Serialize(direct.CaptureState()),
             SettlementStateJson.Serialize(resumed.CaptureState()));
-        Assert.Equal(new long[] { 1, 2, 3 }, resumed.Project().Residents.Select(resident => resident.Id.Value).ToArray());
+        Assert.Equal(
+            Enumerable.Range(1, 12).Select(index => (long)index).ToArray(),
+            resumed.Project().Residents.Select(resident => resident.Id.Value).ToArray());
+    }
+
+    [Fact]
+    public void DefaultVillageStartsRestingAndTransitionsToWorkAtEight()
+    {
+        var simulation = SettlementSimulation.CreateDefault(new WorldSeed(507));
+        var midnight = simulation.Project();
+
+        Assert.Equal(0, midnight.Hour);
+        Assert.Equal(12, midnight.Residents.Count);
+        Assert.All(midnight.Residents, resident => Assert.Equal(ResidentActivity.Resting, resident.Activity));
+
+        simulation.AdvanceHours(8);
+        var morning = simulation.Project();
+
+        Assert.Equal(8, morning.Hour);
+        Assert.All(morning.Residents, resident => Assert.Equal(ResidentActivity.Working, resident.Activity));
     }
 
     [Fact]
@@ -36,9 +55,9 @@ public sealed class SettlementSimulationTests
 
         Assert.Equal(3, projection.Workplaces.Count);
         Assert.Contains(projection.Residents, resident => resident.Activity == ResidentActivity.Working);
-        Assert.True(StockpileQuantity(projection, SettlementItems.Ration) > 6);
+        Assert.True(StockpileQuantity(projection, SettlementItems.Ration) > 24);
         Assert.True(StockpileQuantity(projection, SettlementItems.Herb) > 0);
-        Assert.Equal(4, StockpileQuantity(projection, SettlementItems.Grain));
+        Assert.True(StockpileQuantity(projection, SettlementItems.Grain) >= 16);
     }
 
     [Fact]
@@ -119,7 +138,7 @@ public sealed class SettlementSimulationTests
 
         Assert.Equal(1, projection.Day);
         Assert.Equal(3, projection.Hour);
-        Assert.Equal(3, projection.Residents.Count);
+        Assert.Equal(12, projection.Residents.Count);
         Assert.Equal(3, projection.Workplaces.Count);
         Assert.All(projection.Residents, resident => Assert.False(string.IsNullOrWhiteSpace(resident.WorkplaceName)));
         Assert.Contains(projection.RecentEvents, entry => entry.Kind == SettlementEventKinds.DayBegan);

@@ -1,0 +1,290 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: World Simulate\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "UI_SETTLEMENT"
+msgstr "Settlement"
+
+msgid "UI_DAY_TIME"
+msgstr "Day {0}, {1}:00"
+
+msgid "UI_STOCKPILE"
+msgstr "Stockpile: {0}"
+
+msgid "UI_RESIDENT"
+msgstr "Resident"
+
+msgid "UI_NAME"
+msgstr "Name"
+
+msgid "UI_PROFESSION"
+msgstr "Profession"
+
+msgid "UI_HOME"
+msgstr "Home"
+
+msgid "UI_NEEDS"
+msgstr "Needs"
+
+msgid "UI_AFFINITY"
+msgstr "Affinity"
+
+msgid "UI_RELATIONSHIP"
+msgstr "Relationship"
+
+msgid "UI_INVENTORY"
+msgstr "Inventory"
+
+msgid "UI_VALUE_UNASSIGNED"
+msgstr "Unassigned"
+
+msgid "UI_VALUE_EMPTY"
+msgstr "Empty"
+
+msgid "UI_INTERACT"
+msgstr "Interact"
+
+msgid "UI_ASK_ABOUT_WORK"
+msgstr "Ask about work"
+
+msgid "UI_ENCOURAGE"
+msgstr "Encourage"
+
+msgid "UI_SHARE_RATION"
+msgstr "Share ration"
+
+msgid "UI_WORLD_STATE"
+msgstr "World state"
+
+msgid "UI_ADVANCE_ONE_HOUR"
+msgstr "Advance one hour"
+
+msgid "UI_INPUT"
+msgstr "Input"
+
+msgid "UI_LANGUAGE"
+msgstr "Language"
+
+msgid "UI_INTERACTION"
+msgstr "Interaction"
+
+msgid "UI_HINT_GAMEPAD"
+msgstr "Left stick move · L3 sprint · B jump / menu cancel · right stick camera · Start world/menu · LB/RB select · A interact · Y advance"
+
+msgid "UI_HINT_KEYBOARD"
+msgstr "WASD move · Shift sprint · Space jump · mouse camera · Tab world/menu · Q/E select · F interact · T advance"
+
+msgid "UI_WORLD_STATE_TIME"
+msgstr "World state: day {0}, {1}:00"
+
+msgid "UI_INTERACT_WITH"
+msgstr "Interact with {0}"
+
+msgid "UI_HOME_UNASSIGNED"
+msgstr "Home: unassigned"
+
+msgid "UI_HOME_ASSIGNED"
+msgstr "Home: {0} · {1}"
+
+msgid "UI_NEEDS_VALUE"
+msgstr "Hunger {0}/100 · Energy {1}/100"
+
+msgid "UI_AFFINITY_VALUE"
+msgstr "Affinity {0}"
+
+msgid "UI_INVENTORY_EMPTY"
+msgstr "Inventory: empty"
+
+msgid "UI_INVENTORY_VALUE"
+msgstr "Inventory: {0}"
+
+msgid "UI_RESIDENT_ROW"
+msgstr "{0}{1} · {2} · {3}"
+
+msgid "UI_PROMPT_TALK"
+msgstr "{0} Talk · {1}"
+
+msgid "UI_PROMPT_INSPECT_ITEM"
+msgstr "{0} Inspect · {1} × {2}"
+
+msgid "UI_PROMPT_INSPECT_BUILDING"
+msgstr "{0} Inspect · {1}"
+
+msgid "UI_PROMPT_ITEM_STOCKPILE"
+msgstr "{0} × {1} · village stockpile"
+
+msgid "UI_PROMPT_ENTRANCE_OPEN"
+msgstr "{0} · doorway is open — walk inside"
+
+msgid "UI_DEBUG_TITLE"
+msgstr "Village observer [F3]"
+
+msgid "UI_DEBUG_SUMMARY"
+msgstr "Residents {0} · views {1} · work {2} · eat {3} · rest {4} · idle {5}"
+
+msgid "UI_DEBUG_TIME"
+msgstr "Day {0}, {1}:00 · player X {2:0} Z {3:0}"
+
+msgid "UI_DEBUG_RESIDENT_ROW"
+msgstr "{0} #{1} · {2} · H{3} E{4} · {5} {6} {7:0}m · {8} wp"
+
+msgid "UI_DEBUG_DEST_SOCIAL"
+msgstr "social point"
+
+msgid "UI_DEBUG_DEST_UNASSIGNED_HOME"
+msgstr "unassigned home"
+
+msgid "UI_DEBUG_ROUTE_MISMATCH"
+msgstr "route does not match authoritative activity"
+
+msgid "UI_DEBUG_LEGEND"
+msgstr "Dots = residents · route line = remaining path · cross = destination · ring/cross = player"
+
+msgid "UI_DEBUG_NO_DATA"
+msgstr "No resident data yet."
+
+msgid "CONTENT_PROFESSION_FARMER"
+msgstr "Farmer"
+
+msgid "CONTENT_PROFESSION_COOK"
+msgstr "Cook"
+
+msgid "CONTENT_PROFESSION_FORAGER"
+msgstr "Forager"
+
+msgid "CONTENT_ACTIVITY_IDLE"
+msgstr "Idle"
+
+msgid "CONTENT_ACTIVITY_WORKING"
+msgstr "Working"
+
+msgid "CONTENT_ACTIVITY_EATING"
+msgstr "Eating"
+
+msgid "CONTENT_ACTIVITY_RESTING"
+msgstr "Resting"
+
+msgid "CONTENT_ITEM_GRAIN"
+msgstr "Grain"
+
+msgid "CONTENT_ITEM_RATION"
+msgstr "Rations"
+
+msgid "CONTENT_ITEM_HERB"
+msgstr "Herbs"
+
+msgid "CONTENT_WORKPLACE_NORTH_FIELD"
+msgstr "North Field"
+
+msgid "CONTENT_WORKPLACE_COMMON_KITCHEN"
+msgstr "Common Kitchen"
+
+msgid "CONTENT_WORKPLACE_HERB_GROVE"
+msgstr "Herb Grove"
+
+msgid "CONTENT_HOUSEHOLD_NORTH"
+msgstr "North Household"
+
+msgid "CONTENT_HOUSEHOLD_EAST"
+msgstr "East Household"
+
+msgid "CONTENT_HOUSEHOLD_MILLER"
+msgstr "Miller Household"
+
+msgid "CONTENT_HOUSEHOLD_COOK"
+msgstr "Cook Household"
+
+msgid "CONTENT_HOUSEHOLD_RIVER"
+msgstr "River Household"
+
+msgid "CONTENT_HOUSEHOLD_GROVE"
+msgstr "Grove Household"
+
+msgid "CONTENT_HOME_UNKNOWN"
+msgstr "Unknown home"
+
+msgid "CONTENT_BUILDING_NORTH_HOUSE_WEST"
+msgstr "North House West"
+
+msgid "CONTENT_BUILDING_NORTH_HOUSE_EAST"
+msgstr "North House East"
+
+msgid "CONTENT_BUILDING_MILLER_HOUSE"
+msgstr "Miller House"
+
+msgid "CONTENT_BUILDING_COOK_HOUSE"
+msgstr "Cook House"
+
+msgid "CONTENT_BUILDING_RIVER_HOUSE"
+msgstr "River House"
+
+msgid "CONTENT_BUILDING_GROVE_HOUSE"
+msgstr "Grove House"
+
+msgid "CONTENT_BUILDING_SOUTH_HOUSE_WEST"
+msgstr "South House West"
+
+msgid "CONTENT_BUILDING_SOUTH_HOUSE_EAST"
+msgstr "South House East"
+
+msgid "CONTENT_BUILDING_FAR_SOUTH_HOUSE_WEST"
+msgstr "Far South House West"
+
+msgid "CONTENT_BUILDING_FAR_SOUTH_HOUSE_EAST"
+msgstr "Far South House East"
+
+msgid "CONTENT_BUILDING_HEARTH_INN"
+msgstr "The Hearth Inn"
+
+msgid "CONTENT_BUILDING_CARPENTER_WORKSHOP"
+msgstr "Carpenter Workshop"
+
+msgid "CONTENT_BUILDING_COMMON_STOREHOUSE"
+msgstr "Common Storehouse"
+
+msgid "CONTENT_BUILDING_SOUTH_BARN"
+msgstr "South Barn"
+
+msgid "FEEDBACK_FED_RESIDENT"
+msgstr "{0}: one ration consumed."
+
+msgid "FEEDBACK_ITEM_GIVEN"
+msgstr "{0} received {1} × {2}."
+
+msgid "FEEDBACK_WORK_INFO"
+msgstr "{0}: {1}, workplace — {2}."
+
+msgid "FEEDBACK_ENCOURAGED"
+msgstr "{0} seems more confident."
+
+msgid "FEEDBACK_RATION_SHARED"
+msgstr "{0} appreciates the shared ration."
+
+msgid "FEEDBACK_RESIDENT_NOT_FOUND"
+msgstr "Resident is no longer available."
+
+msgid "FEEDBACK_NO_RATIONS"
+msgstr "The settlement stockpile has no rations."
+
+msgid "FEEDBACK_INVALID_QUANTITY"
+msgstr "Quantity must be positive."
+
+msgid "FEEDBACK_ITEM_NOT_AVAILABLE"
+msgstr "Stockpile lacks {0} × {1}."
+
+msgid "FEEDBACK_INVENTORY_CAPACITY_EXCEEDED"
+msgstr "Inventory cannot hold more items."
+
+msgid "FEEDBACK_STALE_COMMAND"
+msgstr "That action is no longer current."
+
+msgid "FEEDBACK_ACTION_COMPLETED"
+msgstr "Action completed."
+
+msgid "FEEDBACK_ACTION_FAILED"
+msgstr "Action failed: {0}"

@@ -109,6 +109,24 @@ public sealed partial class WorldRuntime
             return RecordOperation(CreateReceipt(intent, false, "RESIDENT_NOT_FOUND"));
         }
 
+        // Task interruption/cancellation is not yet modeled. Preserve the selected task
+        // instead of silently erasing it during migration, and require an explicit future
+        // transition before this person can migrate.
+        if (resident.SelectedTask is not null)
+        {
+            return RecordOperation(CreateReceipt(intent, false, "ACTIVE_TASK_BLOCKS_MIGRATION"));
+        }
+
+        var residentRouteKnowledge = sourceState.ResidentRouteKnowledge?
+            .SingleOrDefault(entry => entry.ResidentId == intent.ResidentId);
+        if (residentRouteKnowledge is not null && residentRouteKnowledge.KnownConnectionIds.Count > 0)
+        {
+            // Route connection IDs are settlement-local authority. Until knowledge transfer
+            // across route graphs is modeled, do not silently erase or reinterpret a person's
+            // known routes during migration.
+            return RecordOperation(CreateReceipt(intent, false, "ROUTE_KNOWLEDGE_BLOCKS_MIGRATION"));
+        }
+
         if (destinationState.Residents.Any(entry => entry.Id == intent.ResidentId))
         {
             return RecordOperation(CreateReceipt(intent, false, "DESTINATION_ALREADY_CONTAINS_ENTITY"));
@@ -137,6 +155,8 @@ public sealed partial class WorldRuntime
         {
             Activity = ResidentActivity.Idle,
             WorkplaceId = new EntityId(0),
+            HouseholdId = new EntityId(0),
+            Location = SettlementActorLocationState.At(SettlementPlaceRef.Settlement),
         };
         var migratedStacks = movingStacks
             .Select((stack, index) => stack with
@@ -148,6 +168,9 @@ public sealed partial class WorldRuntime
         {
             Residents = sourceState.Residents.Where(entry => entry.Id != intent.ResidentId).ToArray(),
             ItemStacks = sourceState.ItemStacks.Where(stack => stack.OwnerId != intent.ResidentId).ToArray(),
+            ResidentRouteKnowledge = sourceState.ResidentRouteKnowledge?
+                .Where(entry => entry.ResidentId != intent.ResidentId)
+                .ToArray(),
         };
         var nextDestinationState = destinationState with
         {

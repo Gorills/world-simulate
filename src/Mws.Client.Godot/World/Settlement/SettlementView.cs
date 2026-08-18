@@ -1,12 +1,14 @@
 using Godot;
+using Mws.Client.Godot.Localization;
+using Mws.Client.Godot.UI.Theme;
 using Mws.Domain;
 using Mws.Simulation.Api;
-using Mws.Client.Godot.UI.Theme;
 
 namespace Mws.Client.Godot.World.Settlement;
 
-public partial class SettlementView : VBoxContainer
+public partial class SettlementView : PanelContainer
 {
+    private Label _heading = null!;
     private Label _timeLabel = null!;
     private Label _stockpileLabel = null!;
     private VBoxContainer _residentList = null!;
@@ -16,21 +18,42 @@ public partial class SettlementView : VBoxContainer
 
     public override void _Ready()
     {
-        _timeLabel = GetNode<Label>("Time");
-        _stockpileLabel = GetNode<Label>("Stockpile");
-        _residentList = GetNode<VBoxContainer>("Residents");
-        DesignSystem.ApplyHeading(GetNode<Label>("Heading"));
-        DesignSystem.ApplyLabel(_timeLabel);
-        DesignSystem.ApplyLabel(_stockpileLabel, muted: true);
+        var content = GetNode<VBoxContainer>("Content");
+        _heading = GetNode<Label>("Content/Heading");
+        _timeLabel = GetNode<Label>("Content/Time");
+        _stockpileLabel = GetNode<Label>("Content/Stockpile");
+        _residentList = GetNode<VBoxContainer>("Content/Residents");
+
+        DesignSystem.ApplySurface(this, UiSurface.Window);
+        DesignSystem.ApplyStack(content, UiGap.Medium);
+        DesignSystem.ApplyStack(_residentList, UiGap.Small);
+        DesignSystem.ApplyText(_heading, UiTextRole.Display);
+        DesignSystem.ApplyText(_timeLabel, UiTextRole.Metric);
+        DesignSystem.ApplyText(_stockpileLabel, UiTextRole.Muted);
+        RefreshLocalization();
+    }
+
+    public void RefreshLocalization()
+    {
+        if (_heading is not null)
+        {
+            _heading.Text = GameLocalization.Tr("UI_SETTLEMENT");
+        }
     }
 
     public void Render(SettlementProjection projection, EntityId selectedResidentId)
     {
         ArgumentNullException.ThrowIfNull(projection);
 
-        _timeLabel.Text = $"Day {projection.Day}, {projection.Hour:00}:00";
-        _stockpileLabel.Text =
-            $"Stockpile: {string.Join(" · ", projection.Stockpile.Select(stack => $"{stack.ItemId} {stack.Quantity}"))}";
+        _timeLabel.Text = GameLocalization.Format(
+            "UI_DAY_TIME",
+            projection.Day,
+            projection.Hour.ToString("00", System.Globalization.CultureInfo.InvariantCulture));
+        _stockpileLabel.Text = GameLocalization.Format(
+            "UI_STOCKPILE",
+            string.Join(
+                " · ",
+                projection.Stockpile.Select(stack => $"{LocalizedContent.Item(stack.ItemId)} {stack.Quantity}")));
 
         foreach (var child in _residentList.GetChildren())
         {
@@ -44,13 +67,20 @@ public partial class SettlementView : VBoxContainer
             var selected = residentId == selectedResidentId;
             var button = new Button
             {
-                Text = $"{(selected ? "▶ " : string.Empty)}{resident.Name} · {resident.Profession} · {resident.Activity}",
+                Text = GameLocalization.Format(
+                    "UI_RESIDENT_ROW",
+                    selected ? "▶ " : string.Empty,
+                    resident.Name,
+                    LocalizedContent.Profession(resident.Profession),
+                    LocalizedContent.Activity(resident.Activity)),
                 Alignment = HorizontalAlignment.Left,
+                AutoTranslateMode = Node.AutoTranslateModeEnum.Disabled,
             };
-            DesignSystem.ApplyButton(button);
+            DesignSystem.ApplyButton(
+                button,
+                selected ? UiButtonRole.SelectedRow : UiButtonRole.Row);
             if (selected)
             {
-                DesignSystem.ApplySelectedButton(button);
                 _selectedButton = button;
             }
 
@@ -59,8 +89,5 @@ public partial class SettlementView : VBoxContainer
         }
     }
 
-    public void FocusSelected()
-    {
-        _selectedButton?.GrabFocus();
-    }
+    public void FocusSelected() => _selectedButton?.GrabFocus();
 }

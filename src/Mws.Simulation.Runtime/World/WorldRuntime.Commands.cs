@@ -5,6 +5,17 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class WorldRuntime
 {
+    public SettlementCommandResult ExecuteResidentInteraction(
+        SimulationScopeId scopeId,
+        EntityId residentId,
+        ResidentInteractionChoice choice)
+    {
+        var commandId = GetLoadedPartition(scopeId).Simulation.NextCommandId;
+        return ExecuteSettlementCommand(
+            scopeId,
+            new InteractWithResidentCommand(commandId, residentId, choice));
+    }
+
     public SettlementCommandResult ExecuteSettlementCommand(
         SimulationScopeId scopeId,
         SettlementCommand command)
@@ -28,6 +39,18 @@ public sealed partial class WorldRuntime
     {
         ArgumentNullException.ThrowIfNull(command);
         var partition = GetLoadedPartition(scopeId);
+        if (command is InteractWithResidentCommand interaction)
+        {
+            var rejected = ValidateResidentInteraction(
+                scopeId,
+                partition.Simulation,
+                interaction.ResidentId);
+            if (rejected is not null)
+            {
+                return rejected;
+            }
+        }
+
         var state = partition.Simulation.CaptureState();
         var staged = SettlementSimulation.Restore(state);
         var result = staged.Execute(command);
@@ -47,6 +70,45 @@ public sealed partial class WorldRuntime
         partition.Revision = checked(partition.Revision + 1);
         return result;
     }
+
+    private SettlementCommandResult? ValidateResidentInteraction(
+        SimulationScopeId scopeId,
+        SettlementSimulation simulation,
+        EntityId residentId)
+    {
+        if (_player is null)
+        {
+            return InteractionRejected(SettlementResultCodes.PlayerRequired, residentId);
+        }
+
+        if (_player.ScopeId != scopeId)
+        {
+            return InteractionRejected(SettlementResultCodes.PlayerScopeMismatch, residentId);
+        }
+
+        var residentLocation = simulation.TryGetResidentSemanticLocation(residentId);
+        if (residentLocation is null)
+        {
+            return null;
+        }
+
+        var playerLocation = SettlementSemanticLocation.Normalize(_player.Location);
+        if (playerLocation.Kind == SettlementActorLocationKind.Travelling
+            || residentLocation.Kind == SettlementActorLocationKind.Travelling)
+        {
+            return InteractionRejected(SettlementResultCodes.InteractionActorTravelling, residentId);
+        }
+
+        if (playerLocation.CurrentPlace != residentLocation.CurrentPlace)
+        {
+            return InteractionRejected(SettlementResultCodes.InteractionNotCoLocated, residentId);
+        }
+
+        return null;
+    }
+
+    private static SettlementCommandResult InteractionRejected(string code, EntityId residentId) =>
+        new(false, code, residentId, []);
 
     private static WorldSettlementCommandInput CaptureSettlementCommandInput(
         SimulationScopeId scopeId,

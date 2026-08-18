@@ -17,6 +17,11 @@ public sealed partial class SettlementSimulation
         var rationBudget = GetBudget(SettlementItems.Ration, plan.AvailableInputs, plan.ProjectedFinal);
         for (var index = 0; index < _residents.Length; index++)
         {
+            if (_residents[index].SelectedTask is not null)
+            {
+                continue;
+            }
+
             if (plan.Hunger[index] >= 70)
             {
                 plan.HungryCandidates.Add(index);
@@ -71,14 +76,25 @@ public sealed partial class SettlementSimulation
             }
 
             var resident = _residents[index];
-            if (restingHours)
+            if (resident.SelectedTask is not null)
+            {
+                // The selected task is authoritative. Until task execution is implemented,
+                // keep compatibility eat/rest/work selection from replacing it implicitly.
+                plan.Energy[index] = Math.Max(0, resident.Energy - 1);
+                continue;
+            }
+
+            if (restingHours && IsResidentAtHome(resident))
             {
                 plan.Energy[index] = Math.Min(100, resident.Energy + 12);
                 plan.Activity[index] = ResidentActivity.Resting;
                 continue;
             }
 
-            if (workHours && resident.Energy >= 25 && FindWorkplace(resident.WorkplaceId) is not null)
+            if (workHours
+                && resident.Energy >= 25
+                && FindWorkplace(resident.WorkplaceId) is not null
+                && IsResidentAtWorkplace(resident))
             {
                 plan.WorkCandidates.Add(index);
                 continue;

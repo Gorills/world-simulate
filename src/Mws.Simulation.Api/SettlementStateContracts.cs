@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Mws.Domain;
 
 namespace Mws.Simulation.Api;
@@ -25,7 +26,32 @@ public sealed record ResidentState(
     ResidentActivity Activity,
     ResidentProfession Profession,
     EntityId WorkplaceId,
-    int Affinity);
+    int Affinity,
+    EntityId HouseholdId = default,
+    SettlementActorLocationState? Location = null,
+    SettlementSelectedTaskState? SelectedTask = null,
+    SettlementOnFootActorCapabilityClass OnFootCapability =
+        SettlementOnFootActorCapabilityClass.Unknown,
+    string? OnFootCapabilityProvenanceReference = null,
+    bool IsOnFootCapabilityFixture = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    SettlementOnFootCarriedLoadClass OnFootCarriedLoad =
+        SettlementOnFootCarriedLoadClass.Unknown,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    string? OnFootCarriedLoadProvenanceReference = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    bool IsOnFootCarriedLoadFixture = false);
+
+public sealed record HomeState(
+    EntityId Id,
+    string Name,
+    string SpatialKey,
+    int Capacity);
+
+public sealed record HouseholdState(
+    EntityId Id,
+    string Name,
+    EntityId HomeId);
 
 public sealed record ItemStackState(
     long StackId,
@@ -74,4 +100,10 @@ public sealed record SettlementState(
     IReadOnlyList<ItemStackState> ItemStacks,
     IReadOnlyList<WorkplaceState> Workplaces,
     IReadOnlyList<SettlementEvent> Events,
-    IReadOnlyList<SettlementCommandReceipt> CommandReceipts);
+    IReadOnlyList<SettlementCommandReceipt> CommandReceipts,
+    IReadOnlyList<HomeState>? Homes = null,
+    IReadOnlyList<HouseholdState>? Households = null,
+    int ResidentLocationEncodingVersion = SettlementVersions.LegacyResidentLocationEncodingVersion,
+    IReadOnlyList<SettlementRouteConnectionState>? RouteConnections = null,
+    IReadOnlyList<SettlementResidentRouteKnowledgeState>? ResidentRouteKnowledge = null,
+    int RouteModeEncodingVersion = SettlementVersions.LegacyRouteModeEncodingVersion);

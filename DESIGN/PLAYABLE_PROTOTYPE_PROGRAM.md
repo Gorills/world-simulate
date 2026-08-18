@@ -1,0 +1,195 @@
+# Playable Prototype Program v1
+
+This program turns the current village branch into a playable, measurable systemic prototype without allowing architecture work to outrun gameplay evidence.
+
+The program is intentionally sequential. A phase is not complete because its implementation compiles or its author is satisfied. Every implementation phase stops at `AUDIT_REQUIRED` and must receive an independent post-commit code review plus systems audit before any later phase may begin.
+
+Starting with P3, audit also follows the blocking reality/model rules in `DESIGN/REALITY_MODELING_POLICY.md`. A green implementation cannot PASS when its causal model, historical grounding or player/NPC symmetry is invalid or underdefined.
+
+## State machine
+
+Allowed phase states:
+
+- `LOCKED` — implementation must not begin.
+- `IMPLEMENTING` — this is the only phase whose production scope may change.
+- `AUDIT_REQUIRED` — implementation is frozen; review the exact committed subject.
+- `FAILED` — blockers were found; repair this same phase before anything later starts.
+- `PASSED` — code review and systems audit both passed, plus every required reality/model dimension passed.
+
+At most one phase may be in `IMPLEMENTING`, `AUDIT_REQUIRED`, or `FAILED`.
+
+A later phase may leave `LOCKED` only when every dependency is `PASSED`.
+
+Allowed status transitions are deliberately narrow:
+
+- `LOCKED -> IMPLEMENTING`;
+- `IMPLEMENTING -> AUDIT_REQUIRED`;
+- `AUDIT_REQUIRED -> PASSED | FAILED`;
+- `FAILED -> IMPLEMENTING`;
+- `PASSED` is terminal for that program version.
+
+Only one phase status may change in a single transition. In particular, the commit that records an audit `PASS` must not also start the next phase.
+
+The authoritative machine-readable state is `MACHINE/playable-prototype.json`.
+Run `python TOOLS/validate_playable_prototype.py` and `python TOOLS/validate_reality_model.py` before normal validation.
+
+## Enforced implementation scope
+
+When Git metadata is available, the validator checks both declared state and actual changes.
+
+Protected scope includes:
+
+- `src/`, `tests/`, `benchmarks/`;
+- `TOOLS/`, `DESIGN/`, `.github/workflows/`;
+- `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`;
+- root `AGENTS.md`, `.gitignore` and build/solution configuration files.
+
+Protected working-tree changes require the relevant phase to be `IMPLEMENTING`. The one exception is the same working tree transition from `IMPLEMENTING` to `AUDIT_REQUIRED`, which may contain the final implementation edits.
+
+A committed protected change is valid only when:
+
+- the phase is `IMPLEMENTING`; or
+- the commit closes that same phase from parent `IMPLEMENTING` to `AUDIT_REQUIRED`; or
+- an audit commit adds new JSON evidence while moving that phase from `AUDIT_REQUIRED` to `PASSED` or `FAILED`.
+
+Audit JSON is append-only. An audit transition may add a new result file but may not rewrite a result that existed in its parent commit.
+
+Protected edits are therefore rejected while a phase is `AUDIT_REQUIRED`, `FAILED`, or after all completed phases are `PASSED`, unless the state is first moved through an allowed transition. Generated Python bytecode is ignored by Git so the validation workflow does not create its own false protected change.
+
+The gate also verifies audit subject commits from repository history and requires an audit subject to show that phase as `AUDIT_REQUIRED`. CI checks out full history so old audit evidence remains verifiable as later phases accumulate.
+
+## Audit independence contract
+
+Implementation and audit are separate passes.
+
+When a phase reaches `AUDIT_REQUIRED`:
+
+1. Stop implementation.
+2. Audit the exact committed SHA. Do not silently fix the subject while reviewing it.
+3. Review both the changed code and the connected systems it can affect.
+4. Starting with P3, review the world model against `DESIGN/REALITY_MODELING_POLICY.md` and the relevant `DESIGN/MODELS/` contracts.
+5. Emit an audit record under `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`.
+6. A phase is `PASSED` only when both `code_review` and `systems_audit` are `PASS` and every required model dimension is also `PASS`.
+7. If any required review fails, set the phase to `FAILED`. Repairs remain inside the same phase and require another post-commit audit.
+
+Prefer a separate agent or human reviewer when available. When one agent performs both roles, the audit pass must still be post-commit, read-only with respect to the audited SHA, and must not rely on the implementation author's explanation as evidence.
+
+An audit must examine, when applicable:
+
+- authority and state ownership;
+- mutation paths and public boundaries;
+- determinism, replay, save/load and migrations;
+- client/runtime integration;
+- connected gameplay systems and semantic consistency;
+- asymptotic work, allocations and likely scale cliffs;
+- whether the phase advances the playable systemic loop rather than only presentation;
+- whether a parallel or bypass path was introduced;
+- validation evidence and missing coverage;
+- causal logic: why the modeled actor/resource changes state instead of merely when a branch executes;
+- historical grounding for human economic/social/institutional behavior;
+- player/NPC symmetry and whether player powers come from ordinary world state;
+- long-horizon behavior when the phase establishes economy, demography or resource-balance laws;
+- whether a prototype fixture or regression test has been accidentally promoted into world canon.
+
+Green tests are evidence, not a substitute for this review. If a regression test protects an invalid model, the test is wrong.
+
+## Reality/model audit record
+
+Historical P0-P2 audit JSON remains valid and append-only. Beginning with P3, each verdict record additionally carries:
+
+- `model_contracts`: repository-relative Markdown paths under `DESIGN/MODELS/` when the phase is model-sensitive;
+- `model_context`: reference region, reference period and explicit assumptions when historical grounding passes;
+- `model_review.causal_logic`;
+- `model_review.historical_grounding`;
+- `model_review.player_npc_symmetry`;
+- `model_review.long_horizon`.
+
+Each model-review entry contains `verdict`, `summary` and `evidence`. `historical_grounding: PASS` also requires at least two source citations. `long_horizon: PASS` requires `horizon_years >= 10`.
+
+Required PASS dimensions are defined by `DESIGN/REALITY_MODELING_POLICY.md` and machine-checked by `TOOLS/validate_reality_model.py`. Under audit schema v1, a reality-model `FAIL` must also make `systems_audit` and `overall` fail.
+
+## Program phases
+
+| Phase | Goal | Required proof before PASS |
+| --- | --- | --- |
+| P0 `PROCESS_GATE` | Install this sequential audit contract and make it executable in local validation/CI. | Validator rejects invalid phase transitions and protected edits; audit evidence is append-only; local/CI entry points run the gate; contract is discoverable to agents. |
+| P1 `PLAYABLE_USES_WORLD_RUNTIME` | Make the playable client use `WorldRuntime` as its authoritative composition root. | Time, commands and projection flow through `WorldRuntime`; no client-owned `SettlementSimulation` authority path remains; current village behavior stays equivalent. |
+| P2 `AUTHORITATIVE_PLAYER_ACTOR` | Represent the player as an authoritative simulation actor. | Stable player identity, owned inventory and semantic location survive save/load and deterministic replay; client sends intent only. This remains an authority proof, not permission to create player-only world rules. |
+| P3 `SEMANTIC_LOCATION_AND_TRAVEL` | Add authoritative place/travel semantics for player and residents without persisting render coordinates. | Location-dependent interactions cannot contradict authoritative activity/travel; Godot remains presentation/interpolation; causal logic, historical grounding and player/NPC symmetry model reviews PASS. Fixed prototype work schedules cannot be treated as evidence merely because regression tests encode them. |
+| P4 `REMOVE_HOT_PATH_FULL_STATE_CLONE` | Remove whole-settlement snapshot/restore from ordinary world ticks and commands. | Mutation preserves safety/idempotency without full-state cloning; before/after runtime and allocation evidence is recorded; model dimensions are explicitly reviewed and may be `NOT_APPLICABLE` only if no world-model semantics changed. |
+| P5 `FOOD_SHORTAGE_GAMEPLAY_LOOP` | Prove one costly systemic player choice can change the village trajectory. | Autonomous food pressure, at least two competing interventions, persistent consequences and materially different end-of-day outcomes; causal, historical, symmetry and >=10-year long-horizon model reviews PASS. |
+| P6 `MEASURABLE_VERTICAL_SLICE` | Measure the actual playable scenario end to end and decide the next scale work from evidence. | Gameplay outcome metrics and runtime metrics are emitted for agreed scale cases; all four model dimensions PASS; final audit states what to optimize next and what not to build yet. |
+
+## P1 acceptance boundary
+
+P1 is deliberately narrow:
+
+```text
+Godot
+  -> GameWorldSession
+  -> WorldRuntime
+  -> active SettlementSimulation partition
+```
+
+P1 must not also implement the player actor, travel semantics, new economy mechanics or presentation polish.
+
+Acceptance:
+
+- playable/headless client composition uses `WorldRuntime`;
+- time advances through `WorldRuntime`;
+- settlement commands execute through `WorldRuntime`;
+- settlement projections are obtained through `WorldRuntime`;
+- current village behavior remains functionally equivalent;
+- no second authoritative mutation path remains in the client session;
+- a world checkpoint/save seam is available at the session boundary;
+- relevant core and Godot smoke validation is green.
+
+## Scope freeze until P6 audit
+
+Do not add these unless the current phase cannot be proven without them and the scope exception is recorded in that phase's audit:
+
+- UI/design-system polish;
+- lighting polish;
+- animation polish;
+- asset-pipeline expansion;
+- new professions or extra buildings;
+- combat;
+- skill/progression systems;
+- family simulation beyond what the active phase explicitly requires;
+- crowd avoidance;
+- unrelated RPG verbs.
+
+The freeze is not a claim that these features are unimportant. It prevents presentation and breadth from masking unresolved authority, scaling and gameplay-causality problems. The reality/model policy still applies inside the frozen scope: do not use the freeze as a reason to canonize known-bad fixtures.
+
+## P5 scenario target
+
+The default product proof is a food-shortage day:
+
+`needs -> consumption -> inventory -> farm -> grain -> kitchen -> ration -> household -> player intervention -> persistent consequence`
+
+This chain is a scenario scaffold, not historical canon. Before P5 PASS, its production/ownership/labor assumptions must be replaced or justified by a model contract grounded in the selected reference context.
+
+The player must be able to observe the problem and choose between at least two interventions that compete for a limited resource, time or opportunity. By end of day, different choices must produce objectively different world state.
+
+Minimum gameplay metrics:
+
+- hungry residents;
+- critical-hunger hours;
+- work hours completed/missed;
+- grain/rations produced and consumed;
+- households without food;
+- player actions and meaningful player actions;
+- relationship changes caused by the scenario.
+
+Long-horizon model evidence before P5 PASS must exercise at least 10 simulated years and explain major trajectories/failures in terms of modeled causes rather than merely asserting that the settlement survived.
+
+Minimum runtime metrics by P6:
+
+- advance-hour latency;
+- allocations per simulated hour;
+- command latency;
+- projection latency/allocations;
+- checkpoint latency/bytes;
+- dormant catch-up latency if dormant partitions are exercised.
+
+Do not infer million-agent capacity from the current proof benchmarks. Measure the actual runtime path before selecting coarse LOD, projection deltas or persistence optimization as the next project.

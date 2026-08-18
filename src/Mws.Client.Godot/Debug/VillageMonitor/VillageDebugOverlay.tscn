@@ -1,0 +1,92 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Debug/VillageMonitor/VillageDebugOverlay.cs" id="1_overlay"]
+[ext_resource type="Script" path="res://Debug/VillageMonitor/VillageDebugMap.cs" id="2_map"]
+
+[node name="VillageDebugOverlay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_overlay")
+
+[node name="Anchor" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Anchor"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Root" type="VBoxContainer" parent="Anchor/Panel"]
+layout_mode = 2
+
+[node name="TitleRow" type="HBoxContainer" parent="Anchor/Panel/Root"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Anchor/Panel/Root/TitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Badge" type="Label" parent="Anchor/Panel/Root/TitleRow"]
+layout_mode = 2
+
+[node name="Summary" type="Label" parent="Anchor/Panel/Root"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="Time" type="Label" parent="Anchor/Panel/Root"]
+layout_mode = 2
+
+[node name="Divider" type="HSeparator" parent="Anchor/Panel/Root"]
+layout_mode = 2
+
+[node name="Body" type="HBoxContainer" parent="Anchor/Panel/Root"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MapPanel" type="PanelContainer" parent="Anchor/Panel/Root/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Map" type="Control" parent="Anchor/Panel/Root/Body/MapPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("2_map")
+
+[node name="DetailsPanel" type="PanelContainer" parent="Anchor/Panel/Root/Body"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsScroll" type="ScrollContainer" parent="Anchor/Panel/Root/Body/DetailsPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+horizontal_scroll_mode = 0
+
+[node name="Details" type="Label" parent="Anchor/Panel/Root/Body/DetailsPanel/DetailsScroll"]
+custom_minimum_size = Vector2(330, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 2
+
+[node name="Legend" type="Label" parent="Anchor/Panel/Root"]
+layout_mode = 2
+autowrap_mode = 2

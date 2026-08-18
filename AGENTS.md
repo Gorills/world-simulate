@@ -2,6 +2,28 @@
 
 Optimize for a solo developer using coding agents. Quality gates exist to shorten debugging, not to create ceremony.
 
+## Reality/modeling gate
+`DESIGN/REALITY_MODELING_POLICY.md` is a blocking global policy for authoritative simulation work.
+
+- Do not preserve a prototype fixture or regression test when it conflicts with causal logic, historical evidence or player/NPC symmetry. Fix/delete the fixture or test instead.
+- Before treating human, economic, social, institutional or physical-world behavior as canonical, create/update a model contract under `DESIGN/MODELS/` using `DESIGN/MECHANIC_CONTRACT_TEMPLATE.md`.
+- Historical human behavior needs an explicit reference context and credible evidence; do not invent universal rules from intuition.
+- The player is not a privileged simulation species. Player-only powers require ordinary world-state justification such as ownership, office, permission, contract, skill or physical access.
+- Prefer `MODEL_UNDERDEFINED` and stop implementation over filling a research gap with a convenient constant.
+- `python TOOLS/validate_reality_model.py` is part of routine validation. Starting at P3, a phase cannot PASS without the required model-review evidence.
+
+## Bounded research/modeling workflow
+
+Follow `DESIGN/RESEARCH_MODELING_WORKFLOW.md` for historical/causal model work.
+
+- One bounded research/modeling task -> coherent commit/push -> report -> stop. Do not begin the next task in the same pass.
+- On owner-directed continuation, audit the exact previous commit before starting anything new. A blocker keeps work on the same task.
+- Preserve source-to-claim evidence and limits in model contracts so accepted research can be reused instead of repeated from zero.
+- Audit must independently re-check load-bearing historical facts against their underlying sources; do not merely trust the previous research summary.
+- Before promoting a contract to `ACCEPTED`, persist an append-only audit record under `DESIGN/MODEL_AUDITS/` with the exact reviewed SHA, load-bearing fact checks, reopened sources, verdicts, deferred gaps and CI outcomes.
+- Audit includes relevant CI/required checks on the exact SHA. Running CI means pending, failed CI means repair the same task, and a later task must not start while a blocker remains.
+- Do not turn audit into a full literature-search loop: reopen non-load-bearing evidence only for a concrete contradiction, ambiguity, weak citation or changed dependency.
+
 ## Git
 - Keep `main` plus one active milestone/feature branch. Do not create a branch for each task, fix, test, or agent.
 - Batch coherent edits into one commit. Do not push intermediate placeholders.
@@ -15,7 +37,7 @@ Optimize for a solo developer using coding agents. Quality gates exist to shorte
 - Run `python TOOLS/dev.py full` only at a milestone/checkpoint or when explicitly requested.
 - Run `python TOOLS/dev.py bench` only for explicit performance evidence. Never as part of the normal edit loop.
 
-`fast` must remain the default agent loop. Do not substitute the whole solution, Godot, benchmark, export, or release validation for it.
+`fast` must remain the default agent loop. Do not substitute the whole solution, Godot, benchmark, export or release validation for it.
 
 ## CI anti-stall
 - One change batch -> one CI cycle.
@@ -30,3 +52,16 @@ Routine Proof A/gameplay kernel changes do not require Godot headless CI unless 
 
 ## Agent task sizing
 Prefer small-to-medium vertical edits that a weaker local agent can understand from nearby code and tests. Escalate architecture/persistence/LOD/public-boundary changes to a stronger agent or deliberate review.
+
+## Playable prototype phase gate
+The active playable-prototype program is defined by `DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md` and `MACHINE/playable-prototype.json`.
+
+- Run `python TOOLS/validate_playable_prototype.py` before changing production scope. With Git available, it checks both phase state and actual protected working-tree/HEAD changes.
+- Work only on the single phase marked `IMPLEMENTING`. Protected scope includes `src/`, tests, benchmarks, tooling, design, workflows, audit evidence and root build/agent/git-ignore contracts.
+- A phase in `AUDIT_REQUIRED` is frozen. Review the exact committed implementation; do not keep coding in the audit pass.
+- `FAILED` means repair the same phase: move that phase back to `IMPLEMENTING`, then repair it. Do not start a later phase.
+- A later phase must remain `LOCKED` until all dependencies are `PASSED`.
+- Passing tests is not enough to mark a phase `PASSED`; independent post-commit code review, systems audit and any required reality/model review must pass and be recorded under `AUDIT_RESULTS/PLAYABLE_PROTOTYPE/`.
+- Audit JSON records are append-only evidence. Never rewrite a previous result; a new review creates a new JSON record.
+- Passing a phase does not automatically authorize or start the next phase. Record `PASS` and start the next phase in separate state transitions.
+- Respect the program scope freeze. Do not add polish or unrelated systems while authority, scaling and gameplay-causality phases are unresolved.

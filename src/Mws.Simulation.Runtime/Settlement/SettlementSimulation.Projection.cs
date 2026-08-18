@@ -30,19 +30,27 @@ public sealed partial class SettlementSimulation
             stockpile,
             workplaces,
             residents,
-            _events.TakeLast(8).ToArray());
+            _events.TakeLast(8).ToArray(),
+            ProjectHomes(),
+            ProjectHouseholds());
     }
 
     public ResidentProjectionPage ProjectResidents(int offset, int limit)
     {
         if (offset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(offset), offset, "Resident projection offset cannot be negative.");
+            throw new ArgumentOutOfRangeException(
+                nameof(offset),
+                offset,
+                "Resident projection offset cannot be negative.");
         }
 
         if (limit is <= 0 or > 1_000)
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), limit, "Resident projection limit must be 1..1000.");
+            throw new ArgumentOutOfRangeException(
+                nameof(limit),
+                limit,
+                "Resident projection limit must be 1..1000.");
         }
 
         var count = Math.Min(limit, Math.Max(0, _residents.Length - offset));
@@ -65,6 +73,11 @@ public sealed partial class SettlementSimulation
         for (var index = 0; index < count; index++)
         {
             var resident = _residents[offset + index];
+            var household = FindHousehold(resident.HouseholdId);
+            var home = household is null ? null : FindHome(household.HomeId);
+            var selectedTask = ProjectSelectedTask(resident);
+            var destinationRequest = ProjectDestinationRequest(resident);
+            var routePath = ProjectRoutePath(resident, destinationRequest);
             result[index] = new ResidentProjection(
                 resident.Id,
                 resident.Name,
@@ -74,7 +87,17 @@ public sealed partial class SettlementSimulation
                 resident.Profession,
                 FindWorkplace(resident.WorkplaceId)?.Name ?? "Unassigned",
                 resident.Affinity,
-                ProjectInventory(resident.Id));
+                ProjectInventory(resident.Id),
+                resident.WorkplaceId,
+                resident.HouseholdId,
+                household?.Name ?? string.Empty,
+                home?.Id ?? default,
+                home?.Name ?? string.Empty,
+                SettlementSemanticLocation.Project(resident.Location),
+                selectedTask,
+                destinationRequest,
+                routePath,
+                ProjectOnFootTraversalApplicability(resident, routePath));
         }
 
         return result;

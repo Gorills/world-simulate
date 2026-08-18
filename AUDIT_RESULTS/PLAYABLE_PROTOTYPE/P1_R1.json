@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
+  "subject_sha": "65cffe38bc6af8c9923ae8fd4b98f268b9466b13",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "PASS",
+  "systems_audit": "FAIL",
+  "overall": "FAIL",
+  "validation": [
+    "Reviewed complete P1 range 2bf51453758c1e58a309ae8c84d15f31b727c08f..65cffe38bc6af8c9923ae8fd4b98f268b9466b13 against the P1 acceptance boundary.",
+    "Confirmed GameWorldSession owns WorldRuntime plus one settlement scope and no client C# file contains a SettlementSimulation authority path.",
+    "Confirmed playable time, projection, resident interaction and checkpoint/restore seams route through WorldRuntime.",
+    "Confirmed ExecuteResidentInteraction emits the existing SettlementCommand journal input and replay continues through ExecuteSettlementCommandCore.",
+    "Confirmed dedicated architecture and core regression tests cover client authority ownership, command journaling and checkpoint restoration.",
+    "Confirmed CI Godot scope matcher now includes the WorldRuntime files directly consumed by the playable session.",
+    "Exact-SHA check snapshot showed playable-prototype gate/scope and proof-a-required successful, while core was still in_progress and the dependent Godot integration job had not yet produced green evidence."
+  ],
+  "systems_examined": [
+    "GameWorldSession authority ownership",
+    "Godot composition and HUD/clock consumers",
+    "WorldRuntime time/projection/command/checkpoint APIs",
+    "settlement command-id allocation boundary",
+    "world input journal and replay path",
+    "checkpoint restore behavior",
+    "architecture regression tests",
+    "core runtime regression test",
+    "CI Godot dependency scope",
+    "P1 scope freeze and P2 boundary"
+  ],
+  "findings": [
+    {
+      "severity": "BLOCKER",
+      "code": "P1_REQUIRED_VALIDATION_INCOMPLETE",
+      "summary": "P1 acceptance requires green relevant core and Godot smoke evidence; the single exact-SHA audit snapshot observed core still running and therefore no completed Godot integration result. No production-code defect was identified in this audit pass."
+    }
+  ],
+  "residual_risks": [
+    "WorldRuntime ordinary advance/command paths still clone full settlement state; this is pre-existing and explicitly deferred to P4.",
+    "GameWorldSession restore currently receives the active settlement scope alongside the world checkpoint rather than serializing client selection metadata into the world checkpoint; current one-settlement playable flow is unaffected.",
+    "The feature branch remains unprotected server-side; repository owner can intentionally bypass CI despite the project gate."
+  ]
+}

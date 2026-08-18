@@ -17,6 +17,11 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 
+[internationalization]
+locale/fallback="en"
+locale/translations=PackedStringArray("res://Localization/en.po", "res://Localization/ru.po")
+rendering/root_node_auto_translate=false
+
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"

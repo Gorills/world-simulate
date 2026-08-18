@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P2_AUTHORITATIVE_PLAYER_ACTOR",
+  "subject_sha": "344ad07927decbf215d26851d8109f2c70093c31",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "PASS",
+  "systems_audit": "PASS",
+  "overall": "PASS",
+  "validation": [
+    "Reviewed the complete P2 implementation from P1 PASS through exact audit checkpoint 344ad07927decbf215d26851d8109f2c70093c31.",
+    "Confirmed the authoritative player actor is world-level state with a stable globally allocated EntityId, authoritative owned inventory and coarse SimulationScopeId semantic location.",
+    "Confirmed player identity is registered in the world entity directory, participates in NextEntityId monotonicity, persists in WorldManifestState and restores before entity-directory verification.",
+    "Confirmed AddPlayerActor is a world input journal event, validates its payload and deterministically replays the same player allocation.",
+    "Confirmed GameWorldSession derives the active settlement from the restored player projection and does not own mutable WorldPlayerActorState.",
+    "Confirmed Godot World/Player remains presentation/controller state and contains no authoritative player inventory or world-player state.",
+    "Confirmed P2 stores only settlement-scope location; no P3 AtPlace/Travelling semantics or render coordinates entered authoritative state.",
+    "Confirmed R1 CA1859 and replay nullability findings were repaired in a narrow two-file patch with no semantic drift.",
+    "Exact-SHA CI snapshot completed core=success, godot=success and ci-required=success; playable-prototype gate and proof checks were also present in the successful validation set."
+  ],
+  "systems_examined": [
+    "global player identity allocation",
+    "entity directory and counter invariants",
+    "authoritative player inventory",
+    "coarse semantic scope location",
+    "world manifest JSON persistence",
+    "input journal validation and deterministic replay",
+    "resident migration safety",
+    "GameWorldSession restore/composition boundary",
+    "Godot player presentation ownership",
+    "headless client checkpoint roundtrip",
+    "architecture/core regression tests",
+    "P2/P3 scope boundary",
+    "exact-checkpoint CI validation"
+  ],
+  "findings": [],
+  "residual_risks": [
+    "WorldRuntime tick/command full-state staging remains deliberately deferred to P4_REMOVE_HOT_PATH_FULL_STATE_CLONE.",
+    "Fine semantic place and travel state remains deliberately deferred to P3_SEMANTIC_LOCATION_AND_TRAVEL.",
+    "The additive Player manifest field and AddPlayerActor input retain current world version identifiers; older-binary compatibility is not proven and should be addressed if formal world-schema migration support becomes a requirement.",
+    "The feature branch remains unprotected server-side, so phase enforcement is repository/CI/agent based."
+  ]
+}

@@ -1,21 +1,31 @@
-# Godot Client Architecture v0.1
+# Godot Client Architecture v0.3
 
-Godot is a presentation/input client over the authoritative C# simulation. It is not a second game-state owner.
+Godot is a presentation/input client over the authoritative C# world runtime. It is not a second game-state owner.
 
 ## Flow
 
-`mouse / keyboard / gamepad → GameInput → GameSession → authoritative simulation → projection → views`
+`mouse / keyboard / gamepad → GameInput → GameWorldSession → WorldRuntime → active settlement partition → projection → views`
 
-Views send intent (`select resident`, `interact`, `advance time`). They never set Hunger, Affinity, inventory or job state directly.
+Views send intent (`select resident`, `interact`, `advance time`). They never set Hunger, Affinity, inventory, player identity or job state directly.
+
+`GameWorldSession` is the client orchestration boundary. It owns one `WorldRuntime`, derives the active settlement scope from the authoritative player actor on restore, routes time/commands/projection through the world runtime, and exposes a world-checkpoint seam. It does not own a `SettlementSimulation` or mutable player inventory.
+
+## Authoritative player boundary
+
+`WorldRuntime` owns one authoritative player actor for the current playable prototype. Its stable `EntityId`, owned item quantities and coarse `SimulationScopeId` are persisted in the world manifest and reproduced by world input replay.
+
+`World/Player/ThirdPersonPlayer` remains a Godot presentation/controller object. Its `CharacterBody3D` transform, motor state and camera state are not authoritative player identity, inventory or semantic world state. P3 may add finer place/travel semantics to the simulation without persisting render coordinates.
 
 ## Structure
 
 - `App/` — composition root and process lifecycle only.
-- `Session/` — client-side orchestration around authoritative simulation/projections; no Godot node code.
+- `Session/` — client-side orchestration around `WorldRuntime`, player projection, active scope selection and checkpoint/restore seams; no Godot node code.
 - `Input/` — semantic gameplay actions and last-used-device tracking.
-- `World/` — world-facing views such as settlement/resident representations.
+- `World/` — world-facing views such as settlement/resident representations and presentation-only player control.
 - `UI/Screens/` — screen/panel interaction components.
 - `UI/Theme/` — design tokens and reusable styling helpers.
+
+Only `Session/` may reference `Mws.Simulation.Runtime` from client C# code.
 
 ## File budgets
 
@@ -53,5 +63,5 @@ Do not use deep cross-scene `GetNode()` calls from unrelated features. The paren
 
 ## Headless CI
 
-When `DisplayServer.GetName() == "headless"`, `App/Main.cs` executes a bounded client-boundary smoke and quits.
+When `DisplayServer.GetName() == "headless"`, `App/Main.cs` executes a bounded client-boundary smoke and quits. The smoke proves that the playable session advances and interacts through `WorldRuntime`, restores the world checkpoint, and preserves authoritative player identity/inventory/scope.
 Normal desktop execution stays open as a playable client.

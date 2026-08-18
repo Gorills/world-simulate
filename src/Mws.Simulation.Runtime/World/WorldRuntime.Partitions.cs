@@ -85,6 +85,16 @@ public sealed partial class WorldRuntime
         {
             yield return workplace.Id;
         }
+
+        foreach (var home in state.Homes ?? [])
+        {
+            yield return home.Id;
+        }
+
+        foreach (var household in state.Households ?? [])
+        {
+            yield return household.Id;
+        }
     }
 
     private sealed class WorldPartitionRuntime

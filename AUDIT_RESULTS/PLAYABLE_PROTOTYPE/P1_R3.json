@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
+  "subject_sha": "629c7d00f61fcc79ee7934a282d83bbae2fa1bd3",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "FAIL",
+  "systems_audit": "FAIL",
+  "overall": "FAIL",
+  "validation": [
+    "Reviewed unchanged P1 production implementation at exact checkpoint 629c7d00f61fcc79ee7934a282d83bbae2fa1bd3.",
+    "Confirmed GameWorldSession remains the sole playable client orchestration path over WorldRuntime and P2 scope remains untouched.",
+    "Exact-SHA CI snapshot showed core completed with failure and Godot skipped because it depends on successful core validation.",
+    "Inspected only failed core job 95323658973. Build reached Mws.Simulation.Runtime successfully, then TreatWarningsAsErrors rejected WorldRuntimeClientBoundaryTests.cs line 29 with CA1826 for Enumerable.Last() on the indexable InputJournal collection."
+  ],
+  "systems_examined": [
+    "GameWorldSession authority ownership",
+    "WorldRuntime time/projection/command/checkpoint path",
+    "world input journal and replay path",
+    "P1 regression tests",
+    "Godot dependency scope",
+    "exact-checkpoint CI validation"
+  ],
+  "findings": [
+    {
+      "severity": "BLOCKER",
+      "code": "P1_CORE_BUILD_CA1826",
+      "summary": "tests/Mws.Core.Tests/WorldRuntimeClientBoundaryTests.cs uses checkpoint.Manifest.InputJournal.Last() on an indexable collection. CA1826 is promoted to an error by repository policy, so core validation fails and the dependent Godot integration job cannot run. Replace the LINQ Last() call with direct indexing; no production runtime/session change is required."
+    }
+  ],
+  "residual_risks": [
+    "WorldRuntime full-state staging remains deliberately deferred to P4.",
+    "Active settlement scope is restored alongside, not inside, WorldCheckpointState.",
+    "Feature branch protection remains process/CI based rather than server-enforced."
+  ]
+}

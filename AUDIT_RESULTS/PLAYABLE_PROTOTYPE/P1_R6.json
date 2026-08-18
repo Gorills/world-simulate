@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "program": "playable-prototype-v1",
+  "phase_id": "P1_PLAYABLE_USES_WORLD_RUNTIME",
+  "subject_sha": "cc82ab864d720ec9f8659b8d4b51ad6ac19c5898",
+  "reviewer": "GPT-5.6 Sol",
+  "review_mode": "independent-post-commit",
+  "code_review": "PASS",
+  "systems_audit": "PASS",
+  "overall": "PASS",
+  "validation": [
+    "Reviewed the complete P1 implementation from P0 PASS through exact audit checkpoint cc82ab864d720ec9f8659b8d4b51ad6ac19c5898.",
+    "Confirmed the playable client now composes GameWorldSession -> WorldRuntime -> active settlement partition; GameSession is removed and no client C# file owns or references SettlementSimulation.",
+    "Confirmed playable time advancement, settlement projection and resident interaction all route through WorldRuntime.",
+    "Confirmed WorldRuntime allocates the fresh settlement command ID at the runtime boundary, records the existing SettlementCommand input journal entry and replays it through ExecuteSettlementCommandCore.",
+    "Confirmed GameWorldSession exposes a WorldCheckpointState creation/restore seam and the headless client smoke verifies restored time/day/hour and interaction-visible resident state.",
+    "Confirmed architecture and core regression tests guard the authority boundary, world command journal and checkpoint restoration.",
+    "Confirmed the R3 CA1826 validation blocker was repaired only in the regression test by replacing Enumerable.Last() with direct IReadOnlyList indexing; subsequent core validation is green.",
+    "Confirmed no P2 player-actor, semantic-travel, economy or unrelated polish scope entered P1.",
+    "Exact-SHA CI snapshot on cc82ab864d720ec9f8659b8d4b51ad6ac19c5898 completed core=success, godot=success and ci-required=success."
+  ],
+  "systems_examined": [
+    "Godot composition root and client consumers",
+    "GameWorldSession authority ownership",
+    "WorldRuntime settlement scope ownership",
+    "world time advancement",
+    "settlement projection path",
+    "resident interaction command-id allocation",
+    "world input journal and replay",
+    "world checkpoint create/restore seam",
+    "headless Godot integration smoke",
+    "architecture and core regression tests",
+    "CI Godot dependency scope",
+    "P1/P2 scope boundary"
+  ],
+  "findings": [],
+  "residual_risks": [
+    "WorldRuntime advance and settlement-command hot paths still stage full settlement state; this is pre-existing and intentionally deferred to P4_REMOVE_HOT_PATH_FULL_STATE_CLONE.",
+    "GameWorldSession restores the active settlement scope alongside WorldCheckpointState rather than storing client selection metadata inside the authoritative world checkpoint; this is sufficient for the current single-settlement playable flow.",
+    "The feature branch remains unprotected by server-side GitHub branch protection, so phase enforcement is a repository/CI/agent guardrail rather than an absolute prohibition for the repository owner."
+  ]
+}

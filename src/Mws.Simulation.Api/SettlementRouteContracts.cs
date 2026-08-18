@@ -1,0 +1,55 @@
+using Mws.Domain;
+
+namespace Mws.Simulation.Api;
+
+public enum SettlementRoutePhysicalState
+{
+    Passable,
+    Blocked,
+}
+
+public enum SettlementRoutePassageStatus
+{
+    Open,
+    Restricted,
+}
+
+public enum SettlementTravelMode
+{
+    OnFoot,
+    MountedOrAnimalAssisted,
+    CartWagonOrPack,
+    Water,
+}
+
+public enum SettlementOnFootRouteTimingClass
+{
+    Unknown = 0,
+    BaselineLevelUnobstructed = 1,
+    NonBaseline = 2,
+}
+
+public sealed record SettlementRouteConnectionState(
+    long ConnectionId,
+    SettlementPlaceRef FirstPlace,
+    SettlementPlaceRef SecondPlace,
+    long DistanceMeters,
+    SettlementRoutePhysicalState PhysicalState,
+    SettlementRoutePassageStatus PassageStatus,
+    string ProvenanceReference,
+    bool IsFixture = false,
+    IReadOnlyList<SettlementTravelMode>? SupportedModes = null,
+    SettlementOnFootRouteTimingClass OnFootTimingClass =
+        SettlementOnFootRouteTimingClass.Unknown);
+
+public sealed record SettlementResidentRouteKnowledgeState(
+    EntityId ResidentId,
+    IReadOnlyList<long> KnownConnectionIds);
+
+public sealed record SettlementRoutePathProjection(
+    long TaskId,
+    SettlementPlaceRef Origin,
+    SettlementPlaceRef Destination,
+    IReadOnlyList<long> ConnectionIds,
+    long TotalDistanceMeters,
+    SettlementTravelMode TravelMode);

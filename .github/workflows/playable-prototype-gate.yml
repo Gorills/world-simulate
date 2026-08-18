@@ -1,0 +1,42 @@
+name: playable-prototype-gate
+
+on:
+  push:
+    branches:
+      - main
+      - feature/village-vertical-slice
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playable-prototype-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Validate gate tooling syntax
+        run: python -m py_compile TOOLS/dev.py TOOLS/validate_playable_prototype.py TOOLS/test_playable_prototype_gate.py TOOLS/validate_reality_model.py TOOLS/test_reality_model_gate.py
+
+      - name: Run phase-gate negative self-tests
+        run: python TOOLS/test_playable_prototype_gate.py
+
+      - name: Run reality/model negative self-tests
+        run: python TOOLS/test_reality_model_gate.py
+
+      - name: Validate playable prototype phase state and scope
+        run: python TOOLS/validate_playable_prototype.py
+
+      - name: Validate reality/model audit policy
+        run: python TOOLS/validate_reality_model.py
