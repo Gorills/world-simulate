@@ -23,9 +23,16 @@ public enum SettlementActorLocationKind
     Travelling,
 }
 
+public sealed record SettlementTravelPlanState(
+    long TaskId,
+    SimulationTime DepartedAt,
+    IReadOnlyList<long> ConnectionIds,
+    SettlementTravelMode TravelMode);
+
 public sealed record SettlementTravelProgressState(
     long DurationMilliseconds,
-    long ElapsedMilliseconds);
+    long ElapsedMilliseconds,
+    SettlementTravelPlanState? Plan = null);
 
 public sealed record SettlementActorLocationState(
     SettlementActorLocationKind Kind,

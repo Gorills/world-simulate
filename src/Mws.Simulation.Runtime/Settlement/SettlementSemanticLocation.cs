@@ -178,6 +178,49 @@ internal static class SettlementSemanticLocation
         {
             throw new InvalidOperationException("Active travel progress must be within its duration.");
         }
+
+        if (travel.Plan is not null)
+        {
+            ValidateTravelPlan(travel.Plan);
+        }
+    }
+
+    private static void ValidateTravelPlan(SettlementTravelPlanState plan)
+    {
+        if (plan.TaskId <= 0)
+        {
+            throw new InvalidOperationException("Travel plan task ID must be positive.");
+        }
+
+        if (plan.DepartedAt.Milliseconds < 0)
+        {
+            throw new InvalidOperationException("Travel plan departure time cannot be negative.");
+        }
+
+        ArgumentNullException.ThrowIfNull(plan.ConnectionIds);
+        if (plan.ConnectionIds.Count == 0)
+        {
+            throw new InvalidOperationException("Travel plan requires at least one route connection.");
+        }
+
+        var connectionIds = new HashSet<long>();
+        foreach (var connectionId in plan.ConnectionIds)
+        {
+            if (connectionId <= 0 || !connectionIds.Add(connectionId))
+            {
+                throw new InvalidOperationException(
+                    "Travel plan route connection IDs must be positive and unique.");
+            }
+        }
+
+        if (plan.TravelMode is not (
+            SettlementTravelMode.OnFoot
+            or SettlementTravelMode.MountedOrAnimalAssisted
+            or SettlementTravelMode.CartWagonOrPack
+            or SettlementTravelMode.Water))
+        {
+            throw new InvalidOperationException("Travel plan has an unknown travel mode.");
+        }
     }
 
     private static void ValidatePlace(SettlementPlaceRef place)
