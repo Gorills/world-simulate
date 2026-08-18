@@ -7,15 +7,10 @@ internal static class SettlementPrototypeContent
 {
     internal const long EntityIdSpan = 1_024;
 
-    private const long P3TravelResidentLocalId = 12;
     private const long P3TravelHomeLocalId = 206;
     private const long P3TravelWorkplaceLocalId = 103;
     private const long P3TravelConnectionId = 1;
     private const long P3TravelDistanceMeters = 300;
-    private const string P3TravelCapabilityProvenance =
-        "prototype-content:p3-karo-on-foot-capability-v1";
-    private const string P3TravelLoadProvenance =
-        "prototype-content:p3-karo-starting-load-v1";
     private const string P3TravelRouteProvenance =
         "prototype-content:p3-karo-grove-route-v1";
 
@@ -44,19 +39,7 @@ internal static class SettlementPrototypeContent
             Resident(entityIdOffset, 9, "Sela", 34, 86, ResidentProfession.Forager, herbGroveId, riverHouseholdId),
             Resident(entityIdOffset, 10, "Dain", 26, 91, ResidentProfession.Farmer, farmId, riverHouseholdId),
             Resident(entityIdOffset, 11, "Veya", 38, 82, ResidentProfession.Cook, kitchenId, groveHouseholdId),
-            Resident(
-                entityIdOffset,
-                P3TravelResidentLocalId,
-                "Karo",
-                24,
-                89,
-                ResidentProfession.Forager,
-                herbGroveId,
-                groveHouseholdId,
-                SettlementOnFootActorCapabilityClass.BaselineCompatible,
-                P3TravelCapabilityProvenance,
-                SettlementOnFootCarriedLoadClass.NoMaterialLoad,
-                P3TravelLoadProvenance),
+            Resident(entityIdOffset, 12, "Karo", 24, 89, ResidentProfession.Forager, herbGroveId, groveHouseholdId),
         ];
     }
 
@@ -137,14 +120,6 @@ internal static class SettlementPrototypeContent
             IsFixture: false,
             SupportedModes: [SettlementTravelMode.OnFoot],
             OnFootTimingClass: SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed),
-    ];
-
-    internal static SettlementResidentRouteKnowledgeState[] CreateResidentRouteKnowledge(
-        long entityIdOffset = 0) =>
-    [
-        new SettlementResidentRouteKnowledgeState(
-            Entity(entityIdOffset, P3TravelResidentLocalId),
-            [P3TravelConnectionId]),
     ];
 
     internal static EntityId GetSettlementOwnerId(long entityIdOffset = 0) =>
@@ -228,13 +203,7 @@ internal static class SettlementPrototypeContent
         int energy,
         ResidentProfession profession,
         EntityId workplaceId,
-        EntityId householdId,
-        SettlementOnFootActorCapabilityClass onFootCapability =
-            SettlementOnFootActorCapabilityClass.Unknown,
-        string? onFootCapabilityProvenanceReference = null,
-        SettlementOnFootCarriedLoadClass onFootCarriedLoad =
-            SettlementOnFootCarriedLoadClass.Unknown,
-        string? onFootCarriedLoadProvenanceReference = null) =>
+        EntityId householdId) =>
         new(
             Entity(entityIdOffset, localId),
             name,
@@ -244,15 +213,7 @@ internal static class SettlementPrototypeContent
             profession,
             workplaceId,
             0,
-            householdId,
-            Location: null,
-            SelectedTask: null,
-            OnFootCapability: onFootCapability,
-            OnFootCapabilityProvenanceReference: onFootCapabilityProvenanceReference,
-            IsOnFootCapabilityFixture: false,
-            OnFootCarriedLoad: onFootCarriedLoad,
-            OnFootCarriedLoadProvenanceReference: onFootCarriedLoadProvenanceReference,
-            IsOnFootCarriedLoadFixture: false);
+            householdId);
 
     private static HomeState Home(
         long entityIdOffset,

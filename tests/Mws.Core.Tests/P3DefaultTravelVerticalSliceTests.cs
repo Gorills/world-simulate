@@ -8,8 +8,11 @@ namespace Mws.Core.Tests;
 
 public sealed class P3DefaultTravelVerticalSliceTests
 {
+    private const string CapabilityProvenance = "fixture:test-default-p3-capability";
+    private const string LoadProvenance = "fixture:test-default-p3-load";
+
     [Fact]
-    public void DefaultContentCarriesOneBoundedAuthoritativeOnFootSliceWithoutInventingATask()
+    public void DefaultContentCarriesOneBoundedRouteWithoutInventingResidentAuthorityOrTask()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(9400));
         var state = simulation.CaptureState();
@@ -22,19 +25,15 @@ public sealed class P3DefaultTravelVerticalSliceTests
             SettlementPlaceKind.Workplace,
             resident.WorkplaceId);
         var route = Assert.Single(state.RouteConnections!);
-        var knowledge = Assert.Single(state.ResidentRouteKnowledge!);
 
         Assert.Null(resident.SelectedTask);
-        Assert.Equal(
-            SettlementOnFootActorCapabilityClass.BaselineCompatible,
-            resident.OnFootCapability);
+        Assert.Equal(SettlementOnFootActorCapabilityClass.Unknown, resident.OnFootCapability);
+        Assert.Null(resident.OnFootCapabilityProvenanceReference);
         Assert.False(resident.IsOnFootCapabilityFixture);
-        Assert.False(string.IsNullOrWhiteSpace(resident.OnFootCapabilityProvenanceReference));
-        Assert.Equal(
-            SettlementOnFootCarriedLoadClass.NoMaterialLoad,
-            resident.OnFootCarriedLoad);
+        Assert.Equal(SettlementOnFootCarriedLoadClass.Unknown, resident.OnFootCarriedLoad);
+        Assert.Null(resident.OnFootCarriedLoadProvenanceReference);
         Assert.False(resident.IsOnFootCarriedLoadFixture);
-        Assert.False(string.IsNullOrWhiteSpace(resident.OnFootCarriedLoadProvenanceReference));
+        Assert.Empty(state.ResidentRouteKnowledge!);
 
         Assert.Equal(home, route.FirstPlace);
         Assert.Equal(workplace, route.SecondPlace);
@@ -50,9 +49,6 @@ public sealed class P3DefaultTravelVerticalSliceTests
             route.OnFootTimingClass);
         Assert.False(string.IsNullOrWhiteSpace(route.ProvenanceReference));
 
-        Assert.Equal(resident.Id, knowledge.ResidentId);
-        Assert.Equal(new[] { route.ConnectionId }, knowledge.KnownConnectionIds.ToArray());
-
         var projected = FindResident(simulation, resident.Id);
         var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
 
@@ -66,10 +62,11 @@ public sealed class P3DefaultTravelVerticalSliceTests
     }
 
     [Fact]
-    public void ExplicitTaskUsesDefaultAuthorityThroughDepartureSaveLoadProgressAndArrival()
+    public void ExplicitTaskAndAuthorityUseDefaultRouteThroughDepartureSaveLoadProgressAndArrival()
     {
         var baseState = SettlementSimulation.CreateDefault(new WorldSeed(9401)).CaptureState();
         var resident = Assert.Single(baseState.Residents, entry => entry.Name == "Karo");
+        var route = Assert.Single(baseState.RouteConnections!);
         var workplace = new SettlementPlaceRef(
             SettlementPlaceKind.Workplace,
             resident.WorkplaceId);
@@ -79,13 +76,27 @@ public sealed class P3DefaultTravelVerticalSliceTests
             "fixture:test-default-p3-travel-task",
             new SimulationTime(0),
             workplace);
+        var preparedResident = resident with
+        {
+            SelectedTask = task,
+            OnFootCapability = SettlementOnFootActorCapabilityClass.BaselineCompatible,
+            OnFootCapabilityProvenanceReference = CapabilityProvenance,
+            IsOnFootCapabilityFixture = true,
+            OnFootCarriedLoad = SettlementOnFootCarriedLoadClass.NoMaterialLoad,
+            OnFootCarriedLoadProvenanceReference = LoadProvenance,
+            IsOnFootCarriedLoadFixture = true,
+        };
         var simulation = SettlementSimulation.Restore(baseState with
         {
             Residents = baseState.Residents
-                .Select(entry => entry.Id == resident.Id
-                    ? entry with { SelectedTask = task }
-                    : entry)
+                .Select(entry => entry.Id == resident.Id ? preparedResident : entry)
                 .ToArray(),
+            ResidentRouteKnowledge =
+            [
+                new SettlementResidentRouteKnowledgeState(
+                    resident.Id,
+                    [route.ConnectionId]),
+            ],
         });
 
         var ready = FindResident(simulation, resident.Id);
@@ -96,8 +107,8 @@ public sealed class P3DefaultTravelVerticalSliceTests
             ready.TravelDurationPlan);
 
         Assert.Equal(task.TaskId, routePath.TaskId);
+        Assert.Equal(route.ConnectionId, Assert.Single(routePath.ConnectionIds));
         Assert.Equal(300, routePath.TotalDistanceMeters);
-        Assert.Single(routePath.ConnectionIds);
         Assert.Equal(
             SettlementOnFootTraversalApplicabilityDecision.Applicable,
             applicability.Decision);
