@@ -82,6 +82,13 @@ Routine Proof A/gameplay kernel changes do not require Godot headless CI unless 
 ## Agent task sizing
 Prefer small-to-medium vertical edits that a weaker local agent can understand from nearby code and tests. Escalate architecture/persistence/LOD/public-boundary changes to a stronger agent or deliberate review.
 
+- The unit of work is a **coherent causal capability or acceptance outcome**, not the smallest possible diff.
+- “Minimal diff” means **no unrelated changes**. It does not mean the fewest files, lines, helpers or commits.
+- Do not split an already-defined mechanic into separate commit/CI cycles merely because its production code, tests, API/state wiring or persistence support live in different files. When those edits together make one capability correct and reviewable, batch them.
+- Before splitting an otherwise coherent change, name the concrete risk the split reduces. Valid reasons include an unresolved model decision, an independent acceptance criterion, a meaningful rollback boundary, a high-risk schema/persistence/architecture change, an external dependency, or a change that would otherwise become too large to review safely.
+- If no concrete risk is reduced by splitting, keep the coherent change together. Conversely, do not combine independent capabilities merely to save a CI cycle.
+- A bounded task may cross multiple closely related files and implementation seams, but it must still have one clear completion sentence. Run CI after that coherent batch, not after every helper or file.
+
 ## Playable prototype phase gate
 The active playable-prototype program is defined by `DESIGN/PLAYABLE_PROTOTYPE_PROGRAM.md` and `MACHINE/playable-prototype.json`.
 
