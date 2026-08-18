@@ -38,7 +38,7 @@ public partial class VillageWorld
                 location.DestinationPlace,
                 travel?.ElapsedMilliseconds,
                 travel?.DurationMilliseconds,
-                view.Position.DistanceTo(expectedPosition) <= 0.001f));
+                view.AuthoritativeTargetPosition.DistanceTo(expectedPosition) <= 0.001f));
         }
 
         return new VillageDebugSnapshot(

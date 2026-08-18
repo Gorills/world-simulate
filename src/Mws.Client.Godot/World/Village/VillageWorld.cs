@@ -85,8 +85,11 @@ public partial class VillageWorld : Node3D
 
     internal static void ValidateSpatialContract() => VillageLayout.Validate();
 
-    internal static void ValidateLifeProjection(SettlementProjection projection) =>
+    internal static void ValidateLifeProjection(SettlementProjection projection)
+    {
         VillageResidentPlacement.ValidateProjection(projection);
+        VillageResidentView.ValidateInterpolationContract();
+    }
 
     private void UpdateInteractionTarget()
     {
@@ -155,8 +158,11 @@ public partial class VillageWorld : Node3D
                 _residentViews.Add(resident.Id.Value, view);
             }
 
-            view.Position = VillageResidentPlacement.Resolve(resident, projection);
-            view.Render(resident, resident.Id == selectedResidentId);
+            var authoritativePosition = VillageResidentPlacement.Resolve(resident, projection);
+            view.Render(
+                resident,
+                resident.Id == selectedResidentId,
+                authoritativePosition);
         }
     }
 
