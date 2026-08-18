@@ -78,12 +78,5 @@ public sealed partial class WorldRuntime
         {
             throw new InvalidOperationException("World simulation time is monotonic.");
         }
-
-        if (target.Milliseconds % SettlementSimulation.HourMilliseconds != 0)
-        {
-            throw new ArgumentException(
-                "World simulation advances on canonical whole-hour boundaries.",
-                nameof(target));
-        }
     }
 }

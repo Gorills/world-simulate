@@ -8,8 +8,7 @@ public sealed partial class WorldRuntime
     {
         if (entry.Sequence <= 0
             || entry.Sequence == long.MaxValue
-            || entry.RecordedAt.Milliseconds < 0
-            || entry.RecordedAt.Milliseconds % SettlementSimulation.HourMilliseconds != 0)
+            || entry.RecordedAt.Milliseconds < 0)
         {
             throw new InvalidOperationException("World input journal entry has invalid sequence or time.");
         }
@@ -41,8 +40,7 @@ public sealed partial class WorldRuntime
                 && entry.AllocateOperationId.AllocatedOperationId.Value < long.MaxValue,
             WorldInputKind.AdvanceTo =>
                 entry.AdvanceTo is not null
-                && entry.AdvanceTo.TargetTime.Milliseconds > entry.RecordedAt.Milliseconds
-                && entry.AdvanceTo.TargetTime.Milliseconds % SettlementSimulation.HourMilliseconds == 0,
+                && entry.AdvanceTo.TargetTime.Milliseconds > entry.RecordedAt.Milliseconds,
             WorldInputKind.SettlementCommand =>
                 entry.SettlementCommand is not null && SettlementCommandShapeIsValid(entry.SettlementCommand),
             WorldInputKind.ResidentMigration => entry.ResidentMigration is not null,
