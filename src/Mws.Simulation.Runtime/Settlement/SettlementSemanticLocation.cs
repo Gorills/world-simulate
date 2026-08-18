@@ -61,7 +61,8 @@ internal static class SettlementSemanticLocation
     internal static SettlementActorLocationState BeginTravel(
         SettlementActorLocationState location,
         SettlementPlaceRef destination,
-        long durationMilliseconds)
+        long durationMilliseconds,
+        SettlementTravelPlanState? plan = null)
     {
         location = Normalize(location);
         ArgumentNullException.ThrowIfNull(destination);
@@ -88,7 +89,10 @@ internal static class SettlementSemanticLocation
             SettlementActorLocationKind.Travelling,
             location.CurrentPlace,
             destination,
-            new SettlementTravelProgressState(durationMilliseconds, ElapsedMilliseconds: 0));
+            new SettlementTravelProgressState(
+                durationMilliseconds,
+                ElapsedMilliseconds: 0,
+                plan));
         Validate(travelling);
         return travelling;
     }

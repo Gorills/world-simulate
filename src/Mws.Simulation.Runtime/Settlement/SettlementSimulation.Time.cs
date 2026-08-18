@@ -45,6 +45,7 @@ public sealed partial class SettlementSimulation
             var nextTime = SystemScheduler.NextDueAfter(Time, target, activeSystems);
             var dueCount = SystemScheduler.WriteDueSystems(nextTime, activeSystems, dueSystems);
             var dayBoundaryDue = false;
+            var residentHourlyDue = false;
             var day = 0;
 
             for (var index = 0; index < dueCount; index++)
@@ -61,11 +62,17 @@ public sealed partial class SettlementSimulation
             {
                 if (dueSystems[index] == SettlementSystemKind.ResidentHourly)
                 {
+                    residentHourlyDue = true;
                     ExecuteHourlyResidentSystem(nextTime);
                 }
             }
 
             Time = nextTime;
+            if (residentHourlyDue)
+            {
+                BeginReadySelectedTaskTravelDepartures();
+            }
+
             if (dayBoundaryDue)
             {
                 AppendEvent(

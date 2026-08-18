@@ -135,6 +135,95 @@ public sealed class P3OnFootTravelDurationProjectionTests
         Assert.True(longerDuration.DurationMilliseconds > shorterDuration.DurationMilliseconds);
     }
 
+    [Fact]
+    public void ReadySelectedTaskCommitsPersistedTravelAtNextResidentEvaluation()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9394)).CaptureState();
+        var resident = state.Residents[0];
+        var simulation = SettlementSimulation.Restore(PreparedState(
+            state,
+            resident,
+            SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed,
+            distanceMeters: 300));
+
+        Assert.NotNull(FindResident(simulation, resident.Id).TravelDurationPlan);
+
+        simulation.AdvanceHours(1);
+
+        var projected = FindResident(simulation, resident.Id);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+        var travel = Assert.IsType<SettlementTravelProgressState>(location.Travel);
+        var plan = Assert.IsType<SettlementTravelPlanState>(travel.Plan);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, location.Kind);
+        Assert.Null(projected.RoutePath);
+        Assert.Null(projected.OnFootTraversalApplicability);
+        Assert.Null(projected.TravelDurationPlan);
+        Assert.Equal(214_286, travel.DurationMilliseconds);
+        Assert.Equal(0, travel.ElapsedMilliseconds);
+        Assert.Equal(50, plan.TaskId);
+        Assert.Equal(SettlementSimulation.HourMilliseconds, plan.DepartedAt.Milliseconds);
+        Assert.Equal(new long[] { 1 }, plan.ConnectionIds.ToArray());
+        Assert.Equal(SettlementTravelMode.OnFoot, plan.TravelMode);
+
+        var decoded = SettlementStateJson.Deserialize(
+            SettlementStateJson.Serialize(simulation.CaptureState()));
+        var restored = SettlementSimulation.Restore(decoded);
+        var restoredProjection = FindResident(restored, resident.Id);
+        var restoredLocation = Assert.IsType<SettlementActorLocationProjection>(
+            restoredProjection.Location);
+        var restoredTravel = Assert.IsType<SettlementTravelProgressState>(
+            restoredLocation.Travel);
+        var restoredPlan = Assert.IsType<SettlementTravelPlanState>(restoredTravel.Plan);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, restoredLocation.Kind);
+        Assert.Equal(location.CurrentPlace, restoredLocation.CurrentPlace);
+        Assert.Equal(location.DestinationPlace, restoredLocation.DestinationPlace);
+        Assert.Equal(travel.DurationMilliseconds, restoredTravel.DurationMilliseconds);
+        Assert.Equal(travel.ElapsedMilliseconds, restoredTravel.ElapsedMilliseconds);
+        Assert.Equal(plan.TaskId, restoredPlan.TaskId);
+        Assert.Equal(plan.DepartedAt, restoredPlan.DepartedAt);
+        Assert.Equal(plan.ConnectionIds.ToArray(), restoredPlan.ConnectionIds.ToArray());
+        Assert.Equal(plan.TravelMode, restoredPlan.TravelMode);
+
+        restored.AdvanceHours(1);
+
+        var afterLegacyTick = FindResident(restored, resident.Id);
+        var stillTravelling = Assert.IsType<SettlementActorLocationProjection>(
+            afterLegacyTick.Location);
+        var unchangedTravel = Assert.IsType<SettlementTravelProgressState>(
+            stillTravelling.Travel);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, stillTravelling.Kind);
+        Assert.Equal(0, unchangedTravel.ElapsedMilliseconds);
+        Assert.Equal(214_286, unchangedTravel.DurationMilliseconds);
+        Assert.NotNull(unchangedTravel.Plan);
+    }
+
+    [Fact]
+    public void UnresolvedTraversalDoesNotDepartAtResidentEvaluation()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9395)).CaptureState();
+        var resident = state.Residents[0];
+        var simulation = SettlementSimulation.Restore(PreparedState(
+            state,
+            resident,
+            SettlementOnFootRouteTimingClass.Unknown,
+            distanceMeters: 300));
+
+        simulation.AdvanceHours(1);
+
+        var projected = FindResident(simulation, resident.Id);
+        var applicability = Assert.IsType<SettlementOnFootTraversalApplicabilityProjection>(
+            projected.OnFootTraversalApplicability);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+
+        Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.Unresolved, applicability.Decision);
+        Assert.Null(projected.TravelDurationPlan);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+        Assert.Null(location.Travel);
+    }
+
     private static ResidentProjection FindResident(
         SettlementSimulation simulation,
         EntityId residentId) =>

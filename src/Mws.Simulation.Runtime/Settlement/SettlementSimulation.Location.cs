@@ -141,6 +141,13 @@ public sealed partial class SettlementSimulation
         {
             if (resident.Location.Kind == SettlementActorLocationKind.Travelling)
             {
+                // Plan-bearing P3 travel must not inherit the one-hour compatibility step.
+                // Its authoritative sub-hour progress/arrival is a separate P3 seam.
+                if (resident.Location.Travel?.Plan is not null)
+                {
+                    continue;
+                }
+
                 resident.Location = SettlementSemanticLocation.AdvanceTravel(
                     resident.Location,
                     HourMilliseconds);
