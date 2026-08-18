@@ -1,6 +1,6 @@
 # P3 Planned Traversal Assessment Context
 
-Status: **REVIEW_REQUIRED**
+Status: **ACCEPTED**
 
 This contract defines the authoritative ownership and lifetime boundary for traversal-specific applicability facts that cannot correctly live as permanent actor or route properties.
 
