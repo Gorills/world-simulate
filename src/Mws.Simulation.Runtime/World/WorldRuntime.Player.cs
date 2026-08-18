@@ -22,18 +22,49 @@ public sealed partial class WorldRuntime
         return playerId;
     }
 
+    public void SelectPlayerTask(
+        long taskId,
+        string kind,
+        string reasonReference,
+        SettlementPlaceRef? requiredPlace)
+    {
+        EnsureInputJournalCapacity(1);
+        var input = new WorldSelectPlayerTaskInput(
+            taskId,
+            kind,
+            reasonReference,
+            Time,
+            requiredPlace);
+        var recordedAt = Time;
+        SelectPlayerTaskCore(input);
+        RecordInput(CreateInput(
+            recordedAt,
+            WorldInputKind.SelectPlayerTask,
+            selectPlayerTask: input));
+    }
+
     public WorldPlayerProjection ProjectPlayer()
     {
         var player = _player
             ?? throw new InvalidOperationException("World does not contain an authoritative player actor.");
         var location = SettlementSemanticLocation.Normalize(player.Location);
+        var selectedTask = player.SelectedTask is null
+            ? null
+            : new SettlementSelectedTaskProjection(
+                player.SelectedTask.TaskId,
+                player.SelectedTask.Kind,
+                player.SelectedTask.ReasonReference,
+                player.SelectedTask.SelectedAt,
+                player.SelectedTask.RequiredPlace);
         return new WorldPlayerProjection(
             player.Id,
             player.ScopeId,
             player.Inventory
                 .Select(item => new WorldPlayerInventoryItemProjection(item.ItemId, item.Quantity))
                 .ToArray(),
-            SettlementSemanticLocation.Project(location));
+            SettlementSemanticLocation.Project(location),
+            selectedTask,
+            (player.KnownRouteConnectionIds ?? []).ToArray());
     }
 
     private EntityId AddPlayerActorCore(SimulationScopeId scopeId)
@@ -61,10 +92,39 @@ public sealed partial class WorldRuntime
             scopeId,
             inventory,
             SettlementActorLocationState.At(SettlementPlaceRef.Settlement),
-            WorldPlayerLocationVersions.CurrentEncodingVersion);
+            WorldPlayerLocationVersions.CurrentEncodingVersion,
+            KnownRouteConnectionIds: []);
         _entityLocations.Add(playerId.Value, scopeId);
         _nextEntityId = checked(_nextEntityId + 1);
         return playerId;
+    }
+
+    private void SelectPlayerTaskCore(WorldSelectPlayerTaskInput input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var player = _player
+            ?? throw new InvalidOperationException("World does not contain an authoritative player actor.");
+        if (input.SelectedAt != Time)
+        {
+            throw new InvalidOperationException("Player task selection must be recorded at current world time.");
+        }
+
+        var location = SettlementSemanticLocation.Normalize(player.Location);
+        if (location.Kind == SettlementActorLocationKind.Travelling)
+        {
+            throw new InvalidOperationException(
+                "Player travel reconsideration requires an accepted cancellation/reroute mechanic.");
+        }
+
+        var task = new SettlementSelectedTaskState(
+            input.TaskId,
+            input.Kind,
+            input.ReasonReference,
+            input.SelectedAt,
+            input.RequiredPlace);
+        var authority = CreatePlayerTravelAuthority(player.ScopeId);
+        authority.ValidateExternalSelectedTask(task, Time);
+        _player = player with { SelectedTask = task };
     }
 
     private void RestorePlayer(WorldPlayerActorState state)
@@ -96,9 +156,17 @@ public sealed partial class WorldRuntime
             state.OnFootCarriedLoadProvenanceReference,
             state.IsOnFootCarriedLoadFixture);
         var inventory = CanonicalPlayerInventory(state.Inventory);
+        var knownRouteConnectionIds = CanonicalPlayerKnownRouteConnectionIds(
+            state.KnownRouteConnectionIds);
         var location = SettlementSemanticLocation.NormalizeForRestore(
             state.Location,
             state.LocationEncodingVersion == WorldPlayerLocationVersions.LegacyEncodingVersion);
+        var authority = CreatePlayerTravelAuthority(state.ScopeId);
+        authority.ValidateExternalActorTravelState(
+            location,
+            state.SelectedTask,
+            knownRouteConnectionIds,
+            Time);
         _player = new WorldPlayerActorState(
             state.Id,
             state.ScopeId,
@@ -110,7 +178,9 @@ public sealed partial class WorldRuntime
             state.IsOnFootCapabilityFixture,
             state.OnFootCarriedLoad,
             state.OnFootCarriedLoadProvenanceReference,
-            state.IsOnFootCarriedLoadFixture);
+            state.IsOnFootCarriedLoadFixture,
+            state.SelectedTask,
+            knownRouteConnectionIds);
         _entityLocations.Add(state.Id.Value, state.ScopeId);
     }
 
@@ -135,7 +205,29 @@ public sealed partial class WorldRuntime
             _player.IsOnFootCapabilityFixture,
             _player.OnFootCarriedLoad,
             _player.OnFootCarriedLoadProvenanceReference,
-            _player.IsOnFootCarriedLoadFixture);
+            _player.IsOnFootCarriedLoadFixture,
+            _player.SelectedTask,
+            CanonicalPlayerKnownRouteConnectionIds(_player.KnownRouteConnectionIds));
+    }
+
+    private SettlementSimulation CreatePlayerTravelAuthority(SimulationScopeId scopeId)
+    {
+        var state = CapturePartitionStateAtCurrentTime(GetPartition(scopeId));
+        return SettlementSimulation.Restore(state);
+    }
+
+    private static ReadOnlyCollection<long> CanonicalPlayerKnownRouteConnectionIds(
+        IEnumerable<long>? connectionIds)
+    {
+        var ids = (connectionIds ?? []).ToArray();
+        if (ids.Any(id => id <= 0) || ids.Distinct().Count() != ids.Length)
+        {
+            throw new InvalidOperationException(
+                "World player route knowledge contains invalid or duplicate connection IDs.");
+        }
+
+        Array.Sort(ids);
+        return Array.AsReadOnly(ids);
     }
 
     private static ReadOnlyCollection<WorldPlayerInventoryItemState> CanonicalPlayerInventory(

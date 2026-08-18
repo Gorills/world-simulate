@@ -29,7 +29,9 @@ public sealed record WorldPlayerActorState(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     string? OnFootCarriedLoadProvenanceReference = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    bool IsOnFootCarriedLoadFixture = false);
+    bool IsOnFootCarriedLoadFixture = false,
+    SettlementSelectedTaskState? SelectedTask = null,
+    IReadOnlyList<long>? KnownRouteConnectionIds = null);
 
 public sealed record WorldPlayerInventoryItemProjection(
     string ItemId,
@@ -39,8 +41,17 @@ public sealed record WorldPlayerProjection(
     EntityId Id,
     SimulationScopeId ScopeId,
     IReadOnlyList<WorldPlayerInventoryItemProjection> Inventory,
-    SettlementActorLocationProjection? Location = null);
+    SettlementActorLocationProjection? Location = null,
+    SettlementSelectedTaskProjection? SelectedTask = null,
+    IReadOnlyList<long>? KnownRouteConnectionIds = null);
 
 public sealed record WorldAddPlayerActorInput(
     EntityId CreatedPlayerId,
     SimulationScopeId ScopeId);
+
+public sealed record WorldSelectPlayerTaskInput(
+    long TaskId,
+    string Kind,
+    string ReasonReference,
+    SimulationTime SelectedAt,
+    SettlementPlaceRef? RequiredPlace);

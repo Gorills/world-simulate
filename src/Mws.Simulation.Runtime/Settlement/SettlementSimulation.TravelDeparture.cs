@@ -14,25 +14,16 @@ public sealed partial class SettlementSimulation
                 continue;
             }
 
-            var destinationRequest = ProjectDestinationRequest(resident);
-            var routePath = ProjectRoutePath(resident, destinationRequest);
-            var applicability = ProjectOnFootTraversalApplicability(resident, routePath);
-            var durationPlan = ProjectTravelDurationPlan(routePath, applicability);
-            if (routePath is null || durationPlan is null)
-            {
-                continue;
-            }
-
-            var persistedPlan = new SettlementTravelPlanState(
-                durationPlan.TaskId,
-                Time,
-                durationPlan.ConnectionIds.ToArray(),
-                durationPlan.TravelMode);
-            resident.Location = SettlementSemanticLocation.BeginTravel(
+            _knownRouteConnectionIdsByResident.TryGetValue(
+                resident.Id,
+                out var knownRouteConnectionIds);
+            resident.Location = BeginSelectedTaskTravelForActor(
                 resident.Location,
-                routePath.Destination,
-                durationPlan.DurationMilliseconds,
-                persistedPlan);
+                resident.SelectedTask,
+                knownRouteConnectionIds,
+                resident.OnFootCapability,
+                resident.OnFootCarriedLoad,
+                Time);
         }
     }
 }
