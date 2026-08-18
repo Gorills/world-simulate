@@ -129,8 +129,10 @@ public sealed partial class SettlementSimulation
         }
 
         var routeTiming = AggregateOnFootRouteTiming(routePath.ConnectionIds);
+        // Current P3 route projection represents only the accepted continuous ordinary
+        // OnFoot profile. Process-bearing routes stay outside this profile until modeled.
         const SettlementOnFootTraversalDelayClass traversalDelay =
-            SettlementOnFootTraversalDelayClass.Unknown;
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay;
         var traversalHorizon = SettlementOnFootTraversalHorizonRules.ClassifyReferenceHorizon(
             routePath.TotalDistanceMeters);
         var decision = SettlementOnFootTraversalApplicabilityRules.Evaluate(

@@ -83,7 +83,7 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
     }
 
     [Fact]
-    public void ProductionProjectionDerivesShortHorizonButKeepsUnmodeledDelayUnresolvedAcrossSaveLoad()
+    public void ProductionProjectionUsesContinuousProfileAcrossSaveLoadWithoutStartingTravel()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9380)).CaptureState();
         var resident = state.Residents[0];
@@ -103,11 +103,13 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
         Assert.Equal(
             SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed,
             applicability.RouteTiming);
-        Assert.Equal(SettlementOnFootTraversalDelayClass.Unknown, applicability.TraversalDelay);
+        Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            applicability.TraversalDelay);
         Assert.Equal(
             SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible,
             applicability.TraversalHorizon);
-        Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.Unresolved, applicability.Decision);
+        Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.Applicable, applicability.Decision);
         Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
         Assert.Null(location.Travel);
 
@@ -142,13 +144,19 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
             FindResident(middleSimulation, resident.Id).OnFootTraversalApplicability);
 
         Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            shortApplicability.TraversalDelay);
+        Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            middleApplicability.TraversalDelay);
+        Assert.Equal(
             SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible,
             shortApplicability.TraversalHorizon);
         Assert.Equal(
             SettlementOnFootTraversalHorizonClass.Unknown,
             middleApplicability.TraversalHorizon);
         Assert.Equal(
-            SettlementOnFootTraversalApplicabilityDecision.Unresolved,
+            SettlementOnFootTraversalApplicabilityDecision.Applicable,
             shortApplicability.Decision);
         Assert.Equal(
             SettlementOnFootTraversalApplicabilityDecision.Unresolved,
@@ -184,9 +192,40 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
 
         Assert.Equal(SettlementOnFootActorCapabilityClass.Unknown, applicability.ActorCapability);
         Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            applicability.TraversalDelay);
+        Assert.Equal(
             SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible,
             applicability.TraversalHorizon);
         Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.Unresolved, applicability.Decision);
+    }
+
+    [Fact]
+    public void ContinuousProfileDoesNotOverrideUnknownRouteTiming()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9386)).CaptureState();
+        var resident = state.Residents[0];
+        var simulation = SettlementSimulation.Restore(PreparedState(
+            state,
+            resident,
+            SettlementOnFootRouteTimingClass.Unknown,
+            distanceMeters: 300));
+
+        var projected = FindResident(simulation, resident.Id);
+        var applicability = Assert.IsType<SettlementOnFootTraversalApplicabilityProjection>(
+            projected.OnFootTraversalApplicability);
+        var location = Assert.IsType<SettlementActorLocationProjection>(projected.Location);
+
+        Assert.Equal(SettlementOnFootRouteTimingClass.Unknown, applicability.RouteTiming);
+        Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            applicability.TraversalDelay);
+        Assert.Equal(
+            SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible,
+            applicability.TraversalHorizon);
+        Assert.Equal(SettlementOnFootTraversalApplicabilityDecision.Unresolved, applicability.Decision);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
+        Assert.Null(location.Travel);
     }
 
     [Fact]
@@ -204,7 +243,9 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
 
         Assert.Equal(new long[] { 1, 2 }, routePath.ConnectionIds);
         Assert.Equal(2_520, routePath.TotalDistanceMeters);
-        Assert.Equal(SettlementOnFootTraversalDelayClass.Unknown, applicability.TraversalDelay);
+        Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            applicability.TraversalDelay);
         Assert.Equal(
             SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant,
             applicability.TraversalHorizon);
@@ -222,7 +263,7 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
     }
 
     [Fact]
-    public void ExplicitNonBaselineRouteProducesNotApplicableBeforeDelayExists()
+    public void ExplicitNonBaselineRouteRemainsNotApplicableUnderContinuousProfile()
     {
         var state = SettlementSimulation.CreateDefault(new WorldSeed(9381)).CaptureState();
         var resident = state.Residents[0];
@@ -235,7 +276,9 @@ public sealed class P3OnFootTraversalApplicabilityProjectionTests
             FindResident(simulation, resident.Id).OnFootTraversalApplicability);
 
         Assert.Equal(SettlementOnFootRouteTimingClass.NonBaseline, applicability.RouteTiming);
-        Assert.Equal(SettlementOnFootTraversalDelayClass.Unknown, applicability.TraversalDelay);
+        Assert.Equal(
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay,
+            applicability.TraversalDelay);
         Assert.Equal(
             SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible,
             applicability.TraversalHorizon);
