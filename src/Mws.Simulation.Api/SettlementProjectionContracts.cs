@@ -30,6 +30,12 @@ public sealed record HouseholdProjection(
     string HomeName,
     IReadOnlyList<EntityId> ResidentIds);
 
+public sealed record SettlementTravelDurationPlanProjection(
+    long TaskId,
+    IReadOnlyList<long> ConnectionIds,
+    SettlementTravelMode TravelMode,
+    long DurationMilliseconds);
+
 public sealed record ResidentProjection(
     EntityId Id,
     string Name,
@@ -49,7 +55,8 @@ public sealed record ResidentProjection(
     SettlementSelectedTaskProjection? SelectedTask = null,
     SettlementDestinationRequestProjection? DestinationRequest = null,
     SettlementRoutePathProjection? RoutePath = null,
-    SettlementOnFootTraversalApplicabilityProjection? OnFootTraversalApplicability = null);
+    SettlementOnFootTraversalApplicabilityProjection? OnFootTraversalApplicability = null,
+    SettlementTravelDurationPlanProjection? TravelDurationPlan = null);
 
 public sealed record ResidentProjectionPage(
     SimulationScopeId ScopeId,

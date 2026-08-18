@@ -7,6 +7,9 @@ namespace Mws.Client.Godot.App;
 
 internal static class HeadlessClientSmoke
 {
+    private const long ExpectedTravelDurationMilliseconds = 214_286;
+    private const long PartialTravelElapsedMilliseconds = 100_000;
+
     internal static string Run(GameWorldSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -15,56 +18,202 @@ internal static class HeadlessClientSmoke
         var initial = session.Projection;
         var player = session.Player;
         var startingRation = player.Inventory.Single(item => item.ItemId == SettlementItems.Ration);
+        var initialResident = session.SelectedResident;
+        var initialTask = initialResident.SelectedTask;
         if (initial.Hour != PlaytestTimeProfile.StartHour
             || initial.Residents.Count != VillageLayout.PlaytestResidentCount
-            || initial.Residents.Any(resident => resident.Activity != ResidentActivity.Working)
+            || initial.Residents.Any(resident => !HasAuthoritativeHomePresence(resident))
+            || initialResident.Name != "Karo"
+            || initialTask?.RequiredPlace is not { Kind: SettlementPlaceKind.Workplace }
+            || !session.TravelPlaytestPending
             || player.Id != session.PlayerId
             || player.ScopeId != session.SettlementScopeId
             || startingRation.Quantity != 2)
         {
             throw new InvalidOperationException(
-                "Playtest session did not bootstrap authoritative world/player morning state.");
+                "Playtest session did not bootstrap the authoritative P3 travel fixture.");
         }
 
-        session.AdvanceHours(24);
-        var interaction = session.InteractSelected(ResidentInteractionChoice.Encourage);
-        var projection = session.Projection;
-        VillageWorld.ValidateLifeProjection(projection);
-        var stockpileStack = projection.Stockpile[0];
+        VillageWorld.ValidateLifeProjection(initial);
+        ValidateAuthoritativeResidentPlacement(initial);
+
+        if (!session.TryStartTravelPlaytest())
+        {
+            throw new InvalidOperationException(
+                "P3 playtest task did not depart at the next resident decision boundary.");
+        }
+
+        var departedProjection = session.Projection;
+        var departedResident = session.SelectedResident;
+        var departedLocation = departedResident.Location
+            ?? throw new InvalidOperationException("Departed P3 resident has no authoritative location.");
+        var departedTravel = departedLocation.Travel
+            ?? throw new InvalidOperationException("Departed P3 resident has no travel progress.");
+        if (departedProjection.Hour != PlaytestTimeProfile.StartHour + 1
+            || departedLocation.Kind != SettlementActorLocationKind.Travelling
+            || departedTravel.DurationMilliseconds != ExpectedTravelDurationMilliseconds
+            || departedTravel.ElapsedMilliseconds < 0
+            || departedTravel.ElapsedMilliseconds >= PartialTravelElapsedMilliseconds)
+        {
+            throw new InvalidOperationException("P3 playtest departure state is invalid.");
+        }
+
+        var toPartial = PartialTravelElapsedMilliseconds - departedTravel.ElapsedMilliseconds;
+        if (toPartial > 0 && !session.AdvanceActiveTravelSample(toPartial))
+        {
+            throw new InvalidOperationException("P3 playtest travel ended before the expected partial progress.");
+        }
+
+        var partialProjection = session.Projection;
+        var partialResident = session.SelectedResident;
+        var partialLocation = partialResident.Location
+            ?? throw new InvalidOperationException("Partial P3 resident has no authoritative location.");
+        var partialTravel = partialLocation.Travel
+            ?? throw new InvalidOperationException("Partial P3 resident has no travel progress.");
+        if (partialLocation.Kind != SettlementActorLocationKind.Travelling
+            || partialTravel.DurationMilliseconds != ExpectedTravelDurationMilliseconds
+            || partialTravel.ElapsedMilliseconds != PartialTravelElapsedMilliseconds)
+        {
+            throw new InvalidOperationException("P3 playtest partial travel progress is invalid.");
+        }
+
+        VillageWorld.ValidateLifeProjection(partialProjection);
+        ValidateRuntimeTravelPlacement(initialResident, partialResident, partialProjection);
+
         var checkpoint = session.CreateCheckpoint();
         var restored = GameWorldSession.Restore(checkpoint);
-        var restoredProjection = restored.Projection;
-        var restoredResident = restoredProjection.Residents.Single(
-            resident => resident.Id == session.SelectedResidentId);
+        restored.SelectResident(initialResident.Id);
+        var restoredResident = restored.SelectedResident;
+        var restoredLocation = restoredResident.Location
+            ?? throw new InvalidOperationException("Restored P3 resident has no authoritative location.");
+        var restoredTravel = restoredLocation.Travel
+            ?? throw new InvalidOperationException("Restored P3 resident has no travel progress.");
+        if (restored.Time != session.Time
+            || restoredLocation.Kind != SettlementActorLocationKind.Travelling
+            || restoredTravel.DurationMilliseconds != partialTravel.DurationMilliseconds
+            || restoredTravel.ElapsedMilliseconds != partialTravel.ElapsedMilliseconds)
+        {
+            throw new InvalidOperationException("P3 playtest checkpoint did not preserve travel progress.");
+        }
+
+        var remaining = restoredTravel.DurationMilliseconds - restoredTravel.ElapsedMilliseconds;
+        if (restored.AdvanceActiveTravelSample(remaining))
+        {
+            throw new InvalidOperationException("P3 playtest still reports active travel after exact arrival.");
+        }
+
+        var projection = restored.Projection;
+        var resident = restored.SelectedResident;
+        var arrival = resident.Location
+            ?? throw new InvalidOperationException("Arrived P3 resident has no authoritative location.");
+        var interaction = restored.InteractSelected(ResidentInteractionChoice.Encourage);
+        VillageWorld.ValidateLifeProjection(projection);
+        var stockpileStack = projection.Stockpile[0];
         var restoredPlayer = restored.Player;
 
-        if (interaction.Success
+        if (arrival.Kind != SettlementActorLocationKind.AtPlace
+            || arrival.CurrentPlace.Kind != SettlementPlaceKind.Workplace
+            || arrival.CurrentPlace != arrival.DestinationPlace
+            || arrival.Travel is not null
+            || interaction.Success
             || interaction.Code != SettlementResultCodes.InteractionNotCoLocated
-            || projection.Day != 1
-            || projection.Hour != PlaytestTimeProfile.StartHour
+            || projection.Day != 0
+            || projection.Hour != PlaytestTimeProfile.StartHour + 1
             || projection.Residents.Count != VillageLayout.PlaytestResidentCount
+            || projection.Residents
+                .Where(entry => entry.Id != resident.Id)
+                .Any(entry => !HasAuthoritativeHomePresence(entry))
             || projection.Homes?.Count != 10
             || projection.Households?.Count != 6
-            || session.FindStockpileStack(stockpileStack.StackId) is null
-            || restored.Time != session.Time
-            || restoredProjection.Day != projection.Day
-            || restoredProjection.Hour != projection.Hour
-            || restoredResident.Affinity != session.SelectedResident.Affinity
+            || restored.FindStockpileStack(stockpileStack.StackId) is null
             || restored.PlayerId != session.PlayerId
             || restoredPlayer.ScopeId != player.ScopeId
             || !restoredPlayer.Inventory.SequenceEqual(player.Inventory))
         {
-            throw new InvalidOperationException("Client WorldRuntime/player smoke produced an invalid state.");
+            throw new InvalidOperationException("Client P3 travel playtest produced an invalid state.");
         }
 
-        var resident = session.SelectedResident;
         return
-            $"MWS_GODOT_SMOKE_OK client=village-v0.11 day={projection.Day} hour={projection.Hour} " +
-            $"resident={resident.Name} population={projection.Residents.Count} affinity={resident.Affinity} " +
-            $"player={session.PlayerId.Value} player_scope={player.ScopeId.Value} " +
-            "clock=continuous-hourly-playtest input=third-person-keyboard-gamepad-validated " +
-            "locale=en-ru-validated spatial=village-layout-validated " +
-            "interaction=semantic-colocation-rejection-validated checkpoint=world-runtime-roundtrip-validated " +
-            "player_actor=authoritative-persisted-replayable life=authoritative-residence-routing-validated";
+            $"MWS_GODOT_SMOKE_OK client=village-v0.14 day={projection.Day} hour={projection.Hour} " +
+            $"resident={resident.Name} population={projection.Residents.Count} " +
+            $"player={restored.PlayerId.Value} player_scope={restoredPlayer.ScopeId.Value} " +
+            "clock=hourly-plus-observable-active-travel-sampling input=third-person-keyboard-gamepad-validated " +
+            "locale=en-ru-validated spatial=authoritative-location-route-progress-validated " +
+            "interaction=semantic-colocation-rejection-validated checkpoint=travel-progress-roundtrip-validated " +
+            "playtest=p3-manual-road-travel-observable-validated life=authoritative-placement-validated";
+    }
+
+    private static void ValidateAuthoritativeResidentPlacement(SettlementProjection projection)
+    {
+        var resident = projection.Residents.Single(entry => entry.Name == "Karo");
+        var location = resident.Location
+            ?? throw new InvalidOperationException("P3 client smoke resident has no authoritative location.");
+        if (location.Kind != SettlementActorLocationKind.AtPlace
+            || location.CurrentPlace.Kind != SettlementPlaceKind.Home
+            || resident.WorkplaceId == default)
+        {
+            throw new InvalidOperationException("P3 client smoke resident does not expose the expected places.");
+        }
+
+        var homePosition = VillageResidentPlacement.Resolve(resident, projection);
+        var activityOnly = resident with { Activity = ResidentActivity.Working };
+        var activityOnlyPosition = VillageResidentPlacement.Resolve(activityOnly, projection);
+        if (homePosition.DistanceTo(activityOnlyPosition) > 0.001f)
+        {
+            throw new InvalidOperationException(
+                "Resident presentation moved because Activity changed without semantic location travel.");
+        }
+
+        var housemate = projection.Residents.Single(
+            entry => entry.Id != resident.Id && entry.HouseholdId == resident.HouseholdId);
+        var housematePosition = VillageResidentPlacement.Resolve(housemate, projection);
+        if (homePosition.DistanceTo(housematePosition) < 1.0f)
+        {
+            throw new InvalidOperationException(
+                "Residents sharing one semantic home are visually stacked and cannot be distinguished in playtest.");
+        }
+    }
+
+    private static void ValidateRuntimeTravelPlacement(
+        ResidentProjection initialResident,
+        ResidentProjection travellingResident,
+        SettlementProjection projection)
+    {
+        var travel = travellingResident.Location?.Travel
+            ?? throw new InvalidOperationException("Runtime travel placement fixture has no progress.");
+        var homePosition = VillageResidentPlacement.Resolve(initialResident, projection);
+        var workplace = new SettlementPlaceRef(
+            SettlementPlaceKind.Workplace,
+            travellingResident.WorkplaceId);
+        var arrivedResident = travellingResident with
+        {
+            Location = new SettlementActorLocationProjection(
+                SettlementActorLocationKind.AtPlace,
+                workplace,
+                workplace),
+        };
+        var workplacePosition = VillageResidentPlacement.Resolve(arrivedResident, projection);
+        var actual = VillageResidentPlacement.Resolve(travellingResident, projection);
+        var progress = (float)travel.ElapsedMilliseconds / travel.DurationMilliseconds;
+        var oldStraightLine = homePosition.Lerp(workplacePosition, progress);
+        if (actual.DistanceTo(oldStraightLine) < 10.0f
+            || Math.Abs(actual.X) > 1.0f
+            || actual.Z < 80.0f
+            || actual.Z > 99.0f)
+        {
+            throw new InvalidOperationException(
+                "Runtime resident presentation did not follow the accepted P3 road/track path.");
+        }
+    }
+
+    private static bool HasAuthoritativeHomePresence(ResidentProjection resident)
+    {
+        var location = resident.Location;
+        return resident.Activity != ResidentActivity.Working
+            && location is not null
+            && location.Kind == SettlementActorLocationKind.AtPlace
+            && location.CurrentPlace.Kind == SettlementPlaceKind.Home
+            && location.CurrentPlace.EntityId == resident.HomeId
+            && location.Travel is null;
     }
 }

@@ -86,9 +86,15 @@ public static class SettlementOnFootTraversalApplicabilityRules
 public static class SettlementOnFootTraversalHorizonRules
 {
     private const long BaselineReferenceWalkingSpeedMillimetersPerSecond = 1_400;
+    private const long BaselineShortReferenceHorizonMilliseconds = 300_000;
     private const long ProlongedReferenceHorizonMilliseconds = 1_800_000;
     private const long MillisecondsPerSecond = 1_000;
     private const long MillimetersPerMeter = 1_000;
+    private const long BaselineShortReferenceDistanceMeters =
+        BaselineReferenceWalkingSpeedMillimetersPerSecond
+        * BaselineShortReferenceHorizonMilliseconds
+        / MillisecondsPerSecond
+        / MillimetersPerMeter;
     private const long ProlongedReferenceDistanceMeters =
         BaselineReferenceWalkingSpeedMillimetersPerSecond
         * ProlongedReferenceHorizonMilliseconds
@@ -99,6 +105,11 @@ public static class SettlementOnFootTraversalHorizonRules
         long totalDistanceMeters)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(totalDistanceMeters);
+
+        if (totalDistanceMeters <= BaselineShortReferenceDistanceMeters)
+        {
+            return SettlementOnFootTraversalHorizonClass.BaselineShortReferenceCompatible;
+        }
 
         return totalDistanceMeters >= ProlongedReferenceDistanceMeters
             ? SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant
@@ -118,8 +129,10 @@ public sealed partial class SettlementSimulation
         }
 
         var routeTiming = AggregateOnFootRouteTiming(routePath.ConnectionIds);
+        // Current P3 route projection represents only the accepted continuous ordinary
+        // OnFoot profile. Process-bearing routes stay outside this profile until modeled.
         const SettlementOnFootTraversalDelayClass traversalDelay =
-            SettlementOnFootTraversalDelayClass.Unknown;
+            SettlementOnFootTraversalDelayClass.NoMaterialDelay;
         var traversalHorizon = SettlementOnFootTraversalHorizonRules.ClassifyReferenceHorizon(
             routePath.TotalDistanceMeters);
         var decision = SettlementOnFootTraversalApplicabilityRules.Evaluate(

@@ -6,9 +6,20 @@ namespace Mws.Client.Godot.World.Village;
 
 internal sealed partial class VillageResidentView : Node3D
 {
+    private const double TravelInterpolationSeconds = 0.10;
+    private const float PositionEpsilonMeters = 0.001f;
+
     private MeshInstance3D? _selectionMarker;
+    private Vector3 _authoritativeTargetPosition;
+    private Vector3 _interpolationStartPosition;
+    private double _interpolationElapsedSeconds;
+    private bool _hasPresentationPosition;
+    private bool _isInterpolating;
+    private SettlementActorLocationKind? _lastLocationKind;
 
     internal EntityId ResidentId { get; private set; }
+
+    internal Vector3 AuthoritativeTargetPosition => _authoritativeTargetPosition;
 
     internal void Initialize(ResidentProjection resident)
     {
@@ -71,7 +82,30 @@ internal sealed partial class VillageResidentView : Node3D
         AddChild(interaction);
     }
 
-    internal void Render(ResidentProjection resident, bool selected)
+    public override void _Process(double delta)
+    {
+        if (!_isInterpolating)
+        {
+            return;
+        }
+
+        _interpolationElapsedSeconds += Math.Max(0.0, delta);
+        var progress = (float)Math.Clamp(
+            _interpolationElapsedSeconds / TravelInterpolationSeconds,
+            0.0,
+            1.0);
+        Position = _interpolationStartPosition.Lerp(_authoritativeTargetPosition, progress);
+        if (progress >= 1.0f)
+        {
+            Position = _authoritativeTargetPosition;
+            _isInterpolating = false;
+        }
+    }
+
+    internal void Render(
+        ResidentProjection resident,
+        bool selected,
+        Vector3 authoritativePosition)
     {
         ArgumentNullException.ThrowIfNull(resident);
         if (resident.Id != ResidentId)
@@ -79,10 +113,80 @@ internal sealed partial class VillageResidentView : Node3D
             throw new InvalidOperationException("Resident view cannot be rebound to another authoritative entity.");
         }
 
+        var locationKind = resident.Location?.Kind
+            ?? throw new InvalidOperationException(
+                $"Resident {resident.Id.Value} has no authoritative semantic location to present.");
+        var targetChanged = !_hasPresentationPosition
+            || _authoritativeTargetPosition.DistanceTo(authoritativePosition) > PositionEpsilonMeters;
+        if (targetChanged)
+        {
+            var interpolate = _hasPresentationPosition
+                && (_lastLocationKind == SettlementActorLocationKind.Travelling
+                    || locationKind == SettlementActorLocationKind.Travelling);
+            PresentAuthoritativePosition(authoritativePosition, interpolate);
+        }
+
+        _lastLocationKind = locationKind;
         if (_selectionMarker is not null)
         {
             _selectionMarker.Visible = selected;
         }
+    }
+
+    internal static void ValidateInterpolationContract()
+    {
+        var view = new VillageResidentView();
+        try
+        {
+            var origin = Vector3.Zero;
+            var target = new Vector3(10.0f, 0.0f, 0.0f);
+            view.PresentAuthoritativePosition(origin, interpolate: false);
+            view.PresentAuthoritativePosition(target, interpolate: true);
+            if (view.Position.DistanceTo(origin) > PositionEpsilonMeters
+                || view.AuthoritativeTargetPosition.DistanceTo(target) > PositionEpsilonMeters)
+            {
+                throw new InvalidOperationException(
+                    "Resident presentation must keep visual position separate from the newest authoritative target.");
+            }
+
+            view._Process(TravelInterpolationSeconds * 0.5);
+            var midpoint = origin.Lerp(target, 0.5f);
+            if (view.Position.DistanceTo(midpoint) > 0.01f)
+            {
+                throw new InvalidOperationException(
+                    "Resident presentation interpolation did not produce a smooth midpoint.");
+            }
+
+            view._Process(TravelInterpolationSeconds * 0.5);
+            if (view.Position.DistanceTo(target) > PositionEpsilonMeters)
+            {
+                throw new InvalidOperationException(
+                    "Resident presentation interpolation did not finish at the authoritative target.");
+            }
+        }
+        finally
+        {
+            view.Free();
+        }
+    }
+
+    private void PresentAuthoritativePosition(Vector3 target, bool interpolate)
+    {
+        if (!_hasPresentationPosition || !interpolate)
+        {
+            _authoritativeTargetPosition = target;
+            Position = target;
+            _interpolationElapsedSeconds = 0.0;
+            _isInterpolating = false;
+            _hasPresentationPosition = true;
+            return;
+        }
+
+        _interpolationStartPosition = Position;
+        _authoritativeTargetPosition = target;
+        _interpolationElapsedSeconds = 0.0;
+        _isInterpolating = true;
+        _hasPresentationPosition = true;
     }
 
     private void AddBox(string name, Vector3 position, Vector3 size, Color color)

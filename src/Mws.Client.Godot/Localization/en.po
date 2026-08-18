@@ -131,7 +131,7 @@ msgid "UI_DEBUG_TIME"
 msgstr "Day {0}, {1}:00 · player X {2:0} Z {3:0}"
 
 msgid "UI_DEBUG_RESIDENT_ROW"
-msgstr "{0} #{1} · {2} · H{3} E{4} · {5} {6} {7:0}m · {8} wp"
+msgstr "{0} #{1} · {2} · H{3} E{4} · {5} {6} {7:0}m · {8}"
 
 msgid "UI_DEBUG_DEST_SOCIAL"
 msgstr "social point"
@@ -139,11 +139,11 @@ msgstr "social point"
 msgid "UI_DEBUG_DEST_UNASSIGNED_HOME"
 msgstr "unassigned home"
 
-msgid "UI_DEBUG_ROUTE_MISMATCH"
-msgstr "route does not match authoritative activity"
+msgid "UI_DEBUG_PLACEMENT_MISMATCH"
+msgstr "rendered position does not match authoritative semantic location/travel"
 
 msgid "UI_DEBUG_LEGEND"
-msgstr "Dots = residents · route line = remaining path · cross = destination · ring/cross = player"
+msgstr "Dots = residents · line = semantic destination vector · cross = semantic destination · warning ring = presentation mismatch · ring/cross = player"
 
 msgid "UI_DEBUG_NO_DATA"
 msgstr "No resident data yet."

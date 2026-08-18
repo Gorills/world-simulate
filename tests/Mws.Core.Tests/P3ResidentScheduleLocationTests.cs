@@ -9,79 +9,89 @@ namespace Mws.Core.Tests;
 public sealed class P3ResidentScheduleLocationTests
 {
     [Fact]
-    public void PrototypeScheduleFeedsPersistentTravelWithoutOwningTravelProgress()
+    public void ClockHoursDoNotCreateResidentTravelOrWorkWithoutSelectedTask()
     {
         var simulation = SettlementSimulation.CreateDefault(new WorldSeed(9310));
         var initial = Mira(simulation);
         var initialLocation = RequireLocation(initial);
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId);
 
         Assert.Equal(SettlementActorLocationKind.AtPlace, initialLocation.Kind);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), initialLocation.CurrentPlace);
+        Assert.Equal(home, initialLocation.CurrentPlace);
         Assert.Null(initialLocation.Travel);
+        Assert.Null(initial.SelectedTask);
 
-        simulation.AdvanceHours(7);
-        var commutingToWork = Mira(simulation);
-        var outbound = RequireLocation(commutingToWork);
+        simulation.AdvanceHours(8);
+        var morning = Mira(simulation);
+        var morningLocation = RequireLocation(morning);
 
-        Assert.Equal(SettlementActorLocationKind.Travelling, outbound.Kind);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), outbound.CurrentPlace);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Workplace, initial.WorkplaceId), outbound.DestinationPlace);
-        Assert.NotNull(outbound.Travel);
-        Assert.Equal(SettlementSimulation.HourMilliseconds, outbound.Travel.DurationMilliseconds);
-        Assert.Equal(0, outbound.Travel.ElapsedMilliseconds);
-        Assert.NotEqual(ResidentActivity.Working, commutingToWork.Activity);
-
-        var travellingState = simulation.CaptureState();
-        Assert.NotNull(travellingState.Residents.Single(resident => resident.Id == initial.Id).Location);
-        var travellingJson = SettlementStateJson.Serialize(travellingState);
-        var restoredTravelling = SettlementSimulation.Restore(SettlementStateJson.Deserialize(travellingJson));
-        Assert.Equal(outbound, RequireLocation(Mira(restoredTravelling)));
-
-        simulation.AdvanceHours(1);
-        var atWork = Mira(simulation);
-        var workLocation = RequireLocation(atWork);
-
-        Assert.Equal(SettlementActorLocationKind.AtPlace, workLocation.Kind);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Workplace, initial.WorkplaceId), workLocation.CurrentPlace);
-        Assert.Null(workLocation.Travel);
-        Assert.Equal(ResidentActivity.Working, atWork.Activity);
-        Assert.NotNull(simulation.CaptureState().Residents.Single(resident => resident.Id == initial.Id).Location);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, morningLocation.Kind);
+        Assert.Equal(home, morningLocation.CurrentPlace);
+        Assert.Null(morningLocation.Travel);
+        Assert.NotEqual(ResidentActivity.Working, morning.Activity);
 
         simulation.AdvanceHours(9);
-        var commutingHome = Mira(simulation);
-        var inbound = RequireLocation(commutingHome);
+        var evening = Mira(simulation);
+        var eveningLocation = RequireLocation(evening);
 
-        Assert.Equal(SettlementActorLocationKind.Travelling, inbound.Kind);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Workplace, initial.WorkplaceId), inbound.CurrentPlace);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), inbound.DestinationPlace);
-        Assert.NotNull(inbound.Travel);
-        Assert.Equal(0, inbound.Travel.ElapsedMilliseconds);
-        Assert.NotEqual(ResidentActivity.Working, commutingHome.Activity);
-
-        simulation.AdvanceHours(1);
-        var backHome = Mira(simulation);
-        var homeLocation = RequireLocation(backHome);
-
-        Assert.Equal(SettlementActorLocationKind.AtPlace, homeLocation.Kind);
-        Assert.Equal(new SettlementPlaceRef(SettlementPlaceKind.Home, initial.HomeId), homeLocation.CurrentPlace);
-        Assert.Null(homeLocation.Travel);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, eveningLocation.Kind);
+        Assert.Equal(home, eveningLocation.CurrentPlace);
+        Assert.Null(eveningLocation.Travel);
+        Assert.NotEqual(ResidentActivity.Working, evening.Activity);
     }
 
     [Fact]
-    public void StableLocationRoundTripsWithoutClockDerivedCompaction()
+    public void PersistedPlanlessCompatibilityTravelCanStillFinish()
     {
-        var simulation = SettlementSimulation.CreateDefault(new WorldSeed(9311));
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9311)).CaptureState();
+        var resident = state.Residents.Single(entry => entry.Name == "Mira");
+        var household = state.Households!.Single(entry => entry.Id == resident.HouseholdId);
+        var home = new SettlementPlaceRef(SettlementPlaceKind.Home, household.HomeId);
+        var workplace = new SettlementPlaceRef(SettlementPlaceKind.Workplace, resident.WorkplaceId);
+        var travelling = resident with
+        {
+            Location = new SettlementActorLocationState(
+                SettlementActorLocationKind.Travelling,
+                home,
+                workplace,
+                new SettlementTravelProgressState(
+                    SettlementSimulation.HourMilliseconds,
+                    0)),
+        };
+        var simulation = SettlementSimulation.Restore(state with
+        {
+            Residents = state.Residents
+                .Select(entry => entry.Id == resident.Id ? travelling : entry)
+                .ToArray(),
+        });
+
+        var serialized = SettlementStateJson.Serialize(simulation.CaptureState());
+        simulation = SettlementSimulation.Restore(SettlementStateJson.Deserialize(serialized));
+
+        var before = Mira(simulation);
+        var beforeLocation = RequireLocation(before);
+        Assert.Equal(SettlementActorLocationKind.Travelling, beforeLocation.Kind);
+        Assert.NotNull(beforeLocation.Travel);
+        Assert.Null(beforeLocation.Travel.Plan);
+
+        simulation.AdvanceHours(1);
+
+        var arrived = Mira(simulation);
+        var arrivedLocation = RequireLocation(arrived);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, arrivedLocation.Kind);
+        Assert.Equal(workplace, arrivedLocation.CurrentPlace);
+        Assert.Null(arrivedLocation.Travel);
+        Assert.NotEqual(ResidentActivity.Working, arrived.Activity);
+    }
+
+    [Fact]
+    public void HomeLocationRemainsCompactAcrossClockAdvanceAndRoundTrip()
+    {
+        var simulation = SettlementSimulation.CreateDefault(new WorldSeed(9312));
         simulation.AdvanceHours(8);
 
         var state = simulation.CaptureState();
-        Assert.All(state.Residents, resident =>
-        {
-            var location = Assert.IsType<SettlementActorLocationState>(resident.Location);
-            Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
-            Assert.Equal(SettlementPlaceKind.Workplace, location.CurrentPlace.Kind);
-            Assert.Equal(resident.WorkplaceId, location.CurrentPlace.EntityId);
-            Assert.Null(location.Travel);
-        });
+        Assert.All(state.Residents, resident => Assert.Null(resident.Location));
 
         var json = SettlementStateJson.Serialize(state);
         var restored = SettlementSimulation.Restore(SettlementStateJson.Deserialize(json));
@@ -91,8 +101,8 @@ public sealed class P3ResidentScheduleLocationTests
         {
             var location = RequireLocation(resident);
             Assert.Equal(SettlementActorLocationKind.AtPlace, location.Kind);
-            Assert.Equal(SettlementPlaceKind.Workplace, location.CurrentPlace.Kind);
-            Assert.Equal(resident.WorkplaceId, location.CurrentPlace.EntityId);
+            Assert.Equal(SettlementPlaceKind.Home, location.CurrentPlace.Kind);
+            Assert.Equal(resident.HomeId, location.CurrentPlace.EntityId);
             Assert.Null(location.Travel);
         });
     }

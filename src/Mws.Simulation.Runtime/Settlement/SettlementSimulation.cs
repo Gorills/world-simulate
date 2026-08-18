@@ -115,6 +115,7 @@ public sealed partial class SettlementSimulation
         var workplaces = SettlementPrototypeContent.CreateWorkplaces(entityIdOffset);
         var homes = SettlementPrototypeContent.CreateHomes(entityIdOffset);
         var households = SettlementPrototypeContent.CreateHouseholds(entityIdOffset);
+        var routeConnections = SettlementPrototypeContent.CreateRouteConnections(entityIdOffset);
         SettlementPrototypeContent.Validate(residents, itemStacks, workplaces, homes, households);
 
         return new SettlementSimulation(
@@ -133,7 +134,7 @@ public sealed partial class SettlementSimulation
             homes,
             households,
             SettlementVersions.CurrentResidentLocationEncodingVersion,
-            [],
+            routeConnections,
             [],
             SettlementVersions.CurrentRouteModeEncodingVersion);
     }

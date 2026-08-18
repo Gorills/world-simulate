@@ -76,8 +76,12 @@ public sealed class SettlementScalingTests
         Assert.Equal(
             SettlementStateJson.Serialize(incremental.CaptureState()),
             SettlementStateJson.Serialize(scheduled.CaptureState()));
-        Assert.Throws<ArgumentException>(() => scheduled.AdvanceTo(
-            scheduled.Time.AddMilliseconds(SettlementSimulation.HourMilliseconds / 2)));
+
+        var subHourTarget = scheduled.Time.AddMilliseconds(
+            SettlementSimulation.HourMilliseconds / 2);
+        scheduled.AdvanceTo(subHourTarget);
+
+        Assert.Equal(subHourTarget, scheduled.Time);
     }
 
     [Fact]

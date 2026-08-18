@@ -16,6 +16,7 @@ public partial class Main : Node
     private GameHud? _hud;
     private VillageWorld? _village;
     private PromptView? _prompt;
+    private PlaytestClock? _clock;
     private bool _hudOpen;
 
     public override void _EnterTree()
@@ -29,6 +30,7 @@ public partial class Main : Node
         {
             GameInput.ConfigureDefaults();
             GameInput.ValidateDefaults();
+            DebugInput.ConfigureDefaults();
             VillageWorld.ValidateSpatialContract();
             _session = new GameWorldSession(new WorldSeed(42));
 
@@ -39,9 +41,9 @@ public partial class Main : Node
                 return;
             }
 
-            var clock = new PlaytestClock();
-            AddChild(clock);
-            clock.Bind(_session);
+            _clock = new PlaytestClock();
+            AddChild(_clock);
+            _clock.Bind(_session);
 
             _village = GetNode<VillageWorld>("VillageWorld");
             _prompt = GetNode<PromptView>("WorldInteractionPrompt");
@@ -54,6 +56,7 @@ public partial class Main : Node
             _session.Changed += RefreshVillage;
             RefreshVillage();
             SetHudOpen(open: false);
+            GD.Print("MWS_P3_TRAVEL_PLAYTEST_READY observer=F3 start=F4 resident=Karo");
         }
         catch (Exception exception)
         {
@@ -68,6 +71,24 @@ public partial class Main : Node
         {
             _hud?.SetInputDevice(_inputDevice.Current);
             _prompt?.SetInputDevice(_inputDevice.Current);
+        }
+
+        if (DebugInput.IsStartP3TravelPlaytest(@event)
+            && _session is not null
+            && _clock is not null)
+        {
+            if (_session.TryStartTravelPlaytest())
+            {
+                _clock.BeginActiveTravelSampling();
+                GD.Print("MWS_P3_TRAVEL_PLAYTEST_STARTED resident=Karo observer=F3");
+            }
+            else
+            {
+                GD.PushWarning("MWS_P3_TRAVEL_PLAYTEST_NOT_STARTED restart the playtest to reset the fixture.");
+            }
+
+            GetViewport().SetInputAsHandled();
+            return;
         }
 
         if (@event.IsActionPressed(GameInput.Menu) && _hud is not null && _village is not null)

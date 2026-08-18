@@ -113,6 +113,10 @@ public sealed partial class WorldRuntime
                 break;
             }
 
+            case WorldInputKind.SelectPlayerTask:
+                SelectPlayerTaskCore(entry.SelectPlayerTask!);
+                break;
+
             case WorldInputKind.AllocateOperationId:
             {
                 var actual = AllocateOperationIdCore();
@@ -234,7 +238,8 @@ public sealed partial class WorldRuntime
         WorldTransportBatchInput? deliverInbox = null,
         WorldPartitionResidencyInput? unloadSettlement = null,
         WorldPartitionResidencyInput? loadSettlement = null,
-        WorldAddPlayerActorInput? addPlayerActor = null) =>
+        WorldAddPlayerActorInput? addPlayerActor = null,
+        WorldSelectPlayerTaskInput? selectPlayerTask = null) =>
         new(
             _nextInputSequence,
             recordedAt,
@@ -249,5 +254,6 @@ public sealed partial class WorldRuntime
             deliverInbox,
             unloadSettlement,
             loadSettlement,
-            addPlayerActor);
+            addPlayerActor,
+            selectPlayerTask);
 }

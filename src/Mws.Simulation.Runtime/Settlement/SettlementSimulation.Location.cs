@@ -5,10 +5,8 @@ namespace Mws.Simulation.Runtime;
 
 public sealed partial class SettlementSimulation
 {
-    private const int PrototypeMorningCommuteHour = 7;
-    private const int PrototypeWorkStartHour = 8;
-    private const int PrototypeWorkEndHour = 17;
-    private const long PrototypeTravelDurationMilliseconds = HourMilliseconds;
+    private const int LegacyWorkStartHour = 8;
+    private const int LegacyWorkEndHour = 17;
 
     internal SettlementActorLocationState? TryGetResidentSemanticLocation(EntityId residentId)
     {
@@ -135,38 +133,21 @@ public sealed partial class SettlementSimulation
         }
     }
 
-    private void AdvanceResidentSemanticLocations(int hour)
+    private void AdvanceCompatibilityResidentTravel()
     {
         foreach (var resident in _residents)
         {
-            if (resident.Location.Kind == SettlementActorLocationKind.Travelling)
-            {
-                resident.Location = SettlementSemanticLocation.AdvanceTravel(
-                    resident.Location,
-                    HourMilliseconds);
-                continue;
-            }
-
-            // An authoritative selected task owns the upstream destination requirement.
-            // Until route/travel-plan derivation replaces the prototype duration fixture,
-            // do not let the old clock feeder invent a conflicting commute for that task.
-            if (resident.SelectedTask is not null)
+            if (resident.Location.Kind != SettlementActorLocationKind.Travelling
+                || resident.Location.Travel?.Plan is not null)
             {
                 continue;
             }
 
-            // Compatibility feeder only for residents that do not yet have authoritative
-            // selected-task state. The 07/17 fixture is not a canonical movement cause.
-            var target = PrototypeScheduledResidentDestination(resident, hour);
-            if (IsAtPlace(resident.Location, target))
-            {
-                continue;
-            }
-
-            resident.Location = SettlementSemanticLocation.BeginTravel(
+            // Older snapshots may contain planless one-hour travel. Let that persisted
+            // state finish, but never create a new trip from clock hour or profession.
+            resident.Location = SettlementSemanticLocation.AdvanceTravel(
                 resident.Location,
-                target,
-                PrototypeTravelDurationMilliseconds);
+                HourMilliseconds);
         }
     }
 
@@ -181,16 +162,8 @@ public sealed partial class SettlementSimulation
     private bool IsResidentAtHome(ResidentRuntimeState resident) =>
         IsAtPlace(resident.Location, ResidentHomePlace(resident));
 
-    private bool IsResidentAtWorkplace(ResidentRuntimeState resident) =>
-        IsAtPlace(resident.Location, ResidentWorkplacePlace(resident));
-
-    private SettlementPlaceRef PrototypeScheduledResidentDestination(ResidentRuntimeState resident, int hour) =>
-        hour >= PrototypeMorningCommuteHour && hour < PrototypeWorkEndHour
-            ? ResidentWorkplacePlace(resident)
-            : ResidentHomePlace(resident);
-
     private SettlementPlaceRef LegacyScheduledResidentStablePlace(ResidentRuntimeState resident, int hour) =>
-        hour >= PrototypeWorkStartHour && hour < PrototypeWorkEndHour
+        hour >= LegacyWorkStartHour && hour < LegacyWorkEndHour
             ? ResidentWorkplacePlace(resident)
             : ResidentHomePlace(resident);
 

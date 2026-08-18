@@ -7,6 +7,13 @@ internal static class SettlementPrototypeContent
 {
     internal const long EntityIdSpan = 1_024;
 
+    private const long P3TravelHomeLocalId = 206;
+    private const long P3TravelWorkplaceLocalId = 103;
+    private const long P3TravelConnectionId = 1;
+    private const long P3TravelDistanceMeters = 300;
+    private const string P3TravelRouteProvenance =
+        "prototype-content:p3-karo-grove-route-v1";
+
     internal static ResidentState[] CreateResidents(long entityIdOffset = 0)
     {
         var farmId = Entity(entityIdOffset, 101);
@@ -77,7 +84,7 @@ internal static class SettlementPrototypeContent
         Home(entityIdOffset, 203, "Miller Cottage", SettlementHomeSpatialKeys.Miller, 5),
         Home(entityIdOffset, 204, "Cook Cottage", SettlementHomeSpatialKeys.Cook, 4),
         Home(entityIdOffset, 205, "River Cottage", SettlementHomeSpatialKeys.River, 4),
-        Home(entityIdOffset, 206, "Grove Cottage", SettlementHomeSpatialKeys.Grove, 4),
+        Home(entityIdOffset, P3TravelHomeLocalId, "Grove Cottage", SettlementHomeSpatialKeys.Grove, 4),
         Home(entityIdOffset, 207, "Southwest Cottage", SettlementHomeSpatialKeys.SouthWest, 4),
         Home(entityIdOffset, 208, "Southeast Cottage", SettlementHomeSpatialKeys.SouthEast, 4),
         Home(entityIdOffset, 209, "Far Southwest Cottage", SettlementHomeSpatialKeys.FarSouthWest, 4),
@@ -91,7 +98,28 @@ internal static class SettlementPrototypeContent
         Household(entityIdOffset, 303, "Miller Household", 203),
         Household(entityIdOffset, 304, "Cook Household", 204),
         Household(entityIdOffset, 305, "River Household", 205),
-        Household(entityIdOffset, 306, "Grove Household", 206),
+        Household(entityIdOffset, 306, "Grove Household", P3TravelHomeLocalId),
+    ];
+
+    internal static SettlementRouteConnectionState[] CreateRouteConnections(long entityIdOffset = 0) =>
+    [
+        // Deliberately one route: enough to exercise the accepted P3 lifecycle without
+        // pretending that the prototype already owns a complete village road network.
+        new SettlementRouteConnectionState(
+            P3TravelConnectionId,
+            new SettlementPlaceRef(
+                SettlementPlaceKind.Home,
+                Entity(entityIdOffset, P3TravelHomeLocalId)),
+            new SettlementPlaceRef(
+                SettlementPlaceKind.Workplace,
+                Entity(entityIdOffset, P3TravelWorkplaceLocalId)),
+            P3TravelDistanceMeters,
+            SettlementRoutePhysicalState.Passable,
+            SettlementRoutePassageStatus.Open,
+            P3TravelRouteProvenance,
+            IsFixture: false,
+            SupportedModes: [SettlementTravelMode.OnFoot],
+            OnFootTimingClass: SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed),
     ];
 
     internal static EntityId GetSettlementOwnerId(long entityIdOffset = 0) =>

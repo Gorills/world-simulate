@@ -1,3 +1,4 @@
+using Mws.Domain;
 using Mws.Simulation.Api;
 
 namespace Mws.Simulation.Runtime;
@@ -8,8 +9,7 @@ public sealed partial class WorldRuntime
     {
         if (entry.Sequence <= 0
             || entry.Sequence == long.MaxValue
-            || entry.RecordedAt.Milliseconds < 0
-            || entry.RecordedAt.Milliseconds % SettlementSimulation.HourMilliseconds != 0)
+            || entry.RecordedAt.Milliseconds < 0)
         {
             throw new InvalidOperationException("World input journal entry has invalid sequence or time.");
         }
@@ -24,7 +24,8 @@ public sealed partial class WorldRuntime
             + (entry.DeliverInbox is null ? 0 : 1)
             + (entry.UnloadSettlement is null ? 0 : 1)
             + (entry.LoadSettlement is null ? 0 : 1)
-            + (entry.AddPlayerActor is null ? 0 : 1);
+            + (entry.AddPlayerActor is null ? 0 : 1)
+            + (entry.SelectPlayerTask is null ? 0 : 1);
         if (payloadCount != 1)
         {
             throw new InvalidOperationException("World input journal entry must contain exactly one payload.");
@@ -41,8 +42,7 @@ public sealed partial class WorldRuntime
                 && entry.AllocateOperationId.AllocatedOperationId.Value < long.MaxValue,
             WorldInputKind.AdvanceTo =>
                 entry.AdvanceTo is not null
-                && entry.AdvanceTo.TargetTime.Milliseconds > entry.RecordedAt.Milliseconds
-                && entry.AdvanceTo.TargetTime.Milliseconds % SettlementSimulation.HourMilliseconds == 0,
+                && entry.AdvanceTo.TargetTime.Milliseconds > entry.RecordedAt.Milliseconds,
             WorldInputKind.SettlementCommand =>
                 entry.SettlementCommand is not null && SettlementCommandShapeIsValid(entry.SettlementCommand),
             WorldInputKind.ResidentMigration => entry.ResidentMigration is not null,
@@ -62,6 +62,8 @@ public sealed partial class WorldRuntime
                 && entry.AddPlayerActor.CreatedPlayerId.Value > 0
                 && entry.AddPlayerActor.CreatedPlayerId.Value < long.MaxValue
                 && entry.AddPlayerActor.ScopeId.Value > 0,
+            WorldInputKind.SelectPlayerTask =>
+                PlayerTaskShapeIsValid(entry.SelectPlayerTask, entry.RecordedAt),
             _ => false,
         };
 
@@ -90,6 +92,26 @@ public sealed partial class WorldRuntime
                 input.ItemId is null && input.Quantity == 0 && input.InteractionChoice is not null,
             _ => false,
         };
+    }
+
+    private static bool PlayerTaskShapeIsValid(
+        WorldSelectPlayerTaskInput? input,
+        SimulationTime recordedAt)
+    {
+        if (input is null
+            || input.TaskId <= 0
+            || string.IsNullOrWhiteSpace(input.Kind)
+            || string.IsNullOrWhiteSpace(input.ReasonReference)
+            || input.SelectedAt != recordedAt)
+        {
+            return false;
+        }
+
+        return input.RequiredPlace is null
+            || input.RequiredPlace.Kind is (
+                SettlementPlaceKind.Settlement
+                or SettlementPlaceKind.Home
+                or SettlementPlaceKind.Workplace);
     }
 
     private static bool TransportBatchShapeIsValid(WorldTransportBatchInput input, bool allowBlocked)

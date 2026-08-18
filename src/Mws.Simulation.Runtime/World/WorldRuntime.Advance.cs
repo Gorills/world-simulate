@@ -40,6 +40,7 @@ public sealed partial class WorldRuntime
             return;
         }
 
+        var stagedPlayer = StagePlayerAdvance(target);
         var staged = new List<(WorldPartitionRuntime Partition, SettlementSimulation Simulation)>(_partitions.Count);
         foreach (var partition in _partitions.Values)
         {
@@ -69,6 +70,7 @@ public sealed partial class WorldRuntime
             partition.DeferredAdvanceCount = checked(partition.DeferredAdvanceCount + 1);
         }
 
+        _player = stagedPlayer;
         Time = target;
     }
 
@@ -77,13 +79,6 @@ public sealed partial class WorldRuntime
         if (target.Milliseconds < Time.Milliseconds)
         {
             throw new InvalidOperationException("World simulation time is monotonic.");
-        }
-
-        if (target.Milliseconds % SettlementSimulation.HourMilliseconds != 0)
-        {
-            throw new ArgumentException(
-                "World simulation advances on canonical whole-hour boundaries.",
-                nameof(target));
         }
     }
 }

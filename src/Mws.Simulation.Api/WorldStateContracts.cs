@@ -103,6 +103,7 @@ public enum WorldInputKind
     UnloadSettlement,
     LoadSettlement,
     AddPlayerActor,
+    SelectPlayerTask,
 }
 
 public enum WorldSettlementCommandKind
@@ -216,7 +217,8 @@ public sealed record WorldInputJournalEntry(
     WorldTransportBatchInput? DeliverInbox,
     WorldPartitionResidencyInput? UnloadSettlement = null,
     WorldPartitionResidencyInput? LoadSettlement = null,
-    WorldAddPlayerActorInput? AddPlayerActor = null);
+    WorldAddPlayerActorInput? AddPlayerActor = null,
+    WorldSelectPlayerTaskInput? SelectPlayerTask = null);
 
 public sealed record WorldManifestState(
     int SchemaVersion,

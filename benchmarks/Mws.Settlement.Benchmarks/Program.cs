@@ -62,7 +62,7 @@ catch (Exception exception) when (exception is IOException or JsonException or I
     return 1;
 }
 
-var state = CreateVillageState(residentCount);
+var state = CreateVillageState(residentCount, days);
 var simulation = SettlementSimulation.Restore(state);
 var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
 var elapsed = Stopwatch.StartNew();
@@ -208,7 +208,7 @@ static List<string> BudgetViolations(SettlementScaleReport report, SettlementSca
     return violations;
 }
 
-static SettlementState CreateVillageState(int residentCount)
+static SettlementState CreateVillageState(int residentCount, int days)
 {
     var state = SettlementSimulation.CreateDefault(new WorldSeed(4242), new SimulationScopeId(4242)).CaptureState();
     var workplaces = Enumerable.Range(1, residentCount)
@@ -261,10 +261,13 @@ static SettlementState CreateVillageState(int residentCount)
                 index % 11);
         })
         .ToArray();
+    // This benchmark measures settlement scale, not the P5 food-shortage workload.
+    // One ration per resident per simulated hour is a deliberate non-scarcity upper bound.
+    var nonScarcityRationQuantity = checked(residentCount * days * 24);
     var stacks = state.ItemStacks
         .Select(stack => stack.ItemId switch
         {
-            SettlementItems.Ration => stack with { Quantity = residentCount * 3 },
+            SettlementItems.Ration => stack with { Quantity = nonScarcityRationQuantity },
             SettlementItems.Grain => stack with { Quantity = residentCount * 2 },
             _ => stack,
         })
@@ -275,6 +278,8 @@ static SettlementState CreateVillageState(int residentCount)
         Residents = residents,
         ItemStacks = stacks,
         Workplaces = workplaces,
+        RouteConnections = [],
+        ResidentRouteKnowledge = [],
     };
 }
 
