@@ -98,10 +98,7 @@ public static class SettlementOnFootTraversalHorizonRules
     public static SettlementOnFootTraversalHorizonClass ClassifyReferenceHorizon(
         long totalDistanceMeters)
     {
-        if (totalDistanceMeters <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(totalDistanceMeters));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(totalDistanceMeters);
 
         return totalDistanceMeters >= ProlongedReferenceDistanceMeters
             ? SettlementOnFootTraversalHorizonClass.ProlongedOrEnduranceRelevant
