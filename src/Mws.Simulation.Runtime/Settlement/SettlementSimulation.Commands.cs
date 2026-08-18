@@ -19,6 +19,33 @@ public sealed partial class SettlementSimulation
         }
     }
 
+    internal bool WouldMutateCommandState(SettlementCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (command.Id.Value <= 0 || command.Id.Value == long.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(command), "Command ID must be positive and allocatable.");
+        }
+
+        if (TryGetCommandReceipt(command.Id, out _)
+            || command.Id.Value < _nextCommandId)
+        {
+            return false;
+        }
+
+        if (command is not FeedResidentCommand
+            && command is not GiveItemToResidentCommand
+            && command is not InteractWithResidentCommand)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(command),
+                command.GetType().Name,
+                "Unknown settlement command.");
+        }
+
+        return true;
+    }
+
     public SettlementCommandResult Execute(SettlementCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
