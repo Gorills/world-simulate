@@ -185,19 +185,82 @@ public sealed class P3OnFootTravelDurationProjectionTests
         Assert.Equal(plan.DepartedAt, restoredPlan.DepartedAt);
         Assert.Equal(plan.ConnectionIds.ToArray(), restoredPlan.ConnectionIds.ToArray());
         Assert.Equal(plan.TravelMode, restoredPlan.TravelMode);
+    }
 
-        restored.AdvanceHours(1);
+    [Fact]
+    public void PlanBearingTravelPersistsSubHourProgressAndArrivesAtStoredDuration()
+    {
+        var state = SettlementSimulation.CreateDefault(new WorldSeed(9396)).CaptureState();
+        var resident = state.Residents[0];
+        var simulation = SettlementSimulation.Restore(PreparedState(
+            state,
+            resident,
+            SettlementOnFootRouteTimingClass.BaselineLevelUnobstructed,
+            distanceMeters: 300));
 
-        var afterLegacyTick = FindResident(restored, resident.Id);
-        var stillTravelling = Assert.IsType<SettlementActorLocationProjection>(
-            afterLegacyTick.Location);
-        var unchangedTravel = Assert.IsType<SettlementTravelProgressState>(
-            stillTravelling.Travel);
+        simulation.AdvanceHours(1);
 
-        Assert.Equal(SettlementActorLocationKind.Travelling, stillTravelling.Kind);
-        Assert.Equal(0, unchangedTravel.ElapsedMilliseconds);
-        Assert.Equal(214_286, unchangedTravel.DurationMilliseconds);
-        Assert.NotNull(unchangedTravel.Plan);
+        var departed = FindResident(simulation, resident.Id);
+        var departedLocation = Assert.IsType<SettlementActorLocationProjection>(departed.Location);
+        var departedTravel = Assert.IsType<SettlementTravelProgressState>(departedLocation.Travel);
+        var plan = Assert.IsType<SettlementTravelPlanState>(departedTravel.Plan);
+        var hungerAtDeparture = departed.Hunger;
+
+        var partialTime = new SimulationTime(
+            checked(plan.DepartedAt.Milliseconds + 100_000));
+        simulation.AdvanceTo(partialTime);
+
+        var partial = FindResident(simulation, resident.Id);
+        var partialLocation = Assert.IsType<SettlementActorLocationProjection>(partial.Location);
+        var partialTravel = Assert.IsType<SettlementTravelProgressState>(partialLocation.Travel);
+
+        Assert.Equal(partialTime, simulation.Time);
+        Assert.Equal(SettlementActorLocationKind.Travelling, partialLocation.Kind);
+        Assert.Equal(100_000, partialTravel.ElapsedMilliseconds);
+        Assert.Equal(214_286, partialTravel.DurationMilliseconds);
+        Assert.Equal(hungerAtDeparture, partial.Hunger);
+
+        var decoded = SettlementStateJson.Deserialize(
+            SettlementStateJson.Serialize(simulation.CaptureState()));
+        var restored = SettlementSimulation.Restore(decoded);
+        var restoredPartial = FindResident(restored, resident.Id);
+        var restoredPartialLocation = Assert.IsType<SettlementActorLocationProjection>(
+            restoredPartial.Location);
+        var restoredPartialTravel = Assert.IsType<SettlementTravelProgressState>(
+            restoredPartialLocation.Travel);
+
+        Assert.Equal(100_000, restoredPartialTravel.ElapsedMilliseconds);
+        Assert.NotNull(restoredPartialTravel.Plan);
+
+        var justBeforeArrival = new SimulationTime(
+            checked(plan.DepartedAt.Milliseconds + 214_285));
+        restored.AdvanceTo(justBeforeArrival);
+
+        var beforeArrival = FindResident(restored, resident.Id);
+        var beforeArrivalLocation = Assert.IsType<SettlementActorLocationProjection>(
+            beforeArrival.Location);
+        var beforeArrivalTravel = Assert.IsType<SettlementTravelProgressState>(
+            beforeArrivalLocation.Travel);
+
+        Assert.Equal(SettlementActorLocationKind.Travelling, beforeArrivalLocation.Kind);
+        Assert.Equal(214_285, beforeArrivalTravel.ElapsedMilliseconds);
+
+        var arrivalTime = new SimulationTime(
+            checked(plan.DepartedAt.Milliseconds + 214_286));
+        restored.AdvanceTo(arrivalTime);
+
+        var arrived = FindResident(restored, resident.Id);
+        var arrivedLocation = Assert.IsType<SettlementActorLocationProjection>(arrived.Location);
+
+        Assert.Equal(arrivalTime, restored.Time);
+        Assert.Equal(SettlementActorLocationKind.AtPlace, arrivedLocation.Kind);
+        Assert.Equal(departedLocation.DestinationPlace, arrivedLocation.CurrentPlace);
+        Assert.Equal(arrivedLocation.CurrentPlace, arrivedLocation.DestinationPlace);
+        Assert.Null(arrivedLocation.Travel);
+        Assert.Null(arrived.DestinationRequest);
+        Assert.Null(arrived.RoutePath);
+        Assert.Null(arrived.OnFootTraversalApplicability);
+        Assert.Null(arrived.TravelDurationPlan);
     }
 
     [Fact]

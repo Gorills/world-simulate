@@ -27,12 +27,6 @@ public sealed partial class SettlementSimulation
             throw new InvalidOperationException("Settlement simulation time is monotonic.");
         }
 
-        var delta = checked(target.Milliseconds - Time.Milliseconds);
-        if (delta % HourMilliseconds != 0)
-        {
-            throw new ArgumentException("Settlement simulation advances on canonical whole-hour boundaries.", nameof(target));
-        }
-
         Span<SettlementSystemKind> dueSystems = stackalloc SettlementSystemKind[SystemScheduler.ScheduleCount];
         while (Time.Milliseconds < target.Milliseconds)
         {
@@ -43,6 +37,10 @@ public sealed partial class SettlementSimulation
             }
 
             var nextTime = SystemScheduler.NextDueAfter(Time, target, activeSystems);
+            nextTime = NextPlanBearingTravelBoundary(nextTime);
+            var elapsedMilliseconds = checked(nextTime.Milliseconds - Time.Milliseconds);
+            AdvancePlanBearingTravelProgress(elapsedMilliseconds);
+
             var dueCount = SystemScheduler.WriteDueSystems(nextTime, activeSystems, dueSystems);
             var dayBoundaryDue = false;
             var residentHourlyDue = false;
