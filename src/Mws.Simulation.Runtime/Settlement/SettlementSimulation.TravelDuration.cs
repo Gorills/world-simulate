@@ -20,7 +20,7 @@ public static class SettlementOnFootTravelDurationRules
 
 public sealed partial class SettlementSimulation
 {
-    private SettlementTravelDurationPlanProjection? ProjectTravelDurationPlan(
+    private static SettlementTravelDurationPlanProjection? ProjectTravelDurationPlan(
         SettlementRoutePathProjection? routePath,
         SettlementOnFootTraversalApplicabilityProjection? applicability)
     {
